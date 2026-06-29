@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════
+//  REGRAS DE SEGURANÇA DO STORAGE (fotos dos pontos)
+//  Cole isto em: Storage → Regras
+// ════════════════════════════════════════════════════════════
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Fotos ficam em: pontos/{userId}/{arquivo}
+    match /pontos/{userId}/{fileName} {
+      // Qualquer usuário logado pode ver as fotos (o empregador precisa ver)
+      allow read: if request.auth != null;
+      // Só a própria funcionária faz upload das suas fotos
+      // e o arquivo não pode passar de 2 MB e precisa ser imagem
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

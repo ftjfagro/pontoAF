@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════
+//  REGRAS DE SEGURANÇA DO FIRESTORE
+//  Cole isto em: Firestore Database → Regras
+// ════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfis de usuários
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      // O próprio usuário pode criar/editar seu perfil...
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      // ...e o empregador da mesma casa pode atualizar APENAS os dados
+      // contratuais (salário, jornada, dias, admissão) das suas funcionárias.
+      allow update: if request.auth != null
+        && isEmployerOfHouse(resource.data.houseCode)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['salario','jornadaDiaria','diasTrabalho','admissao']);
+      allow delete: if false;
+    }
+
+    // Registros de ponto
+    match /records/{recordId} {
+      // Pode ler se: é o dono do registro OU é empregador da mesma casa
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        isEmployerOfHouse(resource.data.houseCode)
+      );
+      // Cria registro: a própria funcionária (seu ponto) OU o empregador
+      // da mesma casa (ajuste/inclusão manual).
+      allow create: if request.auth != null && (
+        request.resource.data.userId == request.auth.uid ||
+        isEmployerOfHouse(request.resource.data.houseCode)
+      );
+      // Só o empregador da casa pode corrigir ou excluir um ponto.
+      // A funcionária NÃO pode editar/apagar os próprios registros
+      // (integridade do ponto). Ajustes ficam marcados com adjusted=true.
+      allow update, delete: if request.auth != null
+        && isEmployerOfHouse(resource.data.houseCode);
+    }
+
+    // Configurações por usuário
+    match /configs/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // helper: verifica se o usuário logado é empregador da casa indicada
+    function isEmployerOfHouse(houseCode) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return u.role == 'empregador' && u.houseCode == houseCode;
+    }
+  }
+}

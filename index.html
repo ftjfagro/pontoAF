@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PontoCasa</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F7F5F2; --surface: #FFFFFF; --surface2: #F0EDE8;
+      --ink: #1A1816; --ink2: #6B6560; --ink3: #A09A94;
+      --accent: #2D6A4F; --accent-light: #D8EDDF;
+      --warn: #E07A2F; --warn-light: #FEF0E4;
+      --danger: #C0392B; --danger-light: #FDECEA;
+      --border: #E8E3DD; --radius: 14px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; }
+    #loginWrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; }
+    .login-logo { font-size: 32px; font-weight: 600; margin-bottom: 4px; }
+    .login-logo span { color: var(--accent); }
+    .login-sub { font-size: 14px; color: var(--ink3); margin-bottom: 36px; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 380px; box-shadow: var(--shadow); }
+    .login-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .login-desc { font-size: 13px; color: var(--ink3); margin-bottom: 24px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--surface2); color: var(--ink); outline: none; transition: border-color 0.15s; }
+    .field input:focus { border-color: var(--accent); background: white; }
+    .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 4px; }
+    .btn-login:disabled { opacity: 0.6; cursor: wait; }
+    .login-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--ink3); }
+    .login-switch a { color: var(--accent); cursor: pointer; font-weight: 500; }
+    .login-err { background: var(--danger-light); color: var(--danger); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .role-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .role-tab { flex: 1; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); color: var(--ink2); font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; }
+    .role-tab.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    #appWrap { display: none; flex-direction: column; flex: 1; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+    .logo span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-time { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--ink2); }
+    .btn-logout { font-size: 12px; color: var(--ink3); background: none; border: none; cursor: pointer; font-family: inherit; padding: 4px 8px; }
+    .user-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; background: var(--accent-light); color: var(--accent); }
+    .user-badge.employer { background: #EAE5FF; color: #5B3FD9; }
+    .alerts-banner { padding: 0 16px 0; }
+    .alert-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px; margin-top: 10px; font-size: 13px; font-weight: 500; }
+    .alert-item.warn { background: var(--warn-light); color: var(--warn); border: 1px solid #F5C49A; }
+    .alert-item.danger { background: var(--danger-light); color: var(--danger); border: 1px solid #F5B3AC; }
+    .alert-item.info { background: var(--accent-light); color: var(--accent); border: 1px solid #A8D5BA; }
+    .alert-icon { font-size: 16px; flex-shrink: 0; }
+    .screen { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
+    .screen.active { display: flex; }
+    .clock-hero { background: var(--accent); color: white; padding: 28px 24px 24px; text-align: center; }
+    .clock-hero .greeting { font-size: 13px; opacity: 0.8; margin-bottom: 3px; }
+    .clock-hero .name { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+    .clock-display { font-family: 'DM Mono', monospace; font-size: 46px; font-weight: 500; letter-spacing: 2px; line-height: 1; }
+    .clock-date { font-size: 13px; opacity: 0.7; margin-top: 6px; }
+    .status-bar { display: flex; gap: 8px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .status-pill { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 100px; font-size: 12px; font-weight: 500; background: var(--surface2); color: var(--ink2); }
+    .status-pill.active { background: var(--accent-light); color: var(--accent); }
+    .status-pill.warn { background: var(--warn-light); color: var(--warn); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+    .action-btn { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 18px 14px; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .action-btn.secondary { background: var(--warn-light); border-color: var(--warn); color: var(--warn); }
+    .action-btn.blue { background: #EAF4FF; border-color: #3498db; color: #2176b5; }
+    .action-btn.disabled { opacity: 0.35; pointer-events: none; }
+    .action-icon { font-size: 26px; line-height: 1; }
+    .action-label { font-size: 13px; font-weight: 600; }
+    .action-sub { font-size: 11px; opacity: 0.7; }
+    .summary-card { margin: 0 16px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .summary-header { background: var(--ink); color: white; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .summary-header .label { font-size: 12px; opacity: 0.6; }
+    .summary-header .value { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
+    .summary-rows { padding: 4px 0; }
+    .summary-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .summary-row .key { font-size: 13px; color: var(--ink2); flex: 1; }
+    .summary-row .val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+    .section-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .section-title { font-size: 16px; font-weight: 600; }
+    .section-sub { font-size: 12px; color: var(--ink3); }
+    .timeline { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .record-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; display: flex; align-items: center; gap: 13px; box-shadow: var(--shadow); }
+    .record-photo { width: 46px; height: 46px; border-radius: 10px; background: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+    .record-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .record-info { flex: 1; min-width: 0; }
+    .record-type { font-size: 11px; font-weight: 600; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.5px; }
+    .record-time { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; line-height: 1.2; }
+    .record-loc { font-size: 11px; color: var(--ink3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-user { font-size: 11px; color: var(--ink3); }
+    .record-badge { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .badge-entrada { background: var(--accent); }
+    .badge-saida { background: var(--danger); }
+    .badge-almoco-saida { background: var(--warn); }
+    .badge-almoco-volta { background: #3498db; }
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--ink3); }
+    .empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 500; color: var(--ink2); }
+    .empty-sub { font-size: 13px; margin-top: 4px; }
+    .employee-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 16px 10px; overflow: hidden; box-shadow: var(--shadow); }
+    .emp-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+    .emp-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .emp-name { font-size: 15px; font-weight: 600; }
+    .emp-status { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+    .emp-badge { margin-left: auto; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .emp-badge.ok { background: var(--accent-light); color: var(--accent); }
+    .emp-badge.warn { background: var(--warn-light); color: var(--warn); }
+    .emp-badge.absent { background: var(--danger-light); color: var(--danger); }
+    .emp-records { border-top: 1px solid var(--border); display: none; }
+    .emp-records.open { display: block; }
+    .emp-rec-row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+    .emp-rec-row:last-child { border-bottom: none; }
+    .settings-section { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .settings-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .settings-row { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row .icon { font-size: 18px; width: 26px; text-align: center; }
+    .settings-row .text { flex: 1; }
+    .settings-row .text .key { font-size: 14px; font-weight: 500; }
+    .settings-row .text .desc { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+    .settings-input { border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: 'DM Mono', monospace; font-size: 14px; color: var(--ink); background: var(--surface2); width: 80px; text-align: center; }
+    .settings-input:focus { outline: none; border-color: var(--accent); }
+    .toggle { width: 42px; height: 24px; background: var(--border); border-radius: 100px; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white; transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    .toggle.on { background: var(--accent); }
+    .toggle.on::after { transform: translateX(18px); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; flex-direction: column; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .camera-wrap { position: relative; width: 100%; max-width: 400px; }
+    #cameraVideo { width: 100%; border-radius: 12px; display: block; transform: scaleX(-1); }
+    .camera-ui { padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 400px; }
+    .camera-info { color: white; text-align: center; }
+    .camera-info .type { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+    .camera-info .label { font-size: 16px; font-weight: 600; margin-top: 4px; }
+    .camera-btn-row { display: flex; gap: 16px; align-items: center; }
+    .btn-cancel { background: rgba(255,255,255,0.15); border: none; color: white; padding: 11px 18px; border-radius: 100px; font-size: 14px; cursor: pointer; }
+    .btn-shoot { width: 64px; height: 64px; border-radius: 50%; background: white; border: 4px solid rgba(255,255,255,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    .photo-confirm { display: none; flex-direction: column; align-items: center; gap: 14px; padding: 18px; width: 100%; max-width: 400px; }
+    .photo-confirm.open { display: flex; }
+    #capturedImg { width: 100%; border-radius: 12px; display: block; transform: scaleX(-1); }
+    .confirm-info { color: white; text-align: center; width: 100%; }
+    .confirm-info .type { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+    .confirm-info .time-stamp { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; margin-top: 4px; }
+    .location-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); border-radius: 100px; padding: 5px 12px; font-size: 12px; color: white; margin-top: 6px; }
+    .confirm-btns { display: flex; gap: 10px; width: 100%; }
+    .btn-retry { flex: 1; background: rgba(255,255,255,0.15); border: none; color: white; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .btn-save { flex: 2; background: var(--accent); border: none; color: white; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-save:disabled { opacity: 0.6; cursor: wait; }
+    nav { background: var(--surface); border-top: 1px solid var(--border); display: flex; position: sticky; bottom: 0; z-index: 100; }
+    .nav-btn { flex: 1; border: none; background: none; padding: 11px 8px 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--ink3); transition: color 0.15s; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 500; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: white; padding: 11px 20px; border-radius: 100px; font-size: 13px; font-weight: 500; white-space: nowrap; opacity: 0; transition: all 0.3s; z-index: 500; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; gap: 16px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .config-banner { background: var(--warn-light); color: var(--warn); padding: 12px 16px; font-size: 13px; text-align: center; border-bottom: 1px solid #F5C49A; }
+    .emp-edit-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink2); cursor: pointer; font-family: inherit; flex-shrink: 0; }
+    .emp-contract { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 14px; }
+    .contract-item { font-size: 12px; }
+    .contract-item .lbl { color: var(--ink3); }
+    .contract-item .v { font-weight: 600; font-family: 'DM Mono', monospace; }
+    .contract-missing { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--warn); }
+    .form-modal { display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; }
+    .form-modal.open { display: flex; }
+    .form-sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 22px 20px 28px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+    .form-sheet h3 { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+    .form-sheet .sub { font-size: 13px; color: var(--ink3); margin-bottom: 18px; }
+    .frow { margin-bottom: 14px; }
+    .frow label { display:block; font-size:12px; font-weight:600; color: var(--ink2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .frow input { width:100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 10px; font-size:15px; font-family: inherit; background: var(--surface2); color: var(--ink); outline: none; }
+    .frow input:focus { border-color: var(--accent); background: white; }
+    .days-row { display: flex; gap: 6px; }
+    .day-chip { flex:1; padding: 9px 0; border: 1.5px solid var(--border); border-radius: 9px; background: var(--surface2); font-size:12px; font-weight:600; color: var(--ink3); cursor:pointer; text-align:center; }
+    .day-chip.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .form-actions { display:flex; gap:10px; margin-top: 8px; }
+    .form-actions button { flex:1; padding: 13px; border-radius: 10px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; border:none; }
+    .btn-form-cancel { background: var(--surface2); color: var(--ink2); }
+    .btn-form-save { background: var(--accent); color: white; flex:2; }
+    .emp-add-point { width: calc(100% - 32px); margin: 0 16px 12px; padding: 10px; border: 1.5px dashed var(--border); border-radius: 10px; background: none; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .emp-rec-row .rec-edit { opacity: 0.5; cursor: pointer; font-size: 14px; padding: 2px 6px; }
+    .emp-rec-row .rec-edit:hover { opacity: 1; }
+    .rec-adjusted { font-size: 10px; color: var(--warn); font-weight: 600; margin-left: 4px; }
+    .type-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .type-opt { padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); font-size: 13px; font-weight: 600; color: var(--ink2); cursor: pointer; text-align: center; }
+    .type-opt.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .btn-form-delete { background: var(--danger-light); color: var(--danger); flex: 1; }
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="color:var(--ink3);font-size:13px">Carregando...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginWrap" style="display:none">
+  <div class="login-logo">Ponto<span>Casa</span></div>
+  <div class="login-sub">Controle de ponto doméstico</div>
+  <div class="login-card">
+    <div class="login-title" id="loginTitle">Entrar</div>
+    <div class="login-desc" id="loginDesc">Acesse com seu e-mail e senha</div>
+    <div class="login-err" id="loginErr"></div>
+    <div class="role-tabs" id="roleTabs" style="display:none">
+      <button class="role-tab active" id="tabFunc" onclick="selectRole('funcionaria')">👩 Funcionária</button>
+      <button class="role-tab" id="tabEmployer" onclick="selectRole('empregador')">🏠 Empregador(a)</button>
+    </div>
+    <div class="field" id="fieldNome" style="display:none">
+      <label>Nome completo</label>
+      <input type="text" id="inputNome" placeholder="Ex: Maria Silva" />
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="inputEmail" placeholder="seu@email.com" />
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inputSenha" placeholder="********" />
+    </div>
+    <div class="field" id="fieldCodigo" style="display:none">
+      <label>Código da casa (fornecido pelo empregador)</label>
+      <input type="text" id="inputCodigo" placeholder="Ex: CASA-1234" style="text-transform:uppercase" />
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">Entrar</button>
+    <div class="login-switch" id="loginSwitch">Não tem conta? <a onclick="showRegister()">Cadastrar</a></div>
+    <div class="login-switch" id="registerSwitch" style="display:none">Já tem conta? <a onclick="showLogin()">Entrar</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appWrap">
+  <header>
+    <div class="logo">Ponto<span>Casa</span></div>
+    <div class="header-right">
+      <div class="header-time" id="headerTime">--:--:--</div>
+      <div class="user-badge" id="userBadge">--</div>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </header>
+
+  <div class="screen active" id="screenRegistro">
+    <div class="clock-hero">
+      <div class="greeting">Olá,</div>
+      <div class="name" id="heroName">Funcionária</div>
+      <div class="clock-display" id="clockDisplay">--:--</div>
+      <div class="clock-date" id="clockDate">carregando...</div>
+    </div>
+    <div class="status-bar">
+      <div class="status-pill" id="statusEntrada"><div class="status-dot"></div>Entrada</div>
+      <div class="status-pill" id="statusAlmoco"><div class="status-dot"></div>Almoço</div>
+      <div class="status-pill" id="statusSaida"><div class="status-dot"></div>Saída</div>
+    </div>
+    <div class="alerts-banner" id="alertsBanner"></div>
+    <div class="actions-grid">
+      <button class="action-btn primary" id="btnEntrada" onclick="openCamera('entrada')"><div class="action-icon">🟢</div><div class="action-label">Entrada</div><div class="action-sub">Início do turno</div></button>
+      <button class="action-btn disabled" id="btnSaida" onclick="openCamera('saida')"><div class="action-icon">🔴</div><div class="action-label">Saída</div><div class="action-sub">Fim do turno</div></button>
+      <button class="action-btn disabled" id="btnAlmocoSaida" onclick="openCamera('almoco-saida')"><div class="action-icon">🍽️</div><div class="action-label">Saída Almoço</div><div class="action-sub">Pausar turno</div></button>
+      <button class="action-btn disabled" id="btnAlmocoVolta" onclick="openCamera('almoco-volta')"><div class="action-icon">↩️</div><div class="action-label">Volta Almoço</div><div class="action-sub">Retomar turno</div></button>
+    </div>
+    <div class="section-header"><div class="section-title">Resumo de hoje</div></div>
+    <div class="summary-card">
+      <div class="summary-header">
+        <div><div class="label">Horas trabalhadas</div><div class="value" id="horasTrabalhadas">--:--</div></div>
+        <div style="text-align:right"><div class="label">Status</div><div class="value" id="statusAtual" style="font-size:14px">Aguardando</div></div>
+      </div>
+      <div class="summary-rows">
+        <div class="summary-row"><div class="dot" style="background:var(--accent)"></div><div class="key">Entrada</div><div class="val" id="sumEntrada">--:--</div></div>
+        <div class="summary-row"><div class="dot" style="background:var(--warn)"></div><div class="key">Saída almoço</div><div class="val" id="sumAlmocoSaida">--:--</div></div>
+        <div class="summary-row"><div class="dot" style="background:#3498db"></div><div class="key">Volta almoço</div><div class="val" id="sumAlmocoVolta">--:--</div></div>
+        <div class="summary-row"><div class="dot" style="background:var(--danger)"></div><div class="key">Saída</div><div class="val" id="sumSaida">--:--</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="screenEmpregador">
+    <div class="section-header"><div><div class="section-title">Painel da Casa</div><div class="section-sub" id="employerCode"></div></div></div>
+    <div class="alerts-banner" id="alertsEmpregadorBanner"></div>
+    <div id="employeeList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="screen" id="screenHistorico">
+    <div class="section-header"><div><div class="section-title">Histórico</div><div class="section-sub" id="histCount">Carregando...</div></div></div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div class="screen" id="screenConfig">
+    <div class="section-header"><div class="section-title">Configurações</div></div>
+    <div class="settings-section">
+      <div class="settings-group" id="configHorarios">
+        <div class="settings-row"><div class="icon">🕗</div><div class="text"><div class="key">Horário de entrada</div><div class="desc">Lembrete de ponto</div></div><input class="settings-input" id="cfgEntrada" type="time" value="07:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🍽️</div><div class="text"><div class="key">Saída para almoço</div><div class="desc">Horário de almoço</div></div><input class="settings-input" id="cfgAlmoco" type="time" value="12:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">↩️</div><div class="text"><div class="key">Volta do almoço</div><div class="desc">Retorno padrão</div></div><input class="settings-input" id="cfgVoltaAlmoco" type="time" value="13:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🕔</div><div class="text"><div class="key">Horário de saída</div><div class="desc">Fim do turno</div></div><input class="settings-input" id="cfgSaida" type="time" value="17:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">⏱️</div><div class="text"><div class="key">Tolerância (min)</div><div class="desc">Margem antes do alerta</div></div><input class="settings-input" id="cfgTolerancia" type="number" value="15" min="0" max="60" onchange="saveConfig()" /></div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-row"><div class="icon">🔔</div><div class="text"><div class="key">Notificações</div><div class="desc">Lembretes de ponto</div></div><button class="toggle on" id="toggleNotif" onclick="toggleNotif()"></button></div>
+        <div class="settings-row"><div class="icon">📍</div><div class="text"><div class="key">Localização</div><div class="desc">Salvar coordenadas</div></div><button class="toggle on" id="toggleLoc" onclick="toggleLoc()"></button></div>
+      </div>
+      <div class="settings-group" id="employerCodeCard" style="display:none">
+        <div class="settings-row"><div class="icon">🔑</div><div class="text"><div class="key">Código da casa</div><div class="desc">Compartilhe com a funcionária</div></div><span id="employerCodeDisplay" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--accent)"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="cameraModal">
+    <div class="camera-wrap"><video id="cameraVideo" autoplay playsinline></video><canvas id="snapCanvas"></canvas></div>
+    <div class="camera-ui" id="cameraUI">
+      <div class="camera-info"><div class="type" id="cameraType">REGISTRO</div><div class="label" id="cameraLabel">Centralize seu rosto</div></div>
+      <div class="camera-btn-row"><button class="btn-cancel" onclick="closeCamera()">Cancelar</button><button class="btn-shoot" onclick="snapPhoto()">📷</button></div>
+    </div>
+    <div class="photo-confirm" id="photoConfirm">
+      <img id="capturedImg" />
+      <div class="confirm-info"><div class="type" id="confirmType">CONFIRMAR</div><div class="time-stamp" id="confirmTime">--:--:--</div><div class="location-tag" id="confirmLoc">📍 obtendo...</div></div>
+      <div class="confirm-btns"><button class="btn-retry" onclick="retryPhoto()">↩ Refazer</button><button class="btn-save" id="btnSave" onclick="saveRecord()">Salvar ✓</button></div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="contractModal">
+    <div class="form-sheet">
+      <h3>Dados contratuais</h3>
+      <div class="sub" id="contractEmpName">—</div>
+      <div class="frow">
+        <label>Salário mensal (R$)</label>
+        <input type="number" id="fSalario" placeholder="Ex: 1518" inputmode="decimal" />
+      </div>
+      <div class="frow">
+        <label>Jornada diária (horas)</label>
+        <input type="number" id="fJornada" placeholder="Ex: 8" step="0.5" inputmode="decimal" />
+      </div>
+      <div class="frow">
+        <label>Dias de trabalho</label>
+        <div class="days-row" id="fDias">
+          <div class="day-chip" data-d="1">Seg</div>
+          <div class="day-chip" data-d="2">Ter</div>
+          <div class="day-chip" data-d="3">Qua</div>
+          <div class="day-chip" data-d="4">Qui</div>
+          <div class="day-chip" data-d="5">Sex</div>
+          <div class="day-chip" data-d="6">Sáb</div>
+          <div class="day-chip" data-d="0">Dom</div>
+        </div>
+      </div>
+      <div class="frow">
+        <label>Data de admissão</label>
+        <input type="date" id="fAdmissao" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeContractModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="saveContract()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="pointModal">
+    <div class="form-sheet">
+      <h3 id="pointModalTitle">Adicionar ponto</h3>
+      <div class="sub" id="pointEmpName">—</div>
+      <div class="frow">
+        <label>Tipo de registro</label>
+        <div class="type-picker" id="pTipo">
+          <div class="type-opt" data-t="entrada">🟢 Entrada</div>
+          <div class="type-opt" data-t="almoco-saida">🍽️ Saída Almoço</div>
+          <div class="type-opt" data-t="almoco-volta">↩️ Volta Almoço</div>
+          <div class="type-opt" data-t="saida">🔴 Saída</div>
+        </div>
+      </div>
+      <div class="frow">
+        <label>Data</label>
+        <input type="date" id="pData" />
+      </div>
+      <div class="frow">
+        <label>Horário</label>
+        <input type="time" id="pHora" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closePointModal()">Cancelar</button>
+        <button class="btn-form-delete" id="pBtnDelete" style="display:none" onclick="deletePoint()">Excluir</button>
+        <button class="btn-form-save" onclick="savePoint()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <nav id="appNav">
+    <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
+    <button class="nav-btn" id="navEmpregador" style="display:none" onclick="showScreen('Empregador')"><div class="nav-icon">🏠</div><div class="nav-label">Painel</div></button>
+    <button class="nav-btn" id="navHistorico" onclick="showScreen('Historico')"><div class="nav-icon">📋</div><div class="nav-label">Histórico</div></button>
+    <button class="nav-btn" id="navConfig" onclick="showScreen('Config')"><div class="nav-icon">⚙️</div><div class="nav-label">Config</div></button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ════ FIREBASE IMPORTS ════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  collection, query, where, orderBy, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadString, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+// ════ INIT ════
+let app, auth, db, storage;
+let configOk = true;
+try {
+  if (firebaseConfig.apiKey === "COLE_AQUI") configOk = false;
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+} catch(e) { configOk = false; console.error(e); }
+
+// ════ STATE ════
+let currentUser = null;     // perfil completo do Firestore
+let records = [];
+let config = {};
+let notifTimers = [];
+let stream = null, currentType = null, capturedDataUrl = null, currentLocation = null;
+let alertCheckInterval = null, recordsUnsub = null;
+let isRegistering = false, selectedRole = 'funcionaria';
+
+const DEFAULT_CONFIG = { entrada:'07:00', almoco:'12:00', voltaAlmoco:'13:00', saida:'17:00', tolerancia:15, notif:true, loc:true };
+
+// expose handlers to window (module scope)
+Object.assign(window, {
+  selectRole, showRegister, showLogin, doLogin, doLogout,
+  showScreen, openCamera, closeCamera, snapPhoto, retryPhoto, saveRecord,
+  saveConfig, toggleNotif, toggleLoc, toggleEmpRecords,
+  openContractModal, closeContractModal, saveContract,
+  openPointModal, closePointModal, savePoint, deletePoint
+});
+
+// ════ LOGIN UI ════
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('tabFunc').className = 'role-tab' + (r==='funcionaria'?' active':'');
+  document.getElementById('tabEmployer').className = 'role-tab' + (r==='empregador'?' active':'');
+  document.getElementById('fieldCodigo').style.display = r==='funcionaria' ? 'block' : 'none';
+}
+function showRegister() {
+  isRegistering = true;
+  document.getElementById('loginTitle').textContent = 'Criar conta';
+  document.getElementById('loginDesc').textContent = 'Preencha os dados para se cadastrar';
+  document.getElementById('btnLogin').textContent = 'Criar conta';
+  document.getElementById('roleTabs').style.display = 'flex';
+  document.getElementById('fieldNome').style.display = 'block';
+  document.getElementById('fieldCodigo').style.display = selectedRole==='funcionaria'?'block':'none';
+  document.getElementById('loginSwitch').style.display = 'none';
+  document.getElementById('registerSwitch').style.display = 'block';
+  document.getElementById('loginErr').style.display = 'none';
+}
+function showLogin() {
+  isRegistering = false;
+  document.getElementById('loginTitle').textContent = 'Entrar';
+  document.getElementById('loginDesc').textContent = 'Acesse com seu e-mail e senha';
+  document.getElementById('btnLogin').textContent = 'Entrar';
+  document.getElementById('roleTabs').style.display = 'none';
+  document.getElementById('fieldNome').style.display = 'none';
+  document.getElementById('fieldCodigo').style.display = 'none';
+  document.getElementById('loginSwitch').style.display = 'block';
+  document.getElementById('registerSwitch').style.display = 'none';
+  document.getElementById('loginErr').style.display = 'none';
+}
+function showErr(m){ const e=document.getElementById('loginErr'); e.textContent=m; e.style.display='block'; }
+
+// ════ AUTH ════
+async function doLogin() {
+  if (!configOk) { showErr('Firebase não configurado. Preencha firebase-config.js'); return; }
+  const email = document.getElementById('inputEmail').value.trim().toLowerCase();
+  const senha = document.getElementById('inputSenha').value;
+  const btn = document.getElementById('btnLogin');
+  if (!email || !senha) { showErr('Preencha e-mail e senha.'); return; }
+  btn.disabled = true;
+
+  try {
+    if (isRegistering) {
+      const nome = document.getElementById('inputNome').value.trim();
+      if (!nome) { showErr('Informe seu nome completo.'); btn.disabled=false; return; }
+      if (senha.length < 6) { showErr('Senha deve ter ao menos 6 caracteres.'); btn.disabled=false; return; }
+
+      let houseCode;
+      if (selectedRole === 'empregador') {
+        houseCode = 'CASA-' + Math.random().toString(36).slice(2,6).toUpperCase();
+      } else {
+        const code = document.getElementById('inputCodigo').value.trim().toUpperCase();
+        if (!code) { showErr('Informe o código da casa.'); btn.disabled=false; return; }
+        // valida se existe um empregador com esse código
+        const q = query(collection(db,'users'), where('role','==','empregador'), where('houseCode','==',code));
+        const snap = await getDocs(q);
+        if (snap.empty) { showErr('Código de casa não encontrado.'); btn.disabled=false; return; }
+        houseCode = code;
+      }
+
+      const cred = await createUserWithEmailAndPassword(auth, email, senha);
+      const profile = { email, nome, role: selectedRole, houseCode };
+      await setDoc(doc(db,'users',cred.user.uid), profile);
+      await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
+      // onAuthStateChanged cuida do resto
+    } else {
+      await signInWithEmailAndPassword(auth, email, senha);
+    }
+  } catch(e) {
+    const map = {
+      'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
+      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/wrong-password': 'E-mail ou senha incorretos.',
+      'auth/user-not-found': 'E-mail ou senha incorretos.',
+      'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+      'auth/invalid-email': 'E-mail inválido.',
+    };
+    showErr(map[e.code] || ('Erro: ' + e.message));
+    btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  if (recordsUnsub) recordsUnsub();
+  clearInterval(alertCheckInterval);
+  notifTimers.forEach(clearTimeout);
+  await signOut(auth);
+}
+
+// monitora estado de login
+if (configOk) {
+  onAuthStateChanged(auth, async (fbUser) => {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    if (fbUser) {
+      const snap = await getDoc(doc(db,'users',fbUser.uid));
+      if (!snap.exists()) { await signOut(auth); return; }
+      currentUser = { uid: fbUser.uid, ...snap.data() };
+      document.getElementById('loginWrap').style.display = 'none';
+      document.getElementById('appWrap').style.display = 'flex';
+      await initApp();
+    } else {
+      currentUser = null;
+      document.getElementById('appWrap').style.display = 'none';
+      document.getElementById('loginWrap').style.display = 'flex';
+      showLogin();
+    }
+  });
+} else {
+  document.getElementById('loadingOverlay').style.display = 'none';
+  document.getElementById('loginWrap').style.display = 'flex';
+  showLogin();
+  showErr('⚠️ Configure o firebase-config.js antes de usar.');
+}
+
+// ════ APP INIT ════
+async function initApp() {
+  // carrega config do usuário
+  const cfgSnap = await getDoc(doc(db,'configs',currentUser.uid));
+  config = cfgSnap.exists() ? { ...DEFAULT_CONFIG, ...cfgSnap.data() } : { ...DEFAULT_CONFIG };
+
+  document.getElementById('heroName').textContent = currentUser.nome.split(' ')[0];
+  const badge = document.getElementById('userBadge');
+  badge.textContent = currentUser.role === 'empregador' ? '🏠 Empregador' : '👩 Funcionária';
+  badge.className = 'user-badge' + (currentUser.role === 'empregador' ? ' employer' : '');
+
+  if (currentUser.role === 'empregador') {
+    document.getElementById('navEmpregador').style.display = 'flex';
+    document.getElementById('navRegistro').style.display = 'none';
+    document.getElementById('screenRegistro').style.display = 'none';
+    document.getElementById('employerCodeCard').style.display = 'block';
+    document.getElementById('employerCodeDisplay').textContent = currentUser.houseCode;
+    document.getElementById('employerCode').textContent = 'Código: ' + currentUser.houseCode;
+    showScreen('Empregador');
+  } else {
+    document.getElementById('navEmpregador').style.display = 'none';
+    document.getElementById('navRegistro').style.display = 'flex';
+    showScreen('Registro');
+  }
+
+  loadConfigUI();
+  subscribeRecords();
+  updateClock();
+  setInterval(updateClock, 1000);
+  if (config.notif) requestNotifPermission();
+  scheduleReminders();
+  alertCheckInterval = setInterval(checkAlerts, 60000);
+}
+
+// ════ FIRESTORE: REGISTROS EM TEMPO REAL ════
+function subscribeRecords() {
+  if (recordsUnsub) recordsUnsub();
+  let q;
+  if (currentUser.role === 'empregador') {
+    q = query(collection(db,'records'), where('houseCode','==',currentUser.houseCode));
+  } else {
+    q = query(collection(db,'records'), where('userId','==',currentUser.uid));
+  }
+  recordsUnsub = onSnapshot(q, (snap) => {
+    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    records.sort((a,b) => new Date(a.ts) - new Date(b.ts));
+    updateButtons();
+    renderTimeline();
+    checkAlerts();
+  }, (err) => { console.error(err); showToast('Erro ao carregar registros'); });
+}
+
+// ════ CONFIG ════
+function loadConfigUI() {
+  document.getElementById('cfgEntrada').value = config.entrada;
+  document.getElementById('cfgAlmoco').value = config.almoco;
+  document.getElementById('cfgVoltaAlmoco').value = config.voltaAlmoco;
+  document.getElementById('cfgSaida').value = config.saida;
+  document.getElementById('cfgTolerancia').value = config.tolerancia;
+  document.getElementById('toggleNotif').className = 'toggle ' + (config.notif?'on':'');
+  document.getElementById('toggleLoc').className = 'toggle ' + (config.loc?'on':'');
+}
+async function saveConfig() {
+  config.entrada = document.getElementById('cfgEntrada').value;
+  config.almoco = document.getElementById('cfgAlmoco').value;
+  config.voltaAlmoco = document.getElementById('cfgVoltaAlmoco').value;
+  config.saida = document.getElementById('cfgSaida').value;
+  config.tolerancia = parseInt(document.getElementById('cfgTolerancia').value) || 15;
+  await setDoc(doc(db,'configs',currentUser.uid), config);
+  scheduleReminders(); checkAlerts();
+  showToast('Configurações salvas');
+}
+async function toggleNotif() {
+  config.notif = !config.notif;
+  document.getElementById('toggleNotif').className = 'toggle ' + (config.notif?'on':'');
+  await setDoc(doc(db,'configs',currentUser.uid), config);
+  if (config.notif) { requestNotifPermission(); scheduleReminders(); }
+}
+async function toggleLoc() {
+  config.loc = !config.loc;
+  document.getElementById('toggleLoc').className = 'toggle ' + (config.loc?'on':'');
+  await setDoc(doc(db,'configs',currentUser.uid), config);
+}
+
+// ════ CLOCK ════
+function updateClock() {
+  const now = new Date(); const pad = n=>String(n).padStart(2,'0');
+  const cd=document.getElementById('clockDisplay');
+  if(cd) cd.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('headerTime').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const days=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const dt=document.getElementById('clockDate');
+  if(dt) dt.textContent = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}`;
+  updateSummary();
+}
+
+// ════ HELPERS ════
+function toMinutes(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+function todayRecordsFor(uid) {
+  const today = new Date().toDateString();
+  return records.filter(r => r.userId===uid && new Date(r.ts).toDateString()===today);
+}
+
+// ════ ALERTAS ════
+function buildAlerts(today, cfg) {
+  const alerts=[]; const now=nowMinutes(); const tol=cfg.tolerancia||15;
+  const has=t=>today.some(r=>r.type===t);
+  if (![1,2,3,4,5].includes(new Date().getDay())) return alerts;
+  const eM=toMinutes(cfg.entrada), aM=toMinutes(cfg.almoco), vM=toMinutes(cfg.voltaAlmoco), sM=toMinutes(cfg.saida);
+  if (!has('entrada') && now > eM+tol) alerts.push({type:'danger',msg:`Entrada não registrada — prevista às ${cfg.entrada}`});
+  if (has('entrada') && !has('almoco-saida') && now > aM+tol && now < sM) alerts.push({type:'warn',msg:`Saída de almoço não registrada — prevista às ${cfg.almoco}`});
+  if (has('almoco-saida') && !has('almoco-volta') && now > vM+tol) alerts.push({type:'warn',msg:`Volta do almoço não registrada — prevista às ${cfg.voltaAlmoco}`});
+  if (has('entrada') && !has('saida') && now > sM+tol) alerts.push({type:'danger',msg:`Saída não registrada — prevista às ${cfg.saida}`});
+  if (!has('entrada') && now >= eM-10 && now < eM) alerts.push({type:'info',msg:`Lembrete: entrada em ${eM-now} minuto(s)`});
+  return alerts;
+}
+function renderAlerts(alerts, id) {
+  const icons={danger:'🚨',warn:'⚠️',info:'💡'};
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML = alerts.map(a=>`<div class="alert-item ${a.type}"><span class="alert-icon">${icons[a.type]}</span>${a.msg}</div>`).join('');
+}
+async function checkAlerts() {
+  if (!currentUser) return;
+  if (currentUser.role === 'funcionaria') {
+    renderAlerts(buildAlerts(todayRecordsFor(currentUser.uid), config), 'alertsBanner');
+  } else {
+    // empregador: lista funcionárias + alertas de cada
+    const q = query(collection(db,'users'), where('role','==','funcionaria'), where('houseCode','==',currentUser.houseCode));
+    const snap = await getDocs(q);
+    const employees = snap.docs.map(d=>({uid:d.id, ...d.data()}));
+    let allAlerts=[];
+    for (const emp of employees) {
+      const today = records.filter(r=>r.userId===emp.uid && new Date(r.ts).toDateString()===new Date().toDateString());
+      const cfgSnap = await getDoc(doc(db,'configs',emp.uid));
+      const empCfg = cfgSnap.exists()? {...DEFAULT_CONFIG, ...cfgSnap.data()} : DEFAULT_CONFIG;
+      allAlerts = allAlerts.concat(buildAlerts(today, empCfg).map(a=>({...a, msg:`${emp.nome.split(' ')[0]}: ${a.msg}`})));
+    }
+    if (employees.length===0) allAlerts=[{type:'info',msg:'Nenhuma funcionária vinculada. Código: '+currentUser.houseCode}];
+    renderAlerts(allAlerts, 'alertsEmpregadorBanner');
+    renderEmployeeList(employees);
+  }
+}
+
+// ════ PAINEL EMPREGADOR ════
+function renderEmployeeList(employees) {
+  const c=document.getElementById('employeeList');
+  if (employees.length===0){ c.innerHTML=`<div class="empty-state"><div class="empty-icon">👩</div><div class="empty-title">Nenhuma funcionária vinculada</div><div class="empty-sub">Compartilhe o código ${currentUser.houseCode}</div></div>`; return; }
+  const tn={entrada:'Entrada',saida:'Saída','almoco-saida':'Saída Almoço','almoco-volta':'Volta Almoço'};
+  const bc={entrada:'var(--accent)',saida:'var(--danger)','almoco-saida':'var(--warn)','almoco-volta':'#3498db'};
+  c.innerHTML = employees.map(emp=>{
+    const today = records.filter(r=>r.userId===emp.uid && new Date(r.ts).toDateString()===new Date().toDateString());
+    const has=t=>today.find(r=>r.type===t);
+    const fmt=ts=>ts?new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'--:--';
+    let status='Sem registros hoje', bcl='absent';
+    if (has('saida')){status='Turno encerrado';bcl='ok';}
+    else if (has('almoco-saida')&&!has('almoco-volta')){status='Em almoço';bcl='warn';}
+    else if (has('entrada')){status='Trabalhando';bcl='ok';}
+    const recs=today.sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(r=>`<div class="emp-rec-row"><div style="width:8px;height:8px;border-radius:50%;background:${bc[r.type]};flex-shrink:0"></div><div style="flex:1;font-size:13px;color:var(--ink2)">${tn[r.type]}${r.adjusted?'<span class="rec-adjusted">ajustado</span>':''}</div><div style="font-family:'DM Mono',monospace;font-size:13px">${fmt(r.ts)}</div><span class="rec-edit" onclick="openPointModal('${emp.uid}','${r.id}')">✏️</span></div>`).join('');
+    const id='emp_'+emp.uid;
+    const fmtR=v=>v?Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+    const diasMap={0:'Dom',1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb'};
+    let contractHtml;
+    if (emp.salario || emp.jornadaDiaria) {
+      const dias=(emp.diasTrabalho||[]).map(d=>diasMap[d]).join(', ')||'—';
+      contractHtml=`<div class="emp-contract">
+        <div class="contract-item"><div class="lbl">Salário</div><div class="v">R$ ${fmtR(emp.salario)}</div></div>
+        <div class="contract-item"><div class="lbl">Jornada</div><div class="v">${emp.jornadaDiaria||'—'}h/dia</div></div>
+        <div class="contract-item"><div class="lbl">Dias</div><div class="v" style="font-family:'DM Sans'">${dias}</div></div>
+      </div>`;
+    } else {
+      contractHtml=`<div class="contract-missing">⚠️ Dados contratuais não preenchidos — necessários para o fechamento</div>`;
+    }
+    return `<div class="employee-card">
+      <div class="emp-header">
+        <div class="emp-avatar" onclick="toggleEmpRecords('${id}')" style="cursor:pointer">👩</div>
+        <div onclick="toggleEmpRecords('${id}')" style="cursor:pointer;flex:1">
+          <div class="emp-name">${emp.nome}</div>
+          <div class="emp-status">${status}</div>
+        </div>
+        <button class="emp-edit-btn" onclick="openContractModal('${emp.uid}')">⚙️ Contrato</button>
+      </div>
+      ${contractHtml}
+      <div class="emp-records" id="${id}">
+        ${recs||'<div style="padding:12px 16px;font-size:13px;color:var(--ink3)">Nenhum ponto hoje</div>'}
+        <button class="emp-add-point" onclick="openPointModal('${emp.uid}')">+ Adicionar ponto manual</button>
+      </div>
+    </div>`;
+  }).join('');
+  window._empCache = employees;
+}
+function toggleEmpRecords(id){ document.getElementById(id).classList.toggle('open'); }
+
+// ════ DADOS CONTRATUAIS ════
+let editingEmpUid = null;
+function openContractModal(uid) {
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  if (!emp) return;
+  editingEmpUid = uid;
+  document.getElementById('contractEmpName').textContent = emp.nome;
+  document.getElementById('fSalario').value = emp.salario || '';
+  document.getElementById('fJornada').value = emp.jornadaDiaria || '';
+  document.getElementById('fAdmissao').value = emp.admissao || '';
+  const dias = emp.diasTrabalho || [1,2,3,4,5];
+  document.querySelectorAll('#fDias .day-chip').forEach(chip=>{
+    const d = parseInt(chip.dataset.d);
+    chip.className = 'day-chip' + (dias.includes(d)?' on':'');
+  });
+  document.getElementById('contractModal').classList.add('open');
+}
+function closeContractModal(){ document.getElementById('contractModal').classList.remove('open'); editingEmpUid=null; }
+async function saveContract() {
+  if (!editingEmpUid) return;
+  const dias = [...document.querySelectorAll('#fDias .day-chip.on')].map(c=>parseInt(c.dataset.d));
+  const dados = {
+    salario: parseFloat(document.getElementById('fSalario').value) || null,
+    jornadaDiaria: parseFloat(document.getElementById('fJornada').value) || null,
+    diasTrabalho: dias.length ? dias : [1,2,3,4,5],
+    admissao: document.getElementById('fAdmissao').value || null,
+  };
+  try {
+    await setDoc(doc(db,'users',editingEmpUid), dados, { merge: true });
+    closeContractModal();
+    showToast('Dados contratuais salvos ✓');
+    checkAlerts();
+  } catch(e){ console.error(e); showToast('Erro ao salvar'); }
+}
+
+// chips de dias clicáveis
+document.addEventListener('click', (e)=>{
+  if (e.target.classList && e.target.classList.contains('day-chip') && e.target.closest('#fDias')) {
+    e.target.classList.toggle('on');
+  }
+  if (e.target.classList && e.target.classList.contains('type-opt') && e.target.closest('#pTipo')) {
+    document.querySelectorAll('#pTipo .type-opt').forEach(o=>o.classList.remove('on'));
+    e.target.classList.add('on');
+  }
+});
+
+// ════ ADICIONAR / CORRIGIR PONTO MANUAL ════
+let editingPoint = null; // { empUid, recordId } ou { empUid } para novo
+function openPointModal(empUid, recordId=null) {
+  const emp = (window._empCache||[]).find(e=>e.uid===empUid);
+  if (!emp) return;
+  editingPoint = { empUid, recordId };
+  document.getElementById('pointEmpName').textContent = emp.nome;
+  document.querySelectorAll('#pTipo .type-opt').forEach(o=>o.classList.remove('on'));
+
+  if (recordId) {
+    const rec = records.find(r=>r.id===recordId);
+    document.getElementById('pointModalTitle').textContent = 'Corrigir ponto';
+    document.getElementById('pBtnDelete').style.display = 'block';
+    const d = new Date(rec.ts);
+    document.querySelector(`#pTipo .type-opt[data-t="${rec.type}"]`)?.classList.add('on');
+    document.getElementById('pData').value = d.toISOString().slice(0,10);
+    document.getElementById('pHora').value = d.toTimeString().slice(0,5);
+  } else {
+    document.getElementById('pointModalTitle').textContent = 'Adicionar ponto';
+    document.getElementById('pBtnDelete').style.display = 'none';
+    document.getElementById('pData').value = new Date().toISOString().slice(0,10);
+    document.getElementById('pHora').value = '';
+  }
+  document.getElementById('pointModal').classList.add('open');
+}
+function closePointModal(){ document.getElementById('pointModal').classList.remove('open'); editingPoint=null; }
+
+async function savePoint() {
+  if (!editingPoint) return;
+  const tipoEl = document.querySelector('#pTipo .type-opt.on');
+  const data = document.getElementById('pData').value;
+  const hora = document.getElementById('pHora').value;
+  if (!tipoEl) { showToast('Escolha o tipo de registro'); return; }
+  if (!data || !hora) { showToast('Preencha data e horário'); return; }
+  const tipo = tipoEl.dataset.t;
+  const ts = new Date(`${data}T${hora}:00`).toISOString();
+  const emp = (window._empCache||[]).find(e=>e.uid===editingPoint.empUid);
+
+  try {
+    if (editingPoint.recordId) {
+      await updateDoc(doc(db,'records',editingPoint.recordId), {
+        type: tipo, ts, adjusted: true,
+        adjustedBy: currentUser.uid, adjustedAt: serverTimestamp()
+      });
+      showToast('Ponto corrigido ✓');
+    } else {
+      await addDoc(collection(db,'records'), {
+        type: tipo, ts, photoUrl: null, location: null,
+        userId: editingPoint.empUid, userName: emp?.nome || '',
+        houseCode: currentUser.houseCode || null,
+        adjusted: true, adjustedBy: currentUser.uid,
+        createdAt: serverTimestamp()
+      });
+      showToast('Ponto adicionado ✓');
+    }
+    closePointModal();
+  } catch(e){ console.error(e); showToast('Erro ao salvar ponto'); }
+}
+
+async function deletePoint() {
+  if (!editingPoint?.recordId) return;
+  if (!confirm('Excluir este registro de ponto?')) return;
+  try {
+    await deleteDoc(doc(db,'records',editingPoint.recordId));
+    closePointModal();
+    showToast('Ponto excluído');
+  } catch(e){ console.error(e); showToast('Erro ao excluir'); }
+}
+
+
+// ════ BOTÕES ════
+function updateButtons() {
+  if (!currentUser || currentUser.role==='empregador') return;
+  const today = todayRecordsFor(currentUser.uid);
+  const has=t=>today.some(r=>r.type===t);
+  document.getElementById('btnEntrada').className = has('entrada')?'action-btn disabled':'action-btn primary';
+  document.getElementById('btnAlmocoSaida').className = (has('entrada')&&!has('almoco-saida'))?'action-btn secondary':'action-btn disabled';
+  document.getElementById('btnAlmocoVolta').className = (has('almoco-saida')&&!has('almoco-volta'))?'action-btn blue':'action-btn disabled';
+  const canSaida = has('entrada')&&!has('saida')&&(!has('almoco-saida')||has('almoco-volta'));
+  document.getElementById('btnSaida').className = canSaida?'action-btn':'action-btn disabled';
+  document.getElementById('statusEntrada').className = 'status-pill '+(has('entrada')?'active':'');
+  document.getElementById('statusAlmoco').className = 'status-pill '+(has('almoco-saida')?(has('almoco-volta')?'active':'warn'):'');
+  document.getElementById('statusSaida').className = 'status-pill '+(has('saida')?'active':'');
+}
+function updateSummary() {
+  if (!currentUser || currentUser.role==='empregador') return;
+  const today = todayRecordsFor(currentUser.uid);
+  const get=t=>today.find(r=>r.type===t);
+  const fmt=ts=>ts?new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'--:--';
+  const se=document.getElementById('sumEntrada'); if(!se) return;
+  se.textContent=fmt(get('entrada')?.ts);
+  document.getElementById('sumAlmocoSaida').textContent=fmt(get('almoco-saida')?.ts);
+  document.getElementById('sumAlmocoVolta').textContent=fmt(get('almoco-volta')?.ts);
+  document.getElementById('sumSaida').textContent=fmt(get('saida')?.ts);
+  const entrada=get('entrada'),saida=get('saida'); let status='Aguardando entrada',horas='--:--';
+  if (entrada){
+    const base=saida?new Date(saida.ts):new Date();
+    let work=base-new Date(entrada.ts);
+    const as=get('almoco-saida'),av=get('almoco-volta');
+    if(as&&av)work-=(new Date(av.ts)-new Date(as.ts));
+    else if(as&&!av)work-=(Date.now()-new Date(as.ts));
+    const min=Math.max(0,Math.floor(work/60000));
+    horas=`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+    status=saida?'Turno encerrado':(as&&!av?'Em almoço':'Trabalhando');
+  }
+  document.getElementById('horasTrabalhadas').textContent=horas;
+  document.getElementById('statusAtual').textContent=status;
+}
+
+// ════ CÂMERA ════
+const typeLabels={entrada:['ENTRADA','Início do turno'],saida:['SAÍDA','Fim do turno'],'almoco-saida':['SAÍDA ALMOÇO','Pausa para refeição'],'almoco-volta':['VOLTA ALMOÇO','Retorno do almoço']};
+async function openCamera(type) {
+  currentType=type;
+  document.getElementById('cameraType').textContent=typeLabels[type][0];
+  document.getElementById('cameraLabel').textContent=typeLabels[type][1];
+  document.getElementById('cameraModal').classList.add('open');
+  document.getElementById('cameraUI').style.display='flex';
+  document.getElementById('photoConfirm').classList.remove('open');
+  try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); document.getElementById('cameraVideo').srcObject=stream; }
+  catch(e){ showToast('Câmera não disponível — use HTTPS'); closeCamera(); return; }
+  if (config.loc) getLocation();
+}
+function getLocation() {
+  currentLocation=null;
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p=>{currentLocation={lat:p.coords.latitude.toFixed(5),lng:p.coords.longitude.toFixed(5)};},()=>{});
+}
+function closeCamera() {
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  document.getElementById('cameraModal').classList.remove('open');
+}
+function snapPhoto() {
+  const v=document.getElementById('cameraVideo'),c=document.getElementById('snapCanvas');
+  c.width=v.videoWidth||320; c.height=v.videoHeight||240;
+  c.getContext('2d').drawImage(v,0,0);
+  capturedDataUrl=c.toDataURL('image/jpeg',0.6);
+  document.getElementById('capturedImg').src=capturedDataUrl;
+  document.getElementById('confirmType').textContent=typeLabels[currentType][0];
+  document.getElementById('confirmTime').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('confirmLoc').textContent=currentLocation?`📍 ${currentLocation.lat}, ${currentLocation.lng}`:(config.loc?'📍 Localização não obtida':'📍 Desativada');
+  document.getElementById('cameraUI').style.display='none';
+  document.getElementById('photoConfirm').classList.add('open');
+}
+function retryPhoto() {
+  document.getElementById('cameraUI').style.display='flex';
+  document.getElementById('photoConfirm').classList.remove('open');
+}
+async function saveRecord() {
+  const btn=document.getElementById('btnSave'); btn.disabled=true;
+  try {
+    const ts=new Date().toISOString();
+    // 1. upload da foto
+    const photoRef=ref(storage,`pontos/${currentUser.uid}/${Date.now()}.jpg`);
+    await uploadString(photoRef, capturedDataUrl, 'data_url');
+    const photoUrl=await getDownloadURL(photoRef);
+    // 2. grava o registro
+    await addDoc(collection(db,'records'), {
+      type: currentType, ts,
+      photoUrl, location: currentLocation,
+      userId: currentUser.uid, userName: currentUser.nome,
+      houseCode: currentUser.houseCode || null,
+      createdAt: serverTimestamp()
+    });
+    closeCamera();
+    const labels={entrada:'Entrada registrada ✓',saida:'Saída registrada ✓','almoco-saida':'Saída p/ almoço ✓','almoco-volta':'Volta do almoço ✓'};
+    showToast(labels[currentType]);
+  } catch(e) { console.error(e); showToast('Erro ao salvar registro'); }
+  btn.disabled=false;
+}
+
+// ════ TIMELINE ════
+const typeNames={entrada:'Entrada',saida:'Saída','almoco-saida':'Saída Almoço','almoco-volta':'Volta Almoço'};
+const badgeClass={entrada:'badge-entrada',saida:'badge-saida','almoco-saida':'badge-almoco-saida','almoco-volta':'badge-almoco-volta'};
+function renderTimeline() {
+  const c=document.getElementById('timeline');
+  document.getElementById('histCount').textContent=`${records.length} registros`;
+  if(records.length===0){ c.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum registro ainda</div><div class="empty-sub">Os pontos batidos aparecerão aqui</div></div>`; return; }
+  c.innerHTML=[...records].reverse().map(r=>{
+    const d=new Date(r.ts);
+    const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const date=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+    const loc=r.location?`📍 ${r.location.lat}, ${r.location.lng}`:'';
+    const photo=r.photoUrl?`<div class="record-photo"><img src="${r.photoUrl}" /></div>`:`<div class="record-photo">👤</div>`;
+    return `<div class="record-card">${photo}<div class="record-info"><div class="record-type">${typeNames[r.type]} · ${date}</div><div class="record-time">${time}</div>${currentUser.role==='empregador'?`<div class="record-user">👩 ${r.userName||''}</div>`:''}${loc?`<div class="record-loc">${loc}</div>`:''}</div><div class="record-badge ${badgeClass[r.type]}"></div></div>`;
+  }).join('');
+}
+
+// ════ NOTIFICAÇÕES ════
+function requestNotifPermission(){ if('Notification'in window&&Notification.permission==='default')Notification.requestPermission(); }
+function scheduleReminders() {
+  notifTimers.forEach(clearTimeout); notifTimers=[];
+  if(!config.notif) return;
+  const sched=[{t:config.entrada,m:'🟢 Hora de bater o ponto de entrada!'},{t:config.almoco,m:'🍽️ Hora de registrar saída para almoço!'},{t:config.voltaAlmoco,m:'↩️ Hora de registrar volta do almoço!'},{t:config.saida,m:'🔴 Hora de bater o ponto de saída!'}];
+  sched.forEach(({t,m})=>{
+    const [h,mi]=t.split(':').map(Number); const tgt=new Date(); tgt.setHours(h,mi,0,0);
+    if(tgt<=new Date())tgt.setDate(tgt.getDate()+1);
+    notifTimers.push(setTimeout(()=>{ if('Notification'in window&&Notification.permission==='granted')new Notification('PontoCasa',{body:m}); else showToast(m); }, tgt-new Date()));
+  });
+}
+
+// ════ NAV ════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen'+name).classList.add('active');
+  const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
+  if(name==='Historico') renderTimeline();
+  if(name==='Empregador') checkAlerts();
+}
+
+// ════ TOAST ════
+function showToast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200); }
+</script>
+</body>
+</html>
