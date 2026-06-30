@@ -557,12 +557,25 @@ if (configOk) {
   onAuthStateChanged(auth, async (fbUser) => {
     document.getElementById('loadingOverlay').style.display = 'none';
     if (fbUser) {
-      const snap = await getDoc(doc(db,'users',fbUser.uid));
-      if (!snap.exists()) { await signOut(auth); return; }
-      currentUser = { uid: fbUser.uid, ...snap.data() };
-      document.getElementById('loginWrap').style.display = 'none';
-      document.getElementById('appWrap').style.display = 'flex';
-      await initApp();
+      try {
+        const snap = await getDoc(doc(db,'users',fbUser.uid));
+        if (!snap.exists()) {
+          // login existe mas não há perfil no banco (conta incompleta)
+          await signOut(auth);
+          showLogin();
+          showErr('Conta sem perfil. Faça o cadastro novamente ou use outro e-mail.');
+          return;
+        }
+        currentUser = { uid: fbUser.uid, ...snap.data() };
+        document.getElementById('loginWrap').style.display = 'none';
+        document.getElementById('appWrap').style.display = 'flex';
+        await initApp();
+      } catch (e) {
+        console.error('Erro ao carregar perfil:', e);
+        await signOut(auth);
+        showLogin();
+        showErr('Não foi possível carregar seu perfil. Tente entrar novamente.');
+      }
     } else {
       currentUser = null;
       document.getElementById('appWrap').style.display = 'none';
