@@ -284,8 +284,12 @@
   </div>
 
   <div class="screen" id="screenEmpregador">
-    <div class="section-header"><div><div class="section-title">Painel da Casa</div><div class="section-sub" id="employerCode"></div></div></div>
+    <div class="section-header">
+      <div><div class="section-title">Painel da Casa</div><div class="section-sub" id="employerCode"></div></div>
+      <button onclick="openInviteModal()" style="background:var(--accent);color:white;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Nova funcionária</button>
+    </div>
     <div class="alerts-banner" id="alertsEmpregadorBanner"></div>
+    <div id="invitesList"></div>
     <div id="employeeList" style="margin-top:10px"></div>
   </div>
 
@@ -358,6 +362,25 @@
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeContractModal()">Cancelar</button>
         <button class="btn-form-save" onclick="saveContract()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="inviteModal">
+    <div class="form-sheet">
+      <h3>Nova funcionária</h3>
+      <div class="sub">Cadastre nome e e-mail. Ela ativa o acesso criando a própria senha no primeiro uso.</div>
+      <div class="frow">
+        <label>Nome completo</label>
+        <input type="text" id="iNome" placeholder="Ex: Maria Silva" />
+      </div>
+      <div class="frow">
+        <label>E-mail</label>
+        <input type="email" id="iEmail" placeholder="email@exemplo.com" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeInviteModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="saveInvite()">Cadastrar</button>
       </div>
     </div>
   </div>
@@ -445,7 +468,8 @@ Object.assign(window, {
   showScreen, openCamera, closeCamera, snapPhoto, retryPhoto, saveRecord,
   saveConfig, toggleNotif, toggleLoc, toggleEmpRecords,
   openContractModal, closeContractModal, saveContract,
-  openPointModal, closePointModal, savePoint, deletePoint
+  openPointModal, closePointModal, savePoint, deletePoint,
+  openInviteModal, closeInviteModal, saveInvite, deleteInvite
 });
 
 // ════ LOGIN UI ════
@@ -453,16 +477,23 @@ function selectRole(r) {
   selectedRole = r;
   document.getElementById('tabFunc').className = 'role-tab' + (r==='funcionaria'?' active':'');
   document.getElementById('tabEmployer').className = 'role-tab' + (r==='empregador'?' active':'');
-  document.getElementById('fieldCodigo').style.display = r==='funcionaria' ? 'block' : 'none';
+  // Funcionária: primeiro acesso (e-mail pré-cadastrado + senha). Empregador: nome completo.
+  document.getElementById('fieldCodigo').style.display = 'none';
+  document.getElementById('fieldNome').style.display = r==='empregador' ? 'block' : 'none';
+  document.getElementById('loginDesc').textContent = r==='funcionaria'
+    ? 'Primeiro acesso: use o e-mail cadastrado pelo empregador e crie sua senha'
+    : 'Preencha os dados para se cadastrar';
+  if (isRegistering) {
+    document.getElementById('loginTitle').textContent = r==='funcionaria' ? 'Primeiro acesso' : 'Criar conta';
+    document.getElementById('btnLogin').textContent = r==='funcionaria' ? 'Ativar acesso' : 'Criar conta';
+  }
 }
 function showRegister() {
   isRegistering = true;
-  document.getElementById('loginTitle').textContent = 'Criar conta';
-  document.getElementById('loginDesc').textContent = 'Preencha os dados para se cadastrar';
-  document.getElementById('btnLogin').textContent = 'Criar conta';
+  document.getElementById('loginTitle').textContent = selectedRole==='funcionaria' ? 'Primeiro acesso' : 'Criar conta';
+  document.getElementById('btnLogin').textContent = selectedRole==='funcionaria' ? 'Ativar acesso' : 'Criar conta';
   document.getElementById('roleTabs').style.display = 'flex';
-  document.getElementById('fieldNome').style.display = 'block';
-  document.getElementById('fieldCodigo').style.display = selectedRole==='funcionaria'?'block':'none';
+  selectRole(selectedRole);
   document.getElementById('loginSwitch').style.display = 'none';
   document.getElementById('registerSwitch').style.display = 'block';
   document.getElementById('loginErr').style.display = 'none';
@@ -492,47 +523,43 @@ async function doLogin() {
 
   try {
     if (isRegistering) {
-      const nome = document.getElementById('inputNome').value.trim();
-      if (!nome) { showErr('Informe seu nome completo.'); btn.disabled=false; return; }
       if (senha.length < 6) { showErr('Senha deve ter ao menos 6 caracteres.'); btn.disabled=false; return; }
 
-      let houseCode;
-      let codeToValidate = null;
       if (selectedRole === 'empregador') {
-        houseCode = 'CASA-' + Math.random().toString(36).slice(2,6).toUpperCase();
+        const nome = document.getElementById('inputNome').value.trim();
+        if (!nome) { showErr('Informe seu nome completo.'); btn.disabled=false; return; }
+        const houseCode = 'CASA-' + Math.random().toString(36).slice(2,6).toUpperCase();
+        window._signupInProgress = true;
+        const cred = await createUserWithEmailAndPassword(auth, email, senha);
+        const profile = { email, nome, role: 'empregador', houseCode };
+        await setDoc(doc(db,'users',cred.user.uid), profile);
+        await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
+        window._signupInProgress = false;
+        currentUser = { uid: cred.user.uid, ...profile };
       } else {
-        const code = document.getElementById('inputCodigo').value.trim().toUpperCase();
-        if (!code) { showErr('Informe o código da casa.'); btn.disabled=false; return; }
-        houseCode = code;
-        codeToValidate = code;
-      }
-
-      // 1) cria o login primeiro (assim a pessoa fica autenticada para ler os dados)
-      window._signupInProgress = true;
-      const cred = await createUserWithEmailAndPassword(auth, email, senha);
-
-      // 2) se for funcionária, agora (já autenticada) valida se a casa existe
-      if (codeToValidate) {
-        const q = query(collection(db,'users'), where('role','==','empregador'), where('houseCode','==',codeToValidate));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          // código inválido: desfaz a conta recém-criada e avisa
+        // PRIMEIRO ACESSO DA FUNCIONÁRIA:
+        // o e-mail precisa ter sido pré-cadastrado pelo empregador (coleção convites).
+        window._signupInProgress = true;
+        const cred = await createUserWithEmailAndPassword(auth, email, senha);
+        const conviteSnap = await getDoc(doc(db,'convites',email));
+        if (!conviteSnap.exists() || conviteSnap.data().usado) {
           window._signupInProgress = false;
           try { await cred.user.delete(); } catch(_) {}
-          showErr('Código de casa não encontrado. Confira com o empregador.');
+          showErr(conviteSnap.exists()
+            ? 'Este e-mail já foi ativado. Use "Entrar" com sua senha.'
+            : 'E-mail não cadastrado. Peça ao empregador para cadastrá-lo primeiro.');
           btn.disabled = false;
           return;
         }
+        const convite = conviteSnap.data();
+        const profile = { email, nome: convite.nome, role: 'funcionaria', houseCode: convite.houseCode };
+        await setDoc(doc(db,'users',cred.user.uid), profile);
+        await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
+        await setDoc(doc(db,'convites',email), { usado: true, uid: cred.user.uid }, { merge: true });
+        window._signupInProgress = false;
+        currentUser = { uid: cred.user.uid, ...profile };
       }
 
-      // 3) grava o perfil e a configuração ANTES de liberar o fluxo de login
-      const profile = { email, nome, role: selectedRole, houseCode };
-      await setDoc(doc(db,'users',cred.user.uid), profile);
-      await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
-
-      // 4) perfil gravado — agora libera e entra no app
-      window._signupInProgress = false;
-      currentUser = { uid: cred.user.uid, ...profile };
       document.getElementById('loginWrap').style.display = 'none';
       document.getElementById('appWrap').style.display = 'flex';
       await initApp();
@@ -743,6 +770,7 @@ async function checkAlerts() {
     if (employees.length===0) allAlerts=[{type:'info',msg:'Nenhuma funcionária vinculada. Código: '+currentUser.houseCode}];
     renderAlerts(allAlerts, 'alertsEmpregadorBanner');
     renderEmployeeList(employees);
+    renderInvites();
   }
 }
 
@@ -841,6 +869,54 @@ document.addEventListener('click', (e)=>{
   }
 });
 
+// ════ CONVITES (pré-cadastro de funcionárias) ════
+function openInviteModal() {
+  document.getElementById('iNome').value = '';
+  document.getElementById('iEmail').value = '';
+  document.getElementById('inviteModal').classList.add('open');
+}
+function closeInviteModal(){ document.getElementById('inviteModal').classList.remove('open'); }
+
+async function saveInvite() {
+  const nome = document.getElementById('iNome').value.trim();
+  const email = document.getElementById('iEmail').value.trim().toLowerCase();
+  if (!nome || !email || !email.includes('@')) { showToast('Preencha nome e e-mail válidos'); return; }
+  try {
+    await setDoc(doc(db,'convites',email), {
+      nome, email, houseCode: currentUser.houseCode,
+      usado: false, criadoEm: new Date().toISOString()
+    });
+    closeInviteModal();
+    showToast('Funcionária cadastrada ✓ Ela já pode ativar o acesso');
+    renderInvites();
+  } catch(e){ console.error(e); showToast('Erro ao cadastrar'); }
+}
+
+async function deleteInvite(email) {
+  if (!confirm('Remover o pré-cadastro de ' + email + '?')) return;
+  try { await deleteDoc(doc(db,'convites',email)); renderInvites(); showToast('Removido'); }
+  catch(e){ console.error(e); showToast('Erro ao remover'); }
+}
+
+async function renderInvites() {
+  const c = document.getElementById('invitesList');
+  if (!c || !currentUser || currentUser.role !== 'empregador') return;
+  try {
+    const q = query(collection(db,'convites'), where('houseCode','==',currentUser.houseCode), where('usado','==',false));
+    const snap = await getDocs(q);
+    if (snap.empty) { c.innerHTML = ''; return; }
+    c.innerHTML = '<div class="section-header" style="padding-top:6px"><div class="section-sub">Aguardando primeiro acesso</div></div>' +
+      snap.docs.map(d => {
+        const v = d.data();
+        return `<div class="employee-card" style="opacity:0.85"><div class="emp-header" style="cursor:default">
+          <div class="emp-avatar">⏳</div>
+          <div style="flex:1"><div class="emp-name">${v.nome}</div><div class="emp-status">${v.email}</div></div>
+          <button class="emp-edit-btn" onclick="deleteInvite('${v.email}')">Remover</button>
+        </div></div>`;
+      }).join('');
+  } catch(e){ console.error(e); }
+}
+
 // ════ ADICIONAR / CORRIGIR PONTO MANUAL ════
 let editingPoint = null; // { empUid, recordId } ou { empUid } para novo
 function openPointModal(empUid, recordId=null) {
@@ -919,7 +995,8 @@ function updateButtons() {
   document.getElementById('btnEntrada').className = has('entrada')?'action-btn disabled':'action-btn primary';
   document.getElementById('btnAlmocoSaida').className = (has('entrada')&&!has('almoco-saida'))?'action-btn secondary':'action-btn disabled';
   document.getElementById('btnAlmocoVolta').className = (has('almoco-saida')&&!has('almoco-volta'))?'action-btn blue':'action-btn disabled';
-  const canSaida = has('entrada')&&!has('saida')&&(!has('almoco-saida')||has('almoco-volta'));
+  // Saída SÓ é liberada com o almoço completo registrado (saída e volta)
+  const canSaida = has('entrada')&&!has('saida')&&has('almoco-saida')&&has('almoco-volta');
   document.getElementById('btnSaida').className = canSaida?'action-btn':'action-btn disabled';
   document.getElementById('statusEntrada').className = 'status-pill '+(has('entrada')?'active':'');
   document.getElementById('statusAlmoco').className = 'status-pill '+(has('almoco-saida')?(has('almoco-volta')?'active':'warn'):'');
@@ -952,7 +1029,20 @@ function updateSummary() {
 
 // ════ CÂMERA ════
 const typeLabels={entrada:['ENTRADA','Início do turno'],saida:['SAÍDA','Fim do turno'],'almoco-saida':['SAÍDA ALMOÇO','Pausa para refeição'],'almoco-volta':['VOLTA ALMOÇO','Retorno do almoço']};
+const ALMOCO_MINIMO_MIN = 60; // 1 hora de almoço, mínimo legal
+
 async function openCamera(type) {
+  // Validação: volta do almoço só após 1h da saída
+  if (type === 'almoco-volta') {
+    const as = todayRecordsFor(currentUser.uid).find(r=>r.type==='almoco-saida');
+    if (as) {
+      const decorrido = Math.floor((Date.now() - new Date(as.ts)) / 60000);
+      if (decorrido < ALMOCO_MINIMO_MIN) {
+        showToast(`Almoço mínimo de 1h — faltam ${ALMOCO_MINIMO_MIN - decorrido} min`);
+        return;
+      }
+    }
+  }
   currentType=type;
   document.getElementById('cameraType').textContent=typeLabels[type][0];
   document.getElementById('cameraLabel').textContent=typeLabels[type][1];
@@ -989,6 +1079,15 @@ function retryPhoto() {
   document.getElementById('photoConfirm').classList.remove('open');
 }
 async function saveRecord() {
+  // Defesa extra: volta do almoço antes de 1h não é gravada
+  if (currentType === 'almoco-volta') {
+    const as = todayRecordsFor(currentUser.uid).find(r=>r.type==='almoco-saida');
+    if (as && (Date.now() - new Date(as.ts)) / 60000 < ALMOCO_MINIMO_MIN) {
+      showToast('Almoço mínimo de 1h ainda não completou');
+      closeCamera();
+      return;
+    }
+  }
   const btn=document.getElementById('btnSave'); btn.disabled=true;
   try {
     const ts=new Date().toISOString();
