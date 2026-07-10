@@ -769,6 +769,12 @@ async function checkAlerts() {
     }
     if (employees.length===0) allAlerts=[{type:'info',msg:'Nenhuma funcionária vinculada. Código: '+currentUser.houseCode}];
     renderAlerts(allAlerts, 'alertsEmpregadorBanner');
+    // carrega os contratos privados da casa para exibir no painel
+    try {
+      const ctSnap = await getDocs(query(collection(db,'contratos'), where('houseCode','==',currentUser.houseCode)));
+      window._contractCache = {};
+      ctSnap.docs.forEach(d => { window._contractCache[d.id] = d.data(); });
+    } catch(e) { console.error('contratos:', e); window._contractCache = window._contractCache || {}; }
     renderEmployeeList(employees);
     renderInvites();
   }
@@ -792,12 +798,13 @@ function renderEmployeeList(employees) {
     const id='emp_'+emp.uid;
     const fmtR=v=>v?Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const diasMap={0:'Dom',1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb'};
+    const ct = (window._contractCache||{})[emp.uid] || {};
     let contractHtml;
-    if (emp.salario || emp.jornadaDiaria) {
-      const dias=(emp.diasTrabalho||[]).map(d=>diasMap[d]).join(', ')||'—';
+    if (ct.salario || ct.jornadaDiaria) {
+      const dias=(ct.diasTrabalho||[]).map(d=>diasMap[d]).join(', ')||'—';
       contractHtml=`<div class="emp-contract">
-        <div class="contract-item"><div class="lbl">Salário</div><div class="v">R$ ${fmtR(emp.salario)}</div></div>
-        <div class="contract-item"><div class="lbl">Jornada</div><div class="v">${emp.jornadaDiaria||'—'}h/dia</div></div>
+        <div class="contract-item"><div class="lbl">Salário</div><div class="v">R$ ${fmtR(ct.salario)}</div></div>
+        <div class="contract-item"><div class="lbl">Jornada</div><div class="v">${ct.jornadaDiaria||'—'}h/dia</div></div>
         <div class="contract-item"><div class="lbl">Dias</div><div class="v" style="font-family:'DM Sans'">${dias}</div></div>
       </div>`;
     } else {
@@ -823,17 +830,18 @@ function renderEmployeeList(employees) {
 }
 function toggleEmpRecords(id){ document.getElementById(id).classList.toggle('open'); }
 
-// ════ DADOS CONTRATUAIS ════
+// ════ DADOS CONTRATUAIS (coleção privada 'contratos' — só o empregador lê/escreve) ════
 let editingEmpUid = null;
 function openContractModal(uid) {
   const emp = (window._empCache||[]).find(e=>e.uid===uid);
   if (!emp) return;
   editingEmpUid = uid;
+  const ct = (window._contractCache||{})[uid] || {};
   document.getElementById('contractEmpName').textContent = emp.nome;
-  document.getElementById('fSalario').value = emp.salario || '';
-  document.getElementById('fJornada').value = emp.jornadaDiaria || '';
-  document.getElementById('fAdmissao').value = emp.admissao || '';
-  const dias = emp.diasTrabalho || [1,2,3,4,5];
+  document.getElementById('fSalario').value = ct.salario || '';
+  document.getElementById('fJornada').value = ct.jornadaDiaria || '';
+  document.getElementById('fAdmissao').value = ct.admissao || '';
+  const dias = ct.diasTrabalho || [1,2,3,4,5];
   document.querySelectorAll('#fDias .day-chip').forEach(chip=>{
     const d = parseInt(chip.dataset.d);
     chip.className = 'day-chip' + (dias.includes(d)?' on':'');
@@ -849,9 +857,12 @@ async function saveContract() {
     jornadaDiaria: parseFloat(document.getElementById('fJornada').value) || null,
     diasTrabalho: dias.length ? dias : [1,2,3,4,5],
     admissao: document.getElementById('fAdmissao').value || null,
+    houseCode: currentUser.houseCode,
   };
   try {
-    await setDoc(doc(db,'users',editingEmpUid), dados, { merge: true });
+    await setDoc(doc(db,'contratos',editingEmpUid), dados);
+    window._contractCache = window._contractCache || {};
+    window._contractCache[editingEmpUid] = dados;
     closeContractModal();
     showToast('Dados contratuais salvos ✓');
     checkAlerts();
