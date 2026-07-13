@@ -55,40 +55,55 @@
     .alert-icon { font-size: 16px; flex-shrink: 0; }
     .screen { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
     .screen.active { display: flex; }
-    .clock-hero { background: var(--accent); color: white; padding: 28px 24px 24px; text-align: center; }
+    .clock-hero { background: var(--accent); color: white; padding: 14px 24px 12px; text-align: center; }
     .clock-hero .greeting { font-size: 13px; opacity: 0.8; margin-bottom: 3px; }
-    .clock-hero .name { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
-    .clock-display { font-family: 'DM Mono', monospace; font-size: 46px; font-weight: 500; letter-spacing: 2px; line-height: 1; }
+    .clock-hero .name { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+    .clock-display { font-family: 'DM Mono', monospace; font-size: 38px; font-weight: 500; letter-spacing: 2px; line-height: 1; }
     .clock-date { font-size: 13px; opacity: 0.7; margin-top: 6px; }
-    .status-bar { display: flex; gap: 8px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .status-bar { display: flex; gap: 8px; padding: 9px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
     .status-pill { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 100px; font-size: 12px; font-weight: 500; background: var(--surface2); color: var(--ink2); }
     .status-pill.active { background: var(--accent-light); color: var(--accent); }
     .status-pill.warn { background: var(--warn-light); color: var(--warn); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
-    .action-btn { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 18px 14px; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; }
+    .action-btn { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 12px; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .action-btn:active { transform: scale(0.97); }
     .action-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
     .action-btn.secondary { background: var(--warn-light); border-color: var(--warn); color: var(--warn); }
     .action-btn.blue { background: #EAF4FF; border-color: #3498db; color: #2176b5; }
     .action-btn.disabled { opacity: 0.35; pointer-events: none; }
-    .action-icon { font-size: 26px; line-height: 1; }
+    .action-icon { font-size: 22px; line-height: 1; }
     .action-label { font-size: 13px; font-weight: 600; }
     .action-sub { font-size: 11px; opacity: 0.7; }
-    .summary-card { margin: 0 16px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-    .summary-header { background: var(--ink); color: white; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .summary-card { margin: 0 16px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .summary-header { background: var(--ink); color: white; padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; }
     .summary-header .label { font-size: 12px; opacity: 0.6; }
     .summary-header .value { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
-    .summary-rows { padding: 4px 0; }
-    .summary-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
-    .summary-row:last-child { border-bottom: none; }
+    .summary-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; }
+    .summary-row { display: flex; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; gap: 8px; background: var(--surface2); }
+    .summary-row:last-child { border-bottom: 1px solid var(--border); }
     .summary-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .summary-row .key { font-size: 13px; color: var(--ink2); flex: 1; }
+    .summary-row .key { font-size: 12px; color: var(--ink2); flex: 1; }
     .summary-row .val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
-    .section-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .section-header { padding: 12px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
     .section-title { font-size: 16px; font-weight: 600; }
     .section-sub { font-size: 12px; color: var(--ink3); }
     .timeline { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .ms-block { margin: 0 16px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .ms-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .ms-month { font-size: 14px; font-weight: 600; text-transform: capitalize; }
+    .ms-total { font-size: 12px; color: var(--ink2); font-family: 'DM Mono', monospace; }
+    .ms-list { padding: 4px 0; }
+    .ms-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+    .ms-row:last-child { border-bottom: none; }
+    .ms-day { font-size: 13px; color: var(--ink2); }
+    .ms-wd { color: var(--ink3); font-size: 12px; margin-right: 5px; }
+    .ms-val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+    .ms-ok { color: var(--accent); }
+    .ms-open { color: #2176b5; }
+    .ms-warn { color: var(--warn); }
+    .ms-none { color: var(--ink3); }
+    .ms-empty { padding: 16px; text-align: center; color: var(--ink3); font-size: 13px; }
     .record-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; display: flex; align-items: center; gap: 13px; box-shadow: var(--shadow); }
     .record-photo { width: 46px; height: 46px; border-radius: 10px; background: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
     .record-photo img { width: 100%; height: 100%; object-fit: cover; }
@@ -192,9 +207,24 @@
     .emp-rec-row .rec-edit { opacity: 0.5; cursor: pointer; font-size: 14px; padding: 2px 6px; }
     .emp-rec-row .rec-edit:hover { opacity: 1; }
     .rec-adjusted { font-size: 10px; color: var(--warn); font-weight: 600; margin-left: 4px; }
+    .rec-fora { font-size: 10px; color: #c0392b; font-weight: 600; margin-left: 4px; }
+    .settings-btn-sm { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .consent-label { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--ink2); font-weight: 500; text-transform: none; letter-spacing: 0; cursor: pointer; line-height: 1.4; }
+    .consent-label input { margin-top: 2px; flex-shrink: 0; }
     .type-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .type-opt { padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); font-size: 13px; font-weight: 600; color: var(--ink2); cursor: pointer; text-align: center; }
     .type-opt.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .frow textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; }
+    .self-correct-btn { width: calc(100% - 32px); margin: 0 16px 12px; padding: 11px; border: 1.5px dashed var(--border); border-radius: 10px; background: none; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .rec-pending { font-size: 10px; color: #b7791f; font-weight: 600; margin-left: 4px; }
+    .ms-confirm-btn { width: calc(100% - 24px); margin: 8px 12px 12px; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .ms-confirmed { padding: 10px 16px; font-size: 12px; color: var(--accent); font-weight: 600; border-top: 1px solid var(--border); }
+    .pending-card { margin: 0 16px 10px; padding: 12px 14px; background: #fff8ec; border: 1px solid #f0d9a8; border-radius: 12px; }
+    .pending-top { font-size: 13px; color: var(--ink); }
+    .pending-just { font-size: 13px; color: var(--ink2); margin: 6px 0 10px; font-style: italic; }
+    .pending-actions { display: flex; gap: 8px; }
+    .pending-ok { flex: 1; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .pending-no { flex: 1; padding: 8px; background: none; color: #c0392b; border: 1px solid #e0b4ac; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .btn-form-delete { background: var(--danger-light); color: var(--danger); flex: 1; }
     canvas { display: none; }
   </style>
@@ -231,7 +261,10 @@
       <label>Senha</label>
       <input type="password" id="inputSenha" placeholder="********" />
     </div>
-    <div class="field" id="fieldCodigo" style="display:none">
+    <div class="field" id="fieldConsent" style="display:none">
+        <label class="consent-label"><input type="checkbox" id="inputConsent" /> <span>Autorizo o registro da minha foto e localização no momento do ponto, conforme a LGPD.</span></label>
+      </div>
+      <div class="field" id="fieldCodigo" style="display:none">
       <label>Código da casa (fornecido pelo empregador)</label>
       <input type="text" id="inputCodigo" placeholder="Ex: CASA-1234" style="text-transform:uppercase" />
     </div>
@@ -271,8 +304,8 @@
       <button class="action-btn disabled" id="btnAlmocoSaida" onclick="openCamera('almoco-saida')"><div class="action-icon">🍽️</div><div class="action-label">Saída Almoço</div><div class="action-sub">Pausar turno</div></button>
       <button class="action-btn disabled" id="btnAlmocoVolta" onclick="openCamera('almoco-volta')"><div class="action-icon">↩️</div><div class="action-label">Volta Almoço</div><div class="action-sub">Retomar turno</div></button>
     </div>
-    <div class="section-header"><div class="section-title">Resumo de hoje</div></div>
-    <div class="summary-card">
+    <button class="self-correct-btn" onclick="openSelfCorrect()">🕘 Esqueci de bater um ponto</button>
+      <div class="summary-card">
       <div class="summary-header">
         <div><div class="label">Horas trabalhadas</div><div class="value" id="horasTrabalhadas">--:--</div></div>
         <div style="text-align:right"><div class="label">Status</div><div class="value" id="statusAtual" style="font-size:14px">Aguardando</div></div>
@@ -293,11 +326,13 @@
     </div>
     <div class="alerts-banner" id="alertsEmpregadorBanner"></div>
     <div id="invitesList"></div>
+    <div id="pendingList"></div>
     <div id="employeeList" style="margin-top:10px"></div>
   </div>
 
   <div class="screen" id="screenHistorico">
     <div class="section-header"><div><div class="section-title">Histórico</div><div class="section-sub" id="histCount">Carregando...</div></div></div>
+    <div id="monthSummary"></div>
     <div class="timeline" id="timeline"></div>
   </div>
 
@@ -317,6 +352,10 @@
       </div>
       <div class="settings-group" id="employerCodeCard" style="display:none">
         <div class="settings-row"><div class="icon">🔑</div><div class="text"><div class="key">Código da casa</div><div class="desc">Compartilhe com a funcionária</div></div><span id="employerCodeDisplay" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--accent)"></span></div>
+      </div>
+      <div class="settings-group" id="geofenceCard" style="display:none">
+        <div class="settings-row"><div class="icon">🏠</div><div class="text"><div class="key">Local da casa (cerca)</div><div class="desc" id="geoStatus">Não definido</div></div><button class="settings-btn-sm" onclick="setHouseLocation()">Definir aqui</button></div>
+        <div class="settings-row"><div class="icon">📏</div><div class="text"><div class="key">Raio (metros)</div><div class="desc">Tolerância da cerca</div></div><input class="settings-input" id="geoRaio" type="number" value="60" min="20" max="500" onchange="saveHouseRaio()" /></div>
       </div>
     </div>
   </div>
@@ -409,6 +448,10 @@
         <label>Horário</label>
         <input type="time" id="pHora" />
       </div>
+      <div class="frow" id="pJustRow" style="display:none">
+        <label>Justificativa (por que esqueceu?)</label>
+        <textarea id="pJustificativa" rows="2" placeholder="Ex: esqueci de bater a saída"></textarea>
+      </div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closePointModal()">Cancelar</button>
         <button class="btn-form-delete" id="pBtnDelete" style="display:none" onclick="deletePoint()">Excluir</button>
@@ -469,6 +512,8 @@ const DEFAULT_CONFIG = { entrada:'07:00', almoco:'12:00', voltaAlmoco:'13:00', s
 Object.assign(window, {
   selectRole, showRegister, showLogin, doLogin, doLogout,
   showScreen, openCamera, closeCamera, snapPhoto, retryPhoto, saveRecord,
+  setHouseLocation, saveHouseRaio,
+  openSelfCorrect, confirmFolha, approvePending, rejectPending,
   saveConfig, toggleNotif, toggleLoc, toggleEmpRecords,
   openContractModal, closeContractModal, saveContract,
   openPointModal, closePointModal, savePoint, deletePoint,
@@ -483,6 +528,7 @@ function selectRole(r) {
   // Funcionária: primeiro acesso (e-mail pré-cadastrado + senha). Empregador: nome completo.
   document.getElementById('fieldCodigo').style.display = 'none';
   document.getElementById('fieldNome').style.display = r==='empregador' ? 'block' : 'none';
+  document.getElementById('fieldConsent').style.display = (isRegistering && r==='funcionaria') ? 'block' : 'none';
   document.getElementById('loginDesc').textContent = r==='funcionaria'
     ? 'Primeiro acesso: use o e-mail cadastrado pelo empregador e crie sua senha'
     : 'Preencha os dados para se cadastrar';
@@ -509,6 +555,7 @@ function showLogin() {
   document.getElementById('roleTabs').style.display = 'none';
   document.getElementById('fieldNome').style.display = 'none';
   document.getElementById('fieldCodigo').style.display = 'none';
+  document.getElementById('fieldConsent').style.display = 'none';
   document.getElementById('loginSwitch').style.display = 'block';
   document.getElementById('registerSwitch').style.display = 'none';
   document.getElementById('loginErr').style.display = 'none';
@@ -542,6 +589,10 @@ async function doLogin() {
       } else {
         // PRIMEIRO ACESSO DA FUNCIONÁRIA:
         // o e-mail precisa ter sido pré-cadastrado pelo empregador (coleção convites).
+        if (!document.getElementById('inputConsent').checked) {
+          showErr('É necessário autorizar o registro de foto e localização (LGPD).');
+          btn.disabled = false; return;
+        }
         window._signupInProgress = true;
         const cred = await createUserWithEmailAndPassword(auth, email, senha);
         const conviteSnap = await getDoc(doc(db,'convites',email));
@@ -555,7 +606,7 @@ async function doLogin() {
           return;
         }
         const convite = conviteSnap.data();
-        const profile = { email, nome: convite.nome, role: 'funcionaria', houseCode: convite.houseCode };
+        const profile = { email, nome: convite.nome, role: 'funcionaria', houseCode: convite.houseCode, consent: { foto: true, loc: true, ts: new Date().toISOString() } };
         await setDoc(doc(db,'users',cred.user.uid), profile);
         await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
         await setDoc(doc(db,'convites',email), { usado: true, uid: cred.user.uid }, { merge: true });
@@ -588,6 +639,7 @@ async function doLogout() {
   if (recordsUnsub) recordsUnsub();
   clearInterval(alertCheckInterval);
   notifTimers.forEach(clearTimeout);
+  stopGeoMonitor();
   await signOut(auth);
 }
 
@@ -637,6 +689,7 @@ async function initApp() {
   // carrega config do usuário
   const cfgSnap = await getDoc(doc(db,'configs',currentUser.uid));
   config = cfgSnap.exists() ? { ...DEFAULT_CONFIG, ...cfgSnap.data() } : { ...DEFAULT_CONFIG };
+  await loadHouseGeo();
 
   document.getElementById('heroName').textContent = currentUser.nome.split(' ')[0];
   const badge = document.getElementById('userBadge');
@@ -648,6 +701,8 @@ async function initApp() {
     document.getElementById('navRegistro').style.display = 'none';
     document.getElementById('screenRegistro').style.display = 'none';
     document.getElementById('employerCodeCard').style.display = 'block';
+    document.getElementById('geofenceCard').style.display = 'block';
+    populateGeoUI();
     document.getElementById('employerCodeDisplay').textContent = currentUser.houseCode;
     document.getElementById('employerCode').textContent = 'Código: ' + currentUser.houseCode;
     showScreen('Empregador');
@@ -664,6 +719,7 @@ async function initApp() {
   if (config.notif) requestNotifPermission();
   scheduleReminders();
   alertCheckInterval = setInterval(checkAlerts, 60000);
+  if (currentUser.role === 'funcionaria') { startGeoMonitor(); checkArrivalOnOpen(); }
 }
 
 // ════ FIRESTORE: REGISTROS EM TEMPO REAL ════
@@ -680,6 +736,7 @@ function subscribeRecords() {
     records.sort((a,b) => new Date(a.ts) - new Date(b.ts));
     updateButtons();
     renderTimeline();
+    renderMonthSummary();
     checkAlerts();
   }, (err) => { console.error(err); showToast('Erro ao carregar registros'); });
 }
@@ -758,7 +815,8 @@ function renderAlerts(alerts, id) {
 async function checkAlerts() {
   if (!currentUser) return;
   if (currentUser.role === 'funcionaria') {
-    renderAlerts(buildAlerts(todayRecordsFor(currentUser.uid), config), 'alertsBanner');
+    const mineAll = records.filter(r=>r.userId===currentUser.uid);
+    renderAlerts([...buildAlerts(todayRecordsFor(currentUser.uid), config), ...buildExtraAlerts(mineAll)], 'alertsBanner');
   } else {
     // empregador: lista funcionárias + alertas de cada
     const q = query(collection(db,'users'), where('role','==','funcionaria'), where('houseCode','==',currentUser.houseCode));
@@ -769,7 +827,8 @@ async function checkAlerts() {
       const today = records.filter(r=>r.userId===emp.uid && new Date(r.ts).toDateString()===new Date().toDateString());
       const cfgSnap = await getDoc(doc(db,'configs',emp.uid));
       const empCfg = cfgSnap.exists()? {...DEFAULT_CONFIG, ...cfgSnap.data()} : DEFAULT_CONFIG;
-      allAlerts = allAlerts.concat(buildAlerts(today, empCfg).map(a=>({...a, msg:`${emp.nome.split(' ')[0]}: ${a.msg}`})));
+      const empAll = records.filter(r=>r.userId===emp.uid);
+      allAlerts = allAlerts.concat([...buildAlerts(today, empCfg), ...buildExtraAlerts(empAll)].map(a=>({...a, msg:`${emp.nome.split(' ')[0]}: ${a.msg}`})));
     }
     if (employees.length===0) allAlerts=[{type:'info',msg:'Nenhuma funcionária vinculada. Código: '+currentUser.houseCode}];
     renderAlerts(allAlerts, 'alertsEmpregadorBanner');
@@ -780,6 +839,7 @@ async function checkAlerts() {
       ctSnap.docs.forEach(d => { window._contractCache[d.id] = d.data(); });
     } catch(e) { console.error('contratos:', e); window._contractCache = window._contractCache || {}; }
     renderEmployeeList(employees);
+    renderPending(employees);
     renderInvites();
   }
 }
@@ -798,7 +858,7 @@ function renderEmployeeList(employees) {
     if (has('saida')){status='Turno encerrado';bcl='ok';}
     else if (has('almoco-saida')&&!has('almoco-volta')){status='Em almoço';bcl='warn';}
     else if (has('entrada')){status='Trabalhando';bcl='ok';}
-    const recs=today.sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(r=>`<div class="emp-rec-row"><div style="width:8px;height:8px;border-radius:50%;background:${bc[r.type]};flex-shrink:0"></div><div style="flex:1;font-size:13px;color:var(--ink2)">${tn[r.type]}${r.adjusted?'<span class="rec-adjusted">ajustado</span>':''}</div><div style="font-family:'DM Mono',monospace;font-size:13px">${fmt(r.ts)}</div><span class="rec-edit" onclick="openPointModal('${emp.uid}','${r.id}')">✏️</span></div>`).join('');
+    const recs=today.sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(r=>`<div class="emp-rec-row"><div style="width:8px;height:8px;border-radius:50%;background:${bc[r.type]};flex-shrink:0"></div><div style="flex:1;font-size:13px;color:var(--ink2)">${tn[r.type]}${r.adjusted?'<span class="rec-adjusted">ajustado</span>':''}${r.foraCerca?'<span class="rec-fora">fora da cerca</span>':''}${r.pendente?'<span class="rec-pending">pendente</span>':''}</div><div style="font-family:'DM Mono',monospace;font-size:13px">${fmt(r.ts)}</div><span class="rec-edit" onclick="openPointModal('${emp.uid}','${r.id}')">✏️</span></div>`).join('');
     const id='emp_'+emp.uid;
     const fmtR=v=>v?Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const diasMap={0:'Dom',1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb'};
@@ -939,6 +999,7 @@ function openPointModal(empUid, recordId=null) {
   if (!emp) return;
   editingPoint = { empUid, recordId };
   document.getElementById('pointEmpName').textContent = emp.nome;
+  { const jr=document.getElementById('pJustRow'); if(jr) jr.style.display='none'; }
   document.querySelectorAll('#pTipo .type-opt').forEach(o=>o.classList.remove('on'));
 
   if (recordId) {
@@ -968,6 +1029,21 @@ async function savePoint() {
   if (!data || !hora) { showToast('Preencha data e horário'); return; }
   const tipo = tipoEl.dataset.t;
   const ts = new Date(`${data}T${hora}:00`).toISOString();
+  if (editingPoint.self) {
+    const just=(document.getElementById('pJustificativa').value||'').trim();
+    if(!just){ showToast('Explique por que está corrigindo'); return; }
+    try {
+      await addDoc(collection(db,'records'), {
+        type: tipo, ts, photoUrl: null, location: null,
+        userId: currentUser.uid, userName: currentUser.nome,
+        houseCode: currentUser.houseCode || null,
+        adjusted: true, origem: 'MANUAL', pendente: true, justificativa: just,
+        createdAt: serverTimestamp()
+      });
+      showToast('Ponto enviado para revisão ✓'); closePointModal();
+    } catch(e){ console.error(e); showToast('Erro ao enviar'); }
+    return;
+  }
   const emp = (window._empCache||[]).find(e=>e.uid===editingPoint.empUid);
 
   try {
@@ -1109,6 +1185,8 @@ async function saveRecord() {
   const btn=document.getElementById('btnSave'); btn.disabled=true;
   try {
     const ts=new Date().toISOString();
+    let foraCerca=null, distCasa=null;
+    { const ll=locLatLng(); if(houseGeo && ll){ distCasa=Math.round(distMeters(ll.la, ll.lo, houseGeo.lat, houseGeo.lng)); foraCerca = distCasa > (houseGeo.raio||60); if(foraCerca) showToast('⚠️ Você está a ~'+distCasa+'m da casa'); } }
     // 1. upload da foto
     const photoRef=ref(storage,`pontos/${currentUser.uid}/${Date.now()}.jpg`);
     await uploadString(photoRef, capturedDataUrl, 'data_url');
@@ -1119,6 +1197,7 @@ async function saveRecord() {
       photoUrl, location: currentLocation,
       userId: currentUser.uid, userName: currentUser.nome,
       houseCode: currentUser.houseCode || null,
+      foraCerca, distCasa,
       createdAt: serverTimestamp()
     });
     closeCamera();
@@ -1145,6 +1224,202 @@ function renderTimeline() {
   }).join('');
 }
 
+// ════ RESUMO MENSAL (funcionária) ════
+function dayHours(recs) {
+  const get=t=>recs.find(r=>r.type===t);
+  const entrada=get('entrada');
+  if(!entrada) return {label:'—', cls:'ms-none', min:0};
+  const saida=get('saida');
+  const isToday = new Date(entrada.ts).toDateString()===new Date().toDateString();
+  if(!saida && !isToday) return {label:'incompleto', cls:'ms-warn', min:0};
+  const base = saida ? new Date(saida.ts) : new Date();
+  let work = base - new Date(entrada.ts);
+  const as=get('almoco-saida'), av=get('almoco-volta');
+  if(as&&av) work -= (new Date(av.ts)-new Date(as.ts));
+  else if(as&&!av) work -= (new Date()-new Date(as.ts));
+  const min=Math.max(0,Math.floor(work/60000));
+  const hh=`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+  return saida ? {label:hh, cls:'ms-ok', min} : {label:hh, cls:'ms-open', min:0};
+}
+function renderMonthSummary() {
+  const el=document.getElementById('monthSummary');
+  if(!el) return;
+  if(!currentUser || currentUser.role==='empregador'){ el.innerHTML=''; return; }
+  const mine=records.filter(r=>r.userId===currentUser.uid);
+  const byDay={};
+  mine.forEach(r=>{ const d=new Date(r.ts); const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; (byDay[k]=byDay[k]||{date:d,recs:[]}).recs.push(r); });
+  const now=new Date();
+  const prev=new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const targets=[{y:now.getFullYear(),m:now.getMonth(),atual:true},{y:prev.getFullYear(),m:prev.getMonth(),atual:false}];
+  const conf=(currentUser.confirmacoes)||{};
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  let html='';
+  targets.forEach(({y,m,atual})=>{
+    const days=Object.values(byDay).filter(g=>g.date.getFullYear()===y&&g.date.getMonth()===m).sort((a,b)=>b.date-a.date);
+    let total=0;
+    const rows=days.map(g=>{
+      const info=dayHours(g.recs); total+=info.min;
+      const wd=cap(g.date.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''));
+      const dm=g.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      return `<div class="ms-row"><div class="ms-day"><span class="ms-wd">${wd}</span>${dm}</div><div class="ms-val ${info.cls}">${info.label}</div></div>`;
+    }).join('');
+    const th=`${Math.floor(total/60)}h${String(total%60).padStart(2,'0')}`;
+    const mName=cap(new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}));
+    const key=y+'-'+m;
+    let footer='';
+    if(!atual && days.length){
+      footer = conf[key]
+        ? `<div class="ms-confirmed">✓ Folha confirmada em ${new Date(conf[key]).toLocaleDateString('pt-BR')}</div>`
+        : `<button class="ms-confirm-btn" onclick="confirmFolha('${key}')">Confirmar folha de ${mName}</button>`;
+    }
+    html+=`<div class="ms-block"><div class="ms-head"><div class="ms-month">${mName}</div><div class="ms-total">${days.length} dia(s) · ${th}</div></div>${days.length?`<div class="ms-list">${rows}</div>`:`<div class="ms-empty">Sem registros neste mês</div>`}${footer}</div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ════ AUTOCORREÇÃO / CONFIRMAÇÃO / AVISOS (leva B) ════
+function buildExtraAlerts(recs) {
+  const alerts=[]; const now=new Date(); const todayStr=now.toDateString();
+  const byDay={};
+  recs.forEach(r=>{ const d=new Date(r.ts); const k=d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); (byDay[k]=byDay[k]||{date:d,recs:[]}).recs.push(r); });
+  const incompletos=[];
+  Object.values(byDay).forEach(g=>{
+    if(g.date.getMonth()!==now.getMonth() || g.date.getFullYear()!==now.getFullYear()) return;
+    if(g.date.toDateString()===todayStr) return;
+    const has=t=>g.recs.some(r=>r.type===t);
+    if(has('entrada') && !has('saida')) incompletos.push(g.date);
+    else if(has('almoco-saida') && !has('almoco-volta')) incompletos.push(g.date);
+  });
+  if(incompletos.length){
+    const ds=incompletos.sort((a,b)=>b-a).slice(0,4).map(d=>d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})).join(', ');
+    alerts.push({type:'warn', msg:'ponto incompleto em '+incompletos.length+' dia(s) do mês ('+ds+')'});
+  }
+  const monday=new Date(now); const dow=(monday.getDay()+6)%7; monday.setDate(monday.getDate()-dow); monday.setHours(0,0,0,0);
+  let weekMin=0;
+  Object.values(byDay).forEach(g=>{ if(g.date>=monday) weekMin+=dayHours(g.recs).min; });
+  if(weekMin > 44*60) alerts.push({type:'warn', msg:'semana atual com '+Math.floor(weekMin/60)+'h'+String(weekMin%60).padStart(2,'0')+' (acima de 44h)'});
+  const fora=recs.filter(r=>r.foraCerca && new Date(r.ts).getMonth()===now.getMonth() && new Date(r.ts).getFullYear()===now.getFullYear()).length;
+  if(fora) alerts.push({type:'info', msg:fora+' ponto(s) fora da cerca este mês'});
+  return alerts;
+}
+function openSelfCorrect() {
+  editingPoint = { self: true };
+  document.getElementById('pointModalTitle').textContent = 'Adicionar ponto esquecido';
+  document.getElementById('pointEmpName').textContent = 'Será enviado para o empregador revisar';
+  document.querySelectorAll('#pTipo .type-opt').forEach(o=>o.classList.remove('on'));
+  document.getElementById('pBtnDelete').style.display = 'none';
+  document.getElementById('pData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pHora').value = '';
+  const jr=document.getElementById('pJustRow'); if(jr) jr.style.display='block';
+  const jt=document.getElementById('pJustificativa'); if(jt) jt.value='';
+  document.getElementById('pointModal').classList.add('open');
+}
+function confirmFolha(key) {
+  if(!currentUser) return;
+  const ts=new Date().toISOString();
+  const conf=Object.assign({}, currentUser.confirmacoes||{}, {[key]: ts});
+  currentUser.confirmacoes=conf;
+  setDoc(doc(db,'users',currentUser.uid), { confirmacoes: conf }, { merge: true })
+    .then(()=>{ showToast('Folha confirmada ✓'); renderMonthSummary(); })
+    .catch(e=>{ console.error(e); showToast('Erro ao confirmar'); });
+}
+function renderPending(employees) {
+  const el=document.getElementById('pendingList'); if(!el) return;
+  const nameOf=uid=>((employees||[]).find(e=>e.uid===uid)?.nome||'').split(' ')[0];
+  const pend=records.filter(r=>r.pendente).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  if(!pend.length){ el.innerHTML=''; return; }
+  const tn={entrada:'Entrada','almoco-saida':'Saída almoço','almoco-volta':'Volta almoço',saida:'Saída'};
+  el.innerHTML='<div class="section-header" style="padding:4px 16px 4px"><div class="section-title" style="font-size:15px">Correções aguardando revisão</div></div>'+
+    pend.map(r=>{
+      const d=new Date(r.ts);
+      const dm=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toTimeString().slice(0,5);
+      const j=(r.justificativa||'').replace(/</g,'&lt;');
+      return '<div class="pending-card"><div class="pending-top"><b>'+nameOf(r.userId)+'</b> · '+(tn[r.type]||r.type)+' · '+dm+'</div><div class="pending-just">"'+j+'"</div><div class="pending-actions"><button class="pending-ok" onclick="approvePending(\''+r.id+'\')">Aprovar</button><button class="pending-no" onclick="rejectPending(\''+r.id+'\')">Excluir</button></div></div>';
+    }).join('');
+}
+function approvePending(id) {
+  updateDoc(doc(db,'records',id), { pendente: false, revisadoAt: serverTimestamp() })
+    .then(()=>showToast('Correção aprovada ✓')).catch(e=>{ console.error(e); showToast('Erro'); });
+}
+function rejectPending(id) {
+  if(!confirm('Excluir esta correção?')) return;
+  deleteDoc(doc(db,'records',id)).then(()=>showToast('Correção removida')).catch(e=>{ console.error(e); showToast('Erro'); });
+}
+
+// ════ CERCA VIRTUAL (geofence) ════
+let houseGeo = null, geoWatchId = null, geoInside = null;
+function distMeters(la1, lo1, la2, lo2){
+  const R=6371000, rad=x=>x*Math.PI/180;
+  const dLa=rad(la2-la1), dLo=rad(lo2-lo1);
+  const a=Math.sin(dLa/2)**2 + Math.cos(rad(la1))*Math.cos(rad(la2))*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function locLatLng(){
+  const cl = currentLocation || {};
+  const la = (typeof cl.lat==='number') ? cl.lat : cl.latitude;
+  const lo = (typeof cl.lng==='number') ? cl.lng : cl.longitude;
+  return (typeof la==='number' && typeof lo==='number') ? {la, lo} : null;
+}
+async function loadHouseGeo(){
+  houseGeo = null;
+  try {
+    const s = await getDoc(doc(db,'casas', currentUser.houseCode));
+    if (s.exists()){ const d=s.data(); if(typeof d.lat==='number' && typeof d.lng==='number') houseGeo={lat:d.lat, lng:d.lng, raio:d.raio||60}; }
+  } catch(e){ console.error('loadHouseGeo', e); }
+}
+function populateGeoUI(){
+  const st=document.getElementById('geoStatus'); if(!st) return;
+  if(houseGeo){ st.textContent='Definido · raio '+houseGeo.raio+'m'; const ri=document.getElementById('geoRaio'); if(ri) ri.value=houseGeo.raio; }
+  else st.textContent='Não definido';
+}
+function setHouseLocation(){
+  if(!navigator.geolocation){ showToast('GPS indisponível'); return; }
+  showToast('Obtendo localização...');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const raio=parseInt(document.getElementById('geoRaio').value)||60;
+    const geo={ lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6), raio };
+    try { await setDoc(doc(db,'casas', currentUser.houseCode), geo); houseGeo=geo; populateGeoUI(); showToast('Local da casa definido ✓'); }
+    catch(e){ console.error(e); showToast('Erro ao salvar o local'); }
+  }, ()=>showToast('Não foi possível obter a localização'), { enableHighAccuracy:true, timeout:15000 });
+}
+async function saveHouseRaio(){
+  const raio=parseInt(document.getElementById('geoRaio').value)||60;
+  if(!houseGeo) return;
+  try { await setDoc(doc(db,'casas', currentUser.houseCode), { lat:houseGeo.lat, lng:houseGeo.lng, raio }); houseGeo.raio=raio; populateGeoUI(); showToast('Raio atualizado'); }
+  catch(e){ console.error(e); }
+}
+function geoNotify(msg){
+  if('Notification' in window && Notification.permission==='granted') new Notification('PontoCasa', { body: msg });
+  else showToast(msg);
+}
+function startGeoMonitor(){
+  stopGeoMonitor();
+  if(currentUser?.role!=='funcionaria' || !houseGeo || !config.loc || !navigator.geolocation) return;
+  geoInside=null;
+  geoWatchId=navigator.geolocation.watchPosition(pos=>{
+    const d=distMeters(pos.coords.latitude, pos.coords.longitude, houseGeo.lat, houseGeo.lng);
+    const inside=d<=(houseGeo.raio||60);
+    if(geoInside===null){ geoInside=inside; return; }
+    if(inside && !geoInside){
+      geoInside=true;
+      if(!todayRecordsFor(currentUser.uid).some(r=>r.type==='entrada')) geoNotify('🟢 Você chegou! Não esqueça de bater a entrada.');
+    } else if(!inside && geoInside){
+      geoInside=false;
+      const t=todayRecordsFor(currentUser.uid), has=x=>t.some(r=>r.type===x);
+      if(has('entrada') && has('almoco-saida') && has('almoco-volta') && !has('saida')) geoNotify('🔴 Você saiu da casa. Bateu a saída?');
+    }
+  }, ()=>{}, { enableHighAccuracy:true, maximumAge:20000, timeout:27000 });
+}
+function stopGeoMonitor(){ if(geoWatchId!==null && navigator.geolocation){ navigator.geolocation.clearWatch(geoWatchId); geoWatchId=null; } }
+function checkArrivalOnOpen(){
+  if(currentUser?.role!=='funcionaria' || !houseGeo || !config.loc || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const d=distMeters(pos.coords.latitude, pos.coords.longitude, houseGeo.lat, houseGeo.lng);
+    if(d<=(houseGeo.raio||60) && !todayRecordsFor(currentUser.uid).some(r=>r.type==='entrada'))
+      showToast('🟢 Você está na casa — não esqueça de bater a entrada.');
+  }, ()=>{}, { maximumAge:20000, timeout:15000 });
+}
+
 // ════ NOTIFICAÇÕES ════
 function requestNotifPermission(){ if('Notification'in window&&Notification.permission==='default')Notification.requestPermission(); }
 function scheduleReminders() {
@@ -1164,7 +1439,8 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
-  if(name==='Historico') renderTimeline();
+  if(name==='Historico'){ renderTimeline(); renderMonthSummary(); }
+  if(name==='Registro') checkArrivalOnOpen();
   if(name==='Empregador') checkAlerts();
 }
 
