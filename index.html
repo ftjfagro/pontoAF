@@ -1930,7 +1930,7 @@ function openCorrecaoModal(prefDs, prefTipos){
   document.getElementById('corHora').value = '';
   document.getElementById('corJustificativa').value = '';
   document.getElementById('corAceite').checked = false;
-  document.getElementById('corNome').value = '';
+  document.getElementById('corNome').value = (currentUser && currentUser.nome) || '';
   document.getElementById('corTermoTexto').textContent = TERMO_TEXTO();
   forcarNovaAssinatura = false;
   refreshAssinaturaUI();
