@@ -580,10 +580,20 @@
       </div>
       <div class="field"><label>Data</label><input type="date" id="corData" /></div>
       <div class="field"><label>Horário</label><input type="time" id="corHora" /></div>
-      <div class="field"><label>Por que você esqueceu de bater o ponto?</label><textarea id="corJustificativa" placeholder="Ex: esqueci ao sair correndo para pegar o ônibus"></textarea></div>
+      <div class="field"><label>O que aconteceu?</label><textarea id="corJustificativa" placeholder="Ex: esqueci"></textarea></div>
       <div class="termo-box" id="corTermoTexto"></div>
       <label class="termo-check"><input type="checkbox" id="corAceite" onchange="updateCorSalvarBtn()" /><span>Estou de acordo com o termo acima e confirmo que as informações que inseri são verdadeiras.</span></label>
-      <div class="field"><label>Digite seu nome completo para confirmar (assinatura)</label><input type="text" id="corNome" placeholder="Nome completo" oninput="updateCorSalvarBtn()" /></div>
+      <div class="field" id="corAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="corAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="reassinarCorrecao()">Assinar novamente</button>
+      </div>
+      <div class="field" id="corAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="corSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="sigStart(event)" onpointermove="sigMove(event)" onpointerup="sigEnd(event)" onpointerleave="sigEnd(event)" onpointercancel="sigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="limparAssinatura()">Limpar</button>
+      </div>
+      <div class="field"><label>Nome completo (confirma a assinatura)</label><input type="text" id="corNome" placeholder="Nome completo" oninput="updateCorSalvarBtn()" /></div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeCorrecaoModal()">Cancelar</button>
         <button class="btn-form-save" id="corSalvarBtn" disabled onclick="saveCorrecao()">Enviar para aprovação</button>
@@ -665,6 +675,7 @@ Object.assign(window, {
   setDashView, setDashEmp, toggleWeek, consolidarMes, reabrirMes,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
   openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao,
+  sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
 
@@ -1820,8 +1831,69 @@ const TERMO_TEXTO = uid => 'Declaro que esqueci de bater o ponto no horário inf
 let corTipoSel = null;
 let correcoesPendentesCache = [];
 let rejeitarAlvoId = null;
+let forcarNovaAssinatura = false;
+let sigCtx = null, sigDrawing = false, sigHasStroke = false;
 
 function typeLabel(t){ return {entrada:'Entrada', saida:'Saída', 'almoco-saida':'Saída Almoço', 'almoco-volta':'Volta Almoço'}[t] || t; }
+
+// ── assinatura desenhada no celular (pointer events cobrem toque e mouse) ──
+function initSigCanvas(){
+  const c = document.getElementById('corSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  sigCtx = c.getContext('2d');
+  sigCtx.scale(dpr,dpr);
+  sigCtx.lineWidth = 2.3;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+  sigCtx.strokeStyle = '#1A1816';
+  sigHasStroke = false;
+  sigDrawing = false;
+}
+function sigPos(e, c){
+  const rect = c.getBoundingClientRect();
+  return { x: e.clientX-rect.left, y: e.clientY-rect.top };
+}
+function sigStart(e){
+  e.preventDefault();
+  sigDrawing = true;
+  const p = sigPos(e, e.currentTarget);
+  sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);
+}
+function sigMove(e){
+  if (!sigDrawing || !sigCtx) return;
+  e.preventDefault();
+  const p = sigPos(e, e.currentTarget);
+  sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
+  if (!sigHasStroke) { sigHasStroke = true; updateCorSalvarBtn(); }
+}
+function sigEnd(){ sigDrawing = false; }
+function limparAssinatura(){
+  const c = document.getElementById('corSigCanvas');
+  if (!c || !sigCtx) return;
+  sigCtx.clearRect(0,0,c.width,c.height);
+  sigHasStroke = false;
+  updateCorSalvarBtn();
+}
+function reassinarCorrecao(){
+  forcarNovaAssinatura = true;
+  refreshAssinaturaUI();
+  initSigCanvas();
+}
+function refreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !forcarNovaAssinatura);
+  document.getElementById('corAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('corAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('corAssinaturaPreview').src = salva;
+}
+function assinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !forcarNovaAssinatura) return true;
+  return sigHasStroke;
+}
 
 async function mesEstaFechado(uid, ym){
   try {
@@ -1847,8 +1919,11 @@ function openCorrecaoModal(prefDs, prefTipos){
   document.getElementById('corAceite').checked = false;
   document.getElementById('corNome').value = '';
   document.getElementById('corTermoTexto').textContent = TERMO_TEXTO();
-  updateCorSalvarBtn();
+  forcarNovaAssinatura = false;
+  refreshAssinaturaUI();
   document.getElementById('correcaoModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('corAssinaturaPadBox').style.display !== 'none') initSigCanvas(); });
+  updateCorSalvarBtn();
 }
 function closeCorrecaoModal(){ document.getElementById('correcaoModal').classList.remove('open'); }
 function setCorTipo(t){
@@ -1858,7 +1933,7 @@ function setCorTipo(t){
 function updateCorSalvarBtn(){
   const nome = document.getElementById('corNome').value.trim();
   const aceite = document.getElementById('corAceite').checked;
-  document.getElementById('corSalvarBtn').disabled = !(nome.length >= 3 && aceite);
+  document.getElementById('corSalvarBtn').disabled = !(nome.length >= 3 && aceite && assinaturaOk());
 }
 async function saveCorrecao(){
   const data = document.getElementById('corData').value;
@@ -1867,7 +1942,8 @@ async function saveCorrecao(){
   const nome = document.getElementById('corNome').value.trim();
   if (!corTipoSel) { showToast('Escolha o tipo de registro'); return; }
   if (!data || !hora) { showToast('Preencha data e horário'); return; }
-  if (justificativa.length < 5) { showToast('Descreva rapidamente o motivo'); return; }
+  if (justificativa.length < 3) { showToast('Conte rapidamente o que houve'); return; }
+  if (!assinaturaOk()) { showToast('Assine no campo antes de enviar'); return; }
   if (nome.toLowerCase().replace(/\s+/g,' ') !== (currentUser.nome||'').toLowerCase().replace(/\s+/g,' ')) {
     if (!confirm('O nome digitado é diferente do seu nome de cadastro ('+currentUser.nome+'). Deseja continuar mesmo assim?')) return;
   }
@@ -1876,18 +1952,29 @@ async function saveCorrecao(){
     showToast('Este mês já foi fechado — peça ao empregador para reabrir antes de corrigir');
     return;
   }
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !forcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('corSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
   const ts = new Date(data+'T'+hora+':00').toISOString();
   try {
     await addDoc(collection(db,'correcoes'), {
       uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
       tipo: corTipoSel, ts, justificativa,
-      termoTexto: TERMO_TEXTO(), assinadoComo: nome, aceite: true,
+      termoTexto: TERMO_TEXTO(), assinadoComo: nome, aceite: true, assinaturaImg,
       status: 'pendente', criadoEm: new Date().toISOString()
     });
     closeCorrecaoModal();
     showToast('Enviado para aprovação ✓');
     renderMinhasCorrecoes();
   } catch(e){ console.error(e); showToast('Erro ao enviar correção'); }
+
 }
 
 // ── funcionária: dias com batida parcial (esqueceu de bater outro ponto do mesmo dia) ──
@@ -2063,7 +2150,11 @@ async function gerarTermoAjustesPDF(uid, ym){
     const termo = pdf.splitTextToSize(`Termo aceito: "${c.termoTexto}"`, W-2*M);
     pdf.setTextColor(120); pdf.text(termo, M, y); pdf.setTextColor(0); y += termo.length*12 + 4;
     const assinadoEm = c.criadoEm ? new Date(c.criadoEm).toLocaleString('pt-BR') : '—';
-    pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y); y += 20;
+    pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y);
+    if (c.assinaturaImg) {
+      try { pdf.addImage(c.assinaturaImg, 'PNG', W-M-70, y-14, 70, 28); } catch(e){ console.error('addImage assinatura', e); }
+    }
+    y += 30;
   });
 
   y += 20;
