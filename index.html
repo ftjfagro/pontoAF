@@ -4,12 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PontoCasa</title>
-  <link rel="apple-touch-icon" href="icon-180.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="PontoCasa" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2D6A4F" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PontoCasa" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -248,6 +250,12 @@
     .dayrow-date .dow { color:var(--ink3); font-weight:400; font-size:12px; margin-left:5px; }
     .dayrow-total { font-family:'DM Mono',monospace; font-size:13px; color:var(--ink2); }
     .dayrow-nums { display:flex; flex-wrap:wrap; gap:10px; margin-top:9px; }
+    .horarios-row { display:flex; flex-wrap:wrap; gap:7px; margin:8px 0; }
+    .horario-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ink2); background:var(--surface2); border-radius:100px; padding:3px 9px; }
+    .horario-item .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .horario-item b { font-family:'DM Mono',monospace; font-weight:500; color:var(--ink); }
+    .horario-item.falta { opacity:0.45; }
+    .horario-item.falta b { color:var(--ink3); }
     .dayrow-num { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--ink2); }
     .dayrow-num b { font-family:'DM Mono',monospace; font-size:12.5px; color:var(--ink); font-weight:500; }
     .dayrow.incomplete { border-style:dashed; border-color:#F5C49A; }
@@ -1557,6 +1565,16 @@ function dividirDia(trab, ds){
   const extra = delta > BANCO_CAP ? delta - BANCO_CAP : 0;
   return { jornada, banco, extra, trab, esperado };
 }
+function horariosDoDia(recs){
+  const get = t => recs.find(r=>r.type===t);
+  const fmt = r => r ? new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : null;
+  return {
+    entrada: fmt(get('entrada')),
+    almocoSaida: fmt(get('almoco-saida')),
+    almocoVolta: fmt(get('almoco-volta')),
+    saida: fmt(get('saida'))
+  };
+}
 function diasDoMes(uid, ym){
   const porDia = {};
   records.filter(r=>r.userId===uid).forEach(r=>{
@@ -1565,9 +1583,11 @@ function diasDoMes(uid, ym){
     (porDia[ds] = porDia[ds] || []).push(r);
   });
   return Object.keys(porDia).sort().map(ds=>{
-    const trab = minutosDoDia(porDia[ds]);
-    if (trab === null) return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0 };
-    return { ds, incompleto:false, ...dividirDia(trab, ds) };
+    const recs = porDia[ds];
+    const horarios = horariosDoDia(recs);
+    const trab = minutosDoDia(recs);
+    if (trab === null) return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
+    return { ds, incompleto:false, horarios, ...dividirDia(trab, ds) };
   });
 }
 function agregarMes(uid, ym){
@@ -1639,12 +1659,25 @@ function legenda(ag){
     <div class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>extra <b>${fmtHM(ag.extra)}</b></div>
   </div>`;
 }
+function horariosRow(h){
+  if (!h) return '';
+  const itens = [
+    ['var(--accent)','Ent.',h.entrada],
+    ['var(--warn)','Alm.',h.almocoSaida],
+    ['#3498db','Volta',h.almocoVolta],
+    ['var(--danger)','Saí.',h.saida]
+  ];
+  return `<div class="horarios-row">` + itens.map(([cor,label,val])=>
+    `<div class="horario-item${val?'':' falta'}"><span class="dot" style="background:${cor}"></span>${label} <b>${val||'--:--'}</b></div>`
+  ).join('') + `</div>`;
+}
 function linhaDia(d){
   const [Y,M,D] = d.ds.split('-').map(Number);
   const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
   if (d.incompleto) {
     return `<div class="dayrow incomplete">
       <div class="dayrow-top"><div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div><div class="dayrow-total" style="color:var(--warn)">⚠️ dia incompleto</div></div>
+      ${horariosRow(d.horarios)}
     </div>`;
   }
   const orc = Math.max(d.esperado || JORNADA_MIN, d.trab);
@@ -1653,6 +1686,7 @@ function linhaDia(d){
       <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}${d.esperado===0?' · exceção':''}</span></div>
       <div class="dayrow-total">${fmtHM(d.trab)}</div>
     </div>
+    ${horariosRow(d.horarios)}
     ${segbar({jornada:d.jornada, bancoPos:Math.max(0,d.banco), extra:d.extra}, orc, true)}
     <div class="dayrow-nums">
       <div class="dayrow-num"><span class="legend-dot" style="background:var(--accent)"></span>jornada <b>${fmtHM(d.jornada)}</b></div>
