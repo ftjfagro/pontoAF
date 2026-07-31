@@ -292,6 +292,15 @@
     .pend-approve { background:var(--accent); color:white; }
     .pend-reject { background:var(--danger-light); color:var(--danger); }
     .cor-report-btn { background:none; border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; color:var(--ink2); cursor:pointer; font-family:inherit; margin-top:10px; }
+    .revisar-box { background:var(--warn-light); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 12px; padding:11px 13px; }
+    .revisar-titulo { font-size:11px; font-weight:700; color:var(--warn); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; }
+    .revisar-item { background:var(--surface); border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .revisar-item:last-child { margin-bottom:0; }
+    .revisar-date { font-size:13.5px; font-weight:600; color:var(--ink); }
+    .revisar-date .dow { font-weight:400; color:var(--ink3); font-size:12px; }
+    .revisar-falta { font-size:12px; color:var(--ink2); margin-top:2px; }
+    .revisar-falta b { font-weight:600; color:var(--danger); }
+    .revisar-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -414,6 +423,7 @@
 
   <div class="screen" id="screenHistorico">
     <div class="section-header"><div><div class="section-title">Histórico</div><div class="section-sub" id="histCount">Carregando...</div></div></div>
+    <div id="diasParaRevisarBox"></div>
     <div class="hist-correction-bar" id="histCorrectionBar" style="display:none">
       <button class="btn-correction" onclick="openCorrecaoModal()">✏️ Corrigir ponto esquecido</button>
     </div>
@@ -1820,10 +1830,10 @@ async function mesEstaFechado(uid, ym){
   } catch(e){ console.error(e); return false; }
 }
 
-function openCorrecaoModal(){
-  corTipoSel = null;
-  document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.remove('on'));
-  document.getElementById('corData').value = ymdOf(new Date());
+function openCorrecaoModal(prefDs, prefTipo){
+  corTipoSel = prefTipo || null;
+  document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.toggle('on', !!(prefTipo && el.dataset.v===prefTipo)));
+  document.getElementById('corData').value = prefDs || ymdOf(new Date());
   document.getElementById('corData').max = ymdOf(new Date());
   document.getElementById('corHora').value = '';
   document.getElementById('corJustificativa').value = '';
@@ -1873,13 +1883,72 @@ async function saveCorrecao(){
   } catch(e){ console.error(e); showToast('Erro ao enviar correção'); }
 }
 
+// ── funcionária: dias com batida parcial (esqueceu de bater outro ponto do mesmo dia) ──
+let minhasCorrecoesRaw = [];
+let meusFechamentos = {};
+async function loadMeusFechamentos(){
+  try {
+    const sn = await getDocs(query(collection(db,'fechamentos'), where('uid','==',currentUser.uid)));
+    meusFechamentos = {};
+    sn.docs.forEach(d=>{ const v=d.data(); meusFechamentos[v.mes] = v.status; });
+  } catch(e){ console.error('meusFechamentos', e); meusFechamentos = {}; }
+}
+function computeDiasParaRevisar(){
+  const hoje = ymdOf(new Date());
+  const limite = new Date(); limite.setDate(limite.getDate()-60);
+  const limiteStr = ymdOf(limite);
+  const porDia = {};
+  records.forEach(r=>{
+    const ds = ymdOf(new Date(r.ts));
+    if (ds >= hoje || ds < limiteStr) return;
+    (porDia[ds] = porDia[ds] || []).push(r.type);
+  });
+  const pendentes = new Set(
+    minhasCorrecoesRaw.filter(c=>c.status!=='rejeitado').map(c=> ymdOf(new Date(c.ts))+'|'+c.tipo)
+  );
+  const out = [];
+  Object.keys(porDia).sort().forEach(ds=>{
+    if (meusFechamentos[ds.slice(0,7)] === 'fechado') return;
+    const tipos = porDia[ds];
+    const has = t => tipos.includes(t);
+    let faltando = [];
+    if (has('entrada') && !has('saida')) faltando.push('saida');
+    if (!has('entrada') && has('saida')) faltando.push('entrada');
+    if (has('almoco-saida') && !has('almoco-volta')) faltando.push('almoco-volta');
+    if (has('almoco-volta') && !has('almoco-saida')) faltando.push('almoco-saida');
+    faltando = faltando.filter(t => !pendentes.has(ds+'|'+t));
+    if (faltando.length) out.push({ ds, faltando });
+  });
+  return out;
+}
+function renderDiasParaRevisar(){
+  const box = document.getElementById('diasParaRevisarBox');
+  if (!box) return;
+  const lista = computeDiasParaRevisar();
+  if (!lista.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="revisar-box"><div class="revisar-titulo">${lista.length} dia${lista.length>1?'s':''} para você revisar</div>` +
+    lista.map(d=>{
+      const [Y,M,D] = d.ds.split('-').map(Number);
+      const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+      const faltStr = d.faltando.map(t=>`<b>${typeLabel(t)}</b>`).join(', ');
+      return `<div class="revisar-item">
+        <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
+        <div class="revisar-falta">Faltou: ${faltStr}</div></div>
+        <button class="revisar-btn" onclick="openCorrecaoModal('${d.ds}','${d.faltando[0]}')">Ajustar</button>
+      </div>`;
+    }).join('') + '</div>';
+}
+
 // ── funcionária: acompanha suas solicitações ──
 async function renderMinhasCorrecoes(){
   if (!currentUser || currentUser.role !== 'funcionaria') return;
   document.getElementById('histCorrectionBar').style.display = 'block';
   try {
     const sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',currentUser.uid)));
-    const list = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> new Date(b.criadoEm)-new Date(a.criadoEm)).slice(0,8);
+    minhasCorrecoesRaw = sn.docs.map(d=>({id:d.id, ...d.data()}));
+    await loadMeusFechamentos();
+    renderDiasParaRevisar();
+    const list = minhasCorrecoesRaw.slice().sort((a,b)=> new Date(b.criadoEm)-new Date(a.criadoEm)).slice(0,8);
     const el = document.getElementById('minhasCorrecoes');
     el.innerHTML = list.map(c=>{
       const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
