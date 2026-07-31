@@ -264,6 +264,34 @@
     .fer-add input[type=date] { flex:0 0 46%; }
     .fer-add input[type=text] { flex:1; }
     .fer-add input { padding:10px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; min-width:0; }
+    /* ═══ AUTOCORREÇÃO DE PONTO ═══ */
+    .hist-correction-bar { padding: 0 16px 12px; }
+    .btn-correction { width:100%; padding:12px; border:1.5px dashed var(--accent); border-radius:10px; background:var(--accent-light); color:var(--accent); font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .my-correction-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:0 16px 10px; padding:12px 14px; }
+    .my-correction-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .my-correction-type { font-size:13.5px; font-weight:600; }
+    .my-correction-when { font-family:'DM Mono',monospace; font-size:12px; color:var(--ink2); margin-top:2px; }
+    .cor-status { font-size:10px; font-weight:700; padding:3px 9px; border-radius:100px; text-transform:uppercase; letter-spacing:0.4px; flex-shrink:0; }
+    .cor-status.pendente { background:var(--warn-light); color:var(--warn); }
+    .cor-status.aprovado { background:var(--accent-light); color:var(--accent); }
+    .cor-status.rejeitado { background:var(--danger-light); color:var(--danger); }
+    .my-correction-just { font-size:12.5px; color:var(--ink2); margin-top:8px; line-height:1.4; }
+    .my-correction-motivo { font-size:12px; color:var(--danger); margin-top:6px; font-style:italic; }
+    .termo-box { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 13px; font-size:12.5px; color:var(--ink2); line-height:1.5; margin:12px 0; }
+    .termo-check { display:flex; align-items:flex-start; gap:10px; margin:12px 0; cursor:pointer; }
+    .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
+    .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
+    textarea.settings-input, textarea.field-input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; resize:vertical; min-height:70px; }
+    .pend-card { background:var(--surface); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 10px; padding:13px 14px; }
+    .pend-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+    .pend-name { font-size:13.5px; font-weight:600; }
+    .pend-when { font-family:'DM Mono',monospace; font-size:12px; color:var(--ink2); }
+    .pend-just { font-size:12.5px; color:var(--ink2); margin:8px 0; line-height:1.4; background:var(--surface2); border-radius:8px; padding:9px 11px; }
+    .pend-btns { display:flex; gap:8px; margin-top:4px; }
+    .pend-btns button { flex:1; padding:9px; border:none; border-radius:8px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .pend-approve { background:var(--accent); color:white; }
+    .pend-reject { background:var(--danger-light); color:var(--danger); }
+    .cor-report-btn { background:none; border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; color:var(--ink2); cursor:pointer; font-family:inherit; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -360,6 +388,7 @@
     </div>
     <div class="alerts-banner" id="alertsEmpregadorBanner"></div>
     <div id="invitesList"></div>
+    <div id="correcoesPendentesBox"></div>
     <div id="employeeList" style="margin-top:10px"></div>
   </div>
 
@@ -385,6 +414,10 @@
 
   <div class="screen" id="screenHistorico">
     <div class="section-header"><div><div class="section-title">Histórico</div><div class="section-sub" id="histCount">Carregando...</div></div></div>
+    <div class="hist-correction-bar" id="histCorrectionBar" style="display:none">
+      <button class="btn-correction" onclick="openCorrecaoModal()">✏️ Corrigir ponto esquecido</button>
+    </div>
+    <div id="minhasCorrecoes"></div>
     <div class="timeline" id="timeline"></div>
   </div>
 
@@ -522,6 +555,44 @@
     </div>
   </div>
 
+  <div class="form-modal" id="correcaoModal">
+    <div class="form-sheet">
+      <h3>Corrigir ponto esquecido</h3>
+      <div class="sub">Use quando você esqueceu de bater um ponto</div>
+      <div class="field">
+        <label>Tipo de registro</label>
+        <div class="type-picker" id="corTipo">
+          <div class="type-opt" data-v="entrada" onclick="setCorTipo('entrada')">Entrada</div>
+          <div class="type-opt" data-v="almoco-saida" onclick="setCorTipo('almoco-saida')">Saída Almoço</div>
+          <div class="type-opt" data-v="almoco-volta" onclick="setCorTipo('almoco-volta')">Volta Almoço</div>
+          <div class="type-opt" data-v="saida" onclick="setCorTipo('saida')">Saída</div>
+        </div>
+      </div>
+      <div class="field"><label>Data</label><input type="date" id="corData" /></div>
+      <div class="field"><label>Horário</label><input type="time" id="corHora" /></div>
+      <div class="field"><label>Por que você esqueceu de bater o ponto?</label><textarea id="corJustificativa" placeholder="Ex: esqueci ao sair correndo para pegar o ônibus"></textarea></div>
+      <div class="termo-box" id="corTermoTexto"></div>
+      <label class="termo-check"><input type="checkbox" id="corAceite" onchange="updateCorSalvarBtn()" /><span>Estou de acordo com o termo acima e confirmo que as informações que inseri são verdadeiras.</span></label>
+      <div class="field"><label>Digite seu nome completo para confirmar (assinatura)</label><input type="text" id="corNome" placeholder="Nome completo" oninput="updateCorSalvarBtn()" /></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeCorrecaoModal()">Cancelar</button>
+        <button class="btn-form-save" id="corSalvarBtn" disabled onclick="saveCorrecao()">Enviar para aprovação</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="rejeitarModal">
+    <div class="form-sheet">
+      <h3>Rejeitar correção</h3>
+      <div class="sub">Explique o motivo — a funcionária vai ver essa mensagem</div>
+      <div class="field"><textarea id="rejMotivo" placeholder="Ex: horário não confere com o esperado, confirme comigo antes"></textarea></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeRejeitarModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="confirmRejeitar()">Confirmar rejeição</button>
+      </div>
+    </div>
+  </div>
+
   <nav id="appNav">
     <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
     <button class="nav-btn" id="navEmpregador" style="display:none" onclick="showScreen('Empregador')"><div class="nav-icon">🏠</div><div class="nav-label">Painel</div></button>
@@ -533,6 +604,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
 // ════ FIREBASE IMPORTS ════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -581,7 +653,9 @@ Object.assign(window, {
   openInviteModal, closeInviteModal, saveInvite, deleteInvite,
   inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
   setDashView, setDashEmp, toggleWeek, consolidarMes, reabrirMes,
-  openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados
+  openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
+  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao,
+  aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
 
 // ════ LOGIN UI ════
@@ -895,6 +969,7 @@ async function checkAlerts() {
     } catch(e) { console.error('contratos:', e); window._contractCache = window._contractCache || {}; }
     renderEmployeeList(ativas, inativas);
     renderInvites();
+    loadCorrecoesPendentes();
   }
 }
 
@@ -1330,7 +1405,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
-  if(name==='Historico') renderTimeline();
+  if(name==='Historico') { renderTimeline(); renderMinhasCorrecoes(); }
   if(name==='Empregador') checkAlerts();
   if(name==='Dashboard') openDashboard();
 }
@@ -1648,6 +1723,7 @@ function renderDashboard(){
             <div class="dash-metric"><div class="lbl">A pagar</div><div class="v" style="color:var(--accent)">${fmtHM(a.pagar)}</div></div>
           </div>
           <button class="dash-close-btn" onclick="consolidarMes('${uid}','${ym}')">Consolidar ${labelMes(ym)}</button>
+          <button class="cor-report-btn" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
         </div>`;
       } else {
         html += `<div class="dash-card" style="padding:13px 16px">
@@ -1656,7 +1732,10 @@ function renderDashboard(){
               <div class="dash-card-sub">Pago ${fmtHM(f?f.pagarMin:a.pagar)} · pote ${fmtHM(f?f.poteMin:a.pote)} · extra ${fmtHM(f?f.extraMin:a.extra)}</div></div>
             <span class="dash-pill fechado">Fechado</span>
           </div>
-          <button class="dash-reopen" onclick="reabrirMes('${uid}','${ym}')">Reabrir para ajustes</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="dash-reopen" onclick="reabrirMes('${uid}','${ym}')">Reabrir para ajustes</button>
+            <button class="cor-report-btn" style="margin-top:0" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
+          </div>
         </div>`;
       }
     });
@@ -1724,6 +1803,206 @@ async function saveFeriados(){
     showToast('Feriados salvos ✓');
     renderDashboard();
   } catch(e){ console.error(e); showToast('Erro ao salvar feriados'); }
+}
+
+// ════ AUTOCORREÇÃO DE PONTO (funcionária relata, empregador aprova) ════
+const TERMO_TEXTO = uid => 'Declaro que esqueci de bater o ponto no horário informado acima e solicito a inclusão manual deste registro. Estou de acordo com o horário informado e confirmo que as informações prestadas são verdadeiras, para os devidos fins de registro de jornada.';
+let corTipoSel = null;
+let correcoesPendentesCache = [];
+let rejeitarAlvoId = null;
+
+function typeLabel(t){ return {entrada:'Entrada', saida:'Saída', 'almoco-saida':'Saída Almoço', 'almoco-volta':'Volta Almoço'}[t] || t; }
+
+async function mesEstaFechado(uid, ym){
+  try {
+    const sn = await getDoc(doc(db,'fechamentos', uid+'_'+ym));
+    return sn.exists() && sn.data().status === 'fechado';
+  } catch(e){ console.error(e); return false; }
+}
+
+function openCorrecaoModal(){
+  corTipoSel = null;
+  document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.remove('on'));
+  document.getElementById('corData').value = ymdOf(new Date());
+  document.getElementById('corData').max = ymdOf(new Date());
+  document.getElementById('corHora').value = '';
+  document.getElementById('corJustificativa').value = '';
+  document.getElementById('corAceite').checked = false;
+  document.getElementById('corNome').value = '';
+  document.getElementById('corTermoTexto').textContent = TERMO_TEXTO();
+  updateCorSalvarBtn();
+  document.getElementById('correcaoModal').classList.add('open');
+}
+function closeCorrecaoModal(){ document.getElementById('correcaoModal').classList.remove('open'); }
+function setCorTipo(t){
+  corTipoSel = t;
+  document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.toggle('on', el.dataset.v===t));
+}
+function updateCorSalvarBtn(){
+  const nome = document.getElementById('corNome').value.trim();
+  const aceite = document.getElementById('corAceite').checked;
+  document.getElementById('corSalvarBtn').disabled = !(nome.length >= 3 && aceite);
+}
+async function saveCorrecao(){
+  const data = document.getElementById('corData').value;
+  const hora = document.getElementById('corHora').value;
+  const justificativa = document.getElementById('corJustificativa').value.trim();
+  const nome = document.getElementById('corNome').value.trim();
+  if (!corTipoSel) { showToast('Escolha o tipo de registro'); return; }
+  if (!data || !hora) { showToast('Preencha data e horário'); return; }
+  if (justificativa.length < 5) { showToast('Descreva rapidamente o motivo'); return; }
+  if (nome.toLowerCase().replace(/\s+/g,' ') !== (currentUser.nome||'').toLowerCase().replace(/\s+/g,' ')) {
+    if (!confirm('O nome digitado é diferente do seu nome de cadastro ('+currentUser.nome+'). Deseja continuar mesmo assim?')) return;
+  }
+  const ym = data.slice(0,7);
+  if (await mesEstaFechado(currentUser.uid, ym)) {
+    showToast('Este mês já foi fechado — peça ao empregador para reabrir antes de corrigir');
+    return;
+  }
+  const ts = new Date(data+'T'+hora+':00').toISOString();
+  try {
+    await addDoc(collection(db,'correcoes'), {
+      uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
+      tipo: corTipoSel, ts, justificativa,
+      termoTexto: TERMO_TEXTO(), assinadoComo: nome, aceite: true,
+      status: 'pendente', criadoEm: new Date().toISOString()
+    });
+    closeCorrecaoModal();
+    showToast('Enviado para aprovação ✓');
+    renderMinhasCorrecoes();
+  } catch(e){ console.error(e); showToast('Erro ao enviar correção'); }
+}
+
+// ── funcionária: acompanha suas solicitações ──
+async function renderMinhasCorrecoes(){
+  if (!currentUser || currentUser.role !== 'funcionaria') return;
+  document.getElementById('histCorrectionBar').style.display = 'block';
+  try {
+    const sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',currentUser.uid)));
+    const list = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> new Date(b.criadoEm)-new Date(a.criadoEm)).slice(0,8);
+    const el = document.getElementById('minhasCorrecoes');
+    el.innerHTML = list.map(c=>{
+      const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `<div class="my-correction-card">
+        <div class="my-correction-top">
+          <div><div class="my-correction-type">${typeLabel(c.tipo)}</div><div class="my-correction-when">${dt}</div></div>
+          <span class="cor-status ${c.status}">${c.status}</span>
+        </div>
+        <div class="my-correction-just">${c.justificativa}</div>
+        ${c.status==='rejeitado' && c.motivoRejeicao ? `<div class="my-correction-motivo">Motivo: ${c.motivoRejeicao}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e){ console.error('minhasCorrecoes', e); }
+}
+
+// ── empregador: fila de aprovação ──
+async function loadCorrecoesPendentes(){
+  try {
+    const sn = await getDocs(query(collection(db,'correcoes'), where('houseCode','==',currentUser.houseCode), where('status','==','pendente')));
+    correcoesPendentesCache = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> new Date(a.ts)-new Date(b.ts));
+  } catch(e){ console.error('loadCorrecoesPendentes', e); correcoesPendentesCache = []; }
+  renderCorrecoesPendentes();
+}
+function renderCorrecoesPendentes(){
+  const box = document.getElementById('correcoesPendentesBox');
+  if (!box) return;
+  if (!correcoesPendentesCache.length) { box.innerHTML=''; return; }
+  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${correcoesPendentesCache.length})</div>` +
+    correcoesPendentesCache.map(c=>{
+      const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `<div class="pend-card">
+        <div class="pend-top"><div class="pend-name">${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
+        <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
+        <div class="pend-btns">
+          <button class="pend-reject" onclick="openRejeitarModal('${c.id}')">Rejeitar</button>
+          <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+async function aprovarCorrecao(id){
+  const c = correcoesPendentesCache.find(x=>x.id===id);
+  if (!c) return;
+  const ym = c.ts.slice(0,7);
+  if (await mesEstaFechado(c.uid, ym)) { showToast('Este mês já está fechado — reabra antes de aprovar'); return; }
+  try {
+    await addDoc(collection(db,'records'), {
+      userId: c.uid, userName: c.nome, houseCode: c.houseCode,
+      type: c.tipo, ts: c.ts, adjusted: true,
+      source: 'autocorrecao', correcaoId: id,
+      adjustedBy: currentUser.uid, adjustedAt: new Date().toISOString()
+    });
+    await updateDoc(doc(db,'correcoes',id), { status:'aprovado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+    showToast('Correção aprovada ✓');
+    await loadCorrecoesPendentes();
+  } catch(e){ console.error(e); showToast('Erro ao aprovar'); }
+}
+function openRejeitarModal(id){ rejeitarAlvoId = id; document.getElementById('rejMotivo').value=''; document.getElementById('rejeitarModal').classList.add('open'); }
+function closeRejeitarModal(){ document.getElementById('rejeitarModal').classList.remove('open'); rejeitarAlvoId = null; }
+async function confirmRejeitar(){
+  if (!rejeitarAlvoId) return;
+  const motivo = document.getElementById('rejMotivo').value.trim();
+  try {
+    await updateDoc(doc(db,'correcoes',rejeitarAlvoId), { status:'rejeitado', motivoRejeicao: motivo || 'Sem motivo informado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+    showToast('Correção rejeitada');
+    closeRejeitarModal();
+    await loadCorrecoesPendentes();
+  } catch(e){ console.error(e); showToast('Erro ao rejeitar'); }
+}
+
+// ── PDF do termo mensal (compilado das correções aprovadas) ──
+async function gerarTermoAjustesPDF(uid, ym){
+  let sn;
+  try {
+    sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',uid), where('status','==','aprovado')));
+  } catch(e){ console.error(e); showToast('Erro ao buscar correções'); return; }
+  const itens = sn.docs.map(d=>d.data()).filter(c=>c.ts.slice(0,7)===ym).sort((a,b)=>a.ts.localeCompare(b.ts));
+  if (!itens.length) { showToast('Nenhuma correção aprovada neste mês'); return; }
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  const nomeF = emp ? emp.nome : itens[0].nome;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 60;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+  pdf.text('Termo de Ciência de Ajustes de Ponto', M, y); y+=20;
+  pdf.setFontSize(11); pdf.setFont('helvetica','normal');
+  pdf.text('Registros manuais por esquecimento — solicitados e confirmados pela funcionária', M, y); y+=26;
+  pdf.setFont('helvetica','bold'); pdf.text('Funcionária:', M, y); pdf.setFont('helvetica','normal'); pdf.text(nomeF, M+80, y); y+=16;
+  pdf.setFont('helvetica','bold'); pdf.text('Empregador(a):', M, y); pdf.setFont('helvetica','normal'); pdf.text(currentUser.nome||'—', M+95, y); y+=16;
+  pdf.setFont('helvetica','bold'); pdf.text('Referência:', M, y); pdf.setFont('helvetica','normal'); pdf.text(labelMes(ym), M+75, y); y+=26;
+
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y+=18;
+
+  itens.forEach((c,idx)=>{
+    if (y > 700) { pdf.addPage(); y = 60; }
+    const dt = new Date(c.ts);
+    const dtStr = dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    pdf.text(`${idx+1}. ${typeLabel(c.tipo)} — ${dtStr}`, M, y); y+=15;
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
+    const just = pdf.splitTextToSize(`Justificativa: ${c.justificativa}`, W-2*M);
+    pdf.text(just, M, y); y += just.length*13 + 3;
+    const termo = pdf.splitTextToSize(`Termo aceito: "${c.termoTexto}"`, W-2*M);
+    pdf.setTextColor(120); pdf.text(termo, M, y); pdf.setTextColor(0); y += termo.length*12 + 4;
+    const assinadoEm = c.criadoEm ? new Date(c.criadoEm).toLocaleString('pt-BR') : '—';
+    pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y); y += 20;
+  });
+
+  y += 20;
+  if (y > 680) { pdf.addPage(); y = 60; }
+  pdf.setFontSize(10); pdf.setFont('helvetica','normal');
+  const declar = pdf.splitTextToSize(`Eu, ${nomeF}, declaro estar de acordo com todos os ajustes de ponto acima listados, referentes ao mês de ${labelMes(ym)}, tendo relatado pessoalmente cada esquecimento e confirmado os horários lançados.`, W-2*M);
+  pdf.text(declar, M, y); y += declar.length*13 + 40;
+
+  pdf.line(M, y, M+200, y); pdf.text('Assinatura da funcionária', M, y+14);
+  pdf.line(W-M-200, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-200, y+14);
+  y += 40;
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y);
+
+  pdf.save(`Termo-Ajustes-${nomeF.split(' ')[0]}-${ym}.pdf`);
 }
 
 // ════ TOAST ════
