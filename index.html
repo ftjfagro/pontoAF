@@ -479,7 +479,10 @@
   <div class="form-modal" id="contractModal">
     <div class="form-sheet">
       <h3>Dados contratuais</h3>
-      <div class="sub" id="contractEmpName">—</div>
+      <div class="frow">
+        <label>Nome completo</label>
+        <input type="text" id="fNomeCompleto" placeholder="Nome completo da funcionária" />
+      </div>
       <div class="frow">
         <label>Salário mensal (R$)</label>
         <input type="number" id="fSalario" placeholder="Ex: 1518" inputmode="decimal" />
@@ -606,7 +609,7 @@
         <canvas id="corSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="sigStart(event)" onpointermove="sigMove(event)" onpointerup="sigEnd(event)" onpointerleave="sigEnd(event)" onpointercancel="sigEnd(event)"></canvas>
         <button type="button" class="dash-reopen" onclick="limparAssinatura()">Limpar</button>
       </div>
-      <div class="field"><label>Nome completo (confirma a assinatura)</label><input type="text" id="corNome" placeholder="Nome completo" oninput="updateCorSalvarBtn()" /></div>
+      <div class="field"><label>Assinando como</label><div id="corNomeDisplay" style="font-size:14.5px;font-weight:600;color:var(--ink);padding:11px 14px;background:var(--surface2);border-radius:10px">—</div></div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeCorrecaoModal()">Cancelar</button>
         <button class="btn-form-save" id="corSalvarBtn" disabled onclick="saveCorrecao()">Enviar para aprovação</button>
@@ -1115,7 +1118,7 @@ function openContractModal(uid) {
   if (!emp) return;
   editingEmpUid = uid;
   const ct = (window._contractCache||{})[uid] || {};
-  document.getElementById('contractEmpName').textContent = emp.nome;
+  document.getElementById('fNomeCompleto').value = emp.nome || '';
   document.getElementById('fSalario').value = ct.salario || '';
   document.getElementById('fJornada').value = ct.jornadaDiaria || '';
   document.getElementById('fAdmissao').value = ct.admissao || '';
@@ -1129,6 +1132,8 @@ function openContractModal(uid) {
 function closeContractModal(){ document.getElementById('contractModal').classList.remove('open'); editingEmpUid=null; }
 async function saveContract() {
   if (!editingEmpUid) return;
+  const nomeCompleto = document.getElementById('fNomeCompleto').value.trim();
+  if (nomeCompleto.length < 3) { showToast('Informe o nome completo'); return; }
   const dias = [...document.querySelectorAll('#fDias .day-chip.on')].map(c=>parseInt(c.dataset.d));
   const dados = {
     salario: parseFloat(document.getElementById('fSalario').value) || null,
@@ -1138,11 +1143,16 @@ async function saveContract() {
     houseCode: currentUser.houseCode,
   };
   try {
+    const emp = (window._empCache||[]).find(e=>e.uid===editingEmpUid);
+    if (emp && nomeCompleto !== emp.nome) {
+      await updateDoc(doc(db,'users',editingEmpUid), { nome: nomeCompleto });
+      emp.nome = nomeCompleto;
+    }
     await setDoc(doc(db,'contratos',editingEmpUid), dados);
     window._contractCache = window._contractCache || {};
     window._contractCache[editingEmpUid] = dados;
     closeContractModal();
-    showToast('Dados contratuais salvos ✓');
+    showToast('Dados salvos ✓');
     checkAlerts();
   } catch(e){ console.error(e); showToast('Erro ao salvar'); }
 }
@@ -1930,7 +1940,7 @@ function openCorrecaoModal(prefDs, prefTipos){
   document.getElementById('corHora').value = '';
   document.getElementById('corJustificativa').value = '';
   document.getElementById('corAceite').checked = false;
-  document.getElementById('corNome').value = (currentUser && currentUser.nome) || '';
+  document.getElementById('corNomeDisplay').textContent = (currentUser && currentUser.nome) || '—';
   document.getElementById('corTermoTexto').textContent = TERMO_TEXTO();
   forcarNovaAssinatura = false;
   refreshAssinaturaUI();
@@ -1964,22 +1974,18 @@ function setCorTipo(t){
   document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.toggle('on', el.dataset.v===t));
 }
 function updateCorSalvarBtn(){
-  const nome = document.getElementById('corNome').value.trim();
   const aceite = document.getElementById('corAceite').checked;
-  document.getElementById('corSalvarBtn').disabled = !(nome.length >= 3 && aceite && assinaturaOk());
+  document.getElementById('corSalvarBtn').disabled = !(aceite && assinaturaOk());
 }
 async function saveCorrecao(){
   const data = document.getElementById('corData').value;
   const hora = document.getElementById('corHora').value;
   const justificativa = document.getElementById('corJustificativa').value.trim();
-  const nome = document.getElementById('corNome').value.trim();
+  const nome = currentUser.nome;
   if (!corTipoSel) { showToast('Escolha o tipo de registro'); return; }
   if (!data || !hora) { showToast('Preencha data e horário'); return; }
   if (justificativa.length < 3) { showToast('Conte rapidamente o que houve'); return; }
   if (!assinaturaOk()) { showToast('Assine no campo antes de enviar'); return; }
-  if (nome.toLowerCase().replace(/\s+/g,' ') !== (currentUser.nome||'').toLowerCase().replace(/\s+/g,' ')) {
-    if (!confirm('O nome digitado é diferente do seu nome de cadastro ('+currentUser.nome+'). Deseja continuar mesmo assim?')) return;
-  }
   const ym = data.slice(0,7);
   if (await mesEstaFechado(currentUser.uid, ym)) {
     showToast('Este mês já foi fechado — peça ao empregador para reabrir antes de corrigir');
