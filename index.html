@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PontoCasa</title>
+  <link rel="apple-touch-icon" href="icon-180.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="PontoCasa" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#2D6A4F" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -278,6 +284,12 @@
     .my-correction-just { font-size:12.5px; color:var(--ink2); margin-top:8px; line-height:1.4; }
     .my-correction-motivo { font-size:12px; color:var(--danger); margin-top:6px; font-style:italic; }
     .termo-box { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 13px; font-size:12.5px; color:var(--ink2); line-height:1.5; margin:12px 0; }
+    .cor-contexto { background:var(--accent-light); border:1px solid #A8D5BA; border-radius:10px; padding:10px 12px; margin:-4px 0 16px; }
+    .cor-contexto-titulo { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+    .cor-contexto-row { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink); padding:2px 0; }
+    .cor-contexto-row .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .cor-contexto-row b { font-family:'DM Mono',monospace; font-weight:500; margin-left:auto; }
+    .cor-contexto-vazio { font-size:12px; color:var(--ink2); }
     .termo-check { display:flex; align-items:flex-start; gap:10px; margin:12px 0; cursor:pointer; }
     .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
     .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
@@ -578,7 +590,8 @@
           <div class="type-opt" data-v="saida" onclick="setCorTipo('saida')">Saída</div>
         </div>
       </div>
-      <div class="field"><label>Data</label><input type="date" id="corData" /></div>
+      <div class="field"><label>Data</label><input type="date" id="corData" onchange="atualizarCorContexto()" /></div>
+      <div id="corContexto"></div>
       <div class="field"><label>Horário</label><input type="time" id="corHora" /></div>
       <div class="field"><label>O que aconteceu?</label><textarea id="corJustificativa" placeholder="Ex: esqueci"></textarea></div>
       <div class="termo-box" id="corTermoTexto"></div>
@@ -674,7 +687,7 @@ Object.assign(window, {
   inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
   setDashView, setDashEmp, toggleWeek, consolidarMes, reabrirMes,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
-  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao,
+  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1921,9 +1934,29 @@ function openCorrecaoModal(prefDs, prefTipos){
   document.getElementById('corTermoTexto').textContent = TERMO_TEXTO();
   forcarNovaAssinatura = false;
   refreshAssinaturaUI();
+  atualizarCorContexto();
   document.getElementById('correcaoModal').classList.add('open');
   requestAnimationFrame(()=>{ if (document.getElementById('corAssinaturaPadBox').style.display !== 'none') initSigCanvas(); });
   updateCorSalvarBtn();
+}
+function atualizarCorContexto(){
+  const box = document.getElementById('corContexto');
+  if (!box) return;
+  const ds = document.getElementById('corData').value;
+  if (!ds) { box.innerHTML = ''; return; }
+  const dotColor = { entrada:'var(--accent)', saida:'var(--danger)', 'almoco-saida':'var(--warn)', 'almoco-volta':'#3498db' };
+  const doDia = records
+    .filter(r => r.userId === currentUser.uid && ymdOf(new Date(r.ts)) === ds)
+    .sort((a,b)=> new Date(a.ts)-new Date(b.ts));
+  if (!doDia.length) {
+    box.innerHTML = `<div class="cor-contexto"><div class="cor-contexto-vazio">Nenhum outro ponto registrado nesse dia ainda.</div></div>`;
+    return;
+  }
+  box.innerHTML = `<div class="cor-contexto"><div class="cor-contexto-titulo">Já registrado nesse dia</div>` +
+    doDia.map(r=>{
+      const hora = new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="cor-contexto-row"><span class="dot" style="background:${dotColor[r.type]||'var(--ink3)'}"></span>${typeLabel(r.type)}<b>${hora}</b></div>`;
+    }).join('') + '</div>';
 }
 function closeCorrecaoModal(){ document.getElementById('correcaoModal').classList.remove('open'); }
 function setCorTipo(t){
