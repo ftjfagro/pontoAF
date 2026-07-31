@@ -570,7 +570,7 @@
       <h3>Corrigir ponto esquecido</h3>
       <div class="sub">Use quando você esqueceu de bater um ponto</div>
       <div class="field">
-        <label>Tipo de registro</label>
+        <label>Tipo de registro <span id="corTipoHint" style="font-weight:400;text-transform:none;color:var(--ink3);font-size:11px;letter-spacing:0"></span></label>
         <div class="type-picker" id="corTipo">
           <div class="type-opt" data-v="entrada" onclick="setCorTipo('entrada')">Entrada</div>
           <div class="type-opt" data-v="almoco-saida" onclick="setCorTipo('almoco-saida')">Saída Almoço</div>
@@ -1830,9 +1830,16 @@ async function mesEstaFechado(uid, ym){
   } catch(e){ console.error(e); return false; }
 }
 
-function openCorrecaoModal(prefDs, prefTipo){
-  corTipoSel = prefTipo || null;
-  document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.toggle('on', !!(prefTipo && el.dataset.v===prefTipo)));
+function openCorrecaoModal(prefDs, prefTipos){
+  const permitidos = prefTipos ? (Array.isArray(prefTipos) ? prefTipos : [prefTipos]) : null;
+  corTipoSel = permitidos && permitidos.length===1 ? permitidos[0] : null;
+  document.querySelectorAll('#corTipo .type-opt').forEach(el=>{
+    const v = el.dataset.v;
+    const permitido = !permitidos || permitidos.includes(v);
+    el.style.display = permitido ? '' : 'none';
+    el.classList.toggle('on', v === corTipoSel);
+  });
+  document.getElementById('corTipoHint').textContent = permitidos ? '— só o que faltou nesse dia' : '';
   document.getElementById('corData').value = prefDs || ymdOf(new Date());
   document.getElementById('corData').max = ymdOf(new Date());
   document.getElementById('corHora').value = '';
@@ -1934,7 +1941,7 @@ function renderDiasParaRevisar(){
       return `<div class="revisar-item">
         <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
         <div class="revisar-falta">Faltou: ${faltStr}</div></div>
-        <button class="revisar-btn" onclick="openCorrecaoModal('${d.ds}','${d.faltando[0]}')">Ajustar</button>
+        <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
       </div>`;
     }).join('') + '</div>';
 }
