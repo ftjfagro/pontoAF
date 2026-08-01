@@ -21,6 +21,7 @@
       --accent: #2D6A4F; --accent-light: #D8EDDF;
       --warn: #E07A2F; --warn-light: #FEF0E4;
       --danger: #C0392B; --danger-light: #FDECEA;
+      --folha: #2E75B6; --folha-light: #E5F1FB;
       --border: #E8E3DD; --radius: 14px;
       --shadow: 0 2px 12px rgba(0,0,0,0.07);
     }
@@ -444,7 +445,7 @@
   <div class="screen" id="screenFechamentos">
     <div class="section-header">
       <div><div class="section-title">Fechamentos</div><div class="section-sub">Períodos, vale-transporte e planilha</div></div>
-      <button onclick="abrirFechamento()" style="background:var(--ink);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📤 Fechar competência</button>
+      <button onclick="abrirFechamento()" style="background:var(--folha);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📊 Enviar para cálculo da folha</button>
     </div>
     <div class="dash-emp-tabs" id="fechEmpTabs"></div>
     <div id="fechBody"></div>
@@ -2469,8 +2470,8 @@ function renderFechamentos(){
       </div>`;
     } else {
       const statusPlanilha = f && f.enviadoPlanilhaEm
-        ? `<div class="vt-status-pago">📤 Enviado à planilha em ${new Date(f.enviadoPlanilhaEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`
-        : `<button class="cor-report-btn" style="margin-top:0;background:var(--ink);color:#fff" onclick="enviarParaPlanilha('${uid}','${ym}')">📤 Enviar para planilha</button>`;
+        ? `<div class="vt-status-pago">📊 Enviado para o cálculo da folha em ${new Date(f.enviadoPlanilhaEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`
+        : `<button class="cor-report-btn" style="margin-top:0;background:var(--folha);color:#fff" onclick="enviarParaPlanilha('${uid}','${ym}')">📊 Enviar para cálculo da folha</button>`;
       html += `<div class="dash-card" style="padding:13px 16px">
         <div class="dash-card-head" style="margin-bottom:0;align-items:center">
           <div><div class="dash-card-title" style="font-size:14px;color:var(--ink2)">${labelMes(ym)}</div>
