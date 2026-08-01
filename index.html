@@ -2882,15 +2882,25 @@ async function confirmRejeitar(){
 
 // ── PDF do termo mensal (compilado das correções aprovadas) ──
 async function gerarTermoAjustesPDF(uid, ym){
-  let sn;
+  let correcoesAprovadas = [];
   try {
-    sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',uid), where('status','==','aprovado')));
+    const sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',uid), where('status','==','aprovado')));
+    correcoesAprovadas = sn.docs.map(d=>d.data()).filter(c=>c.ts.slice(0,7)===ym);
   } catch(e){ console.error(e); showToast('Erro ao buscar correções'); return; }
-  const itens = sn.docs.map(d=>d.data()).filter(c=>c.ts.slice(0,7)===ym).sort((a,b)=>a.ts.localeCompare(b.ts));
-  if (!itens.length) { showToast('Nenhuma correção aprovada neste mês'); return; }
+
+  // ajustes feitos manualmente pelo empregador (pelo lápis/+ em Fechamentos), sem passar pela autocorreção
+  const ajustesManuais = records.filter(r =>
+    r.userId===uid && r.adjusted && r.source !== 'autocorrecao' && ymdOf(new Date(r.ts)).slice(0,7)===ym
+  );
+
+  const itensCorrecao = correcoesAprovadas.map(c=>({ origem:'correcao', ts:c.ts, ...c }));
+  const itensManuais = ajustesManuais.map(r=>({ origem:'manual', ts:r.ts, tipo:r.type, adjustedAt:r.adjustedAt }));
+  const itens = [...itensCorrecao, ...itensManuais].sort((a,b)=>a.ts.localeCompare(b.ts));
+
+  if (!itens.length) { showToast('Nenhum ajuste manual neste mês'); return; }
   if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
   const emp = (window._empCache||[]).find(e=>e.uid===uid);
-  const nomeF = emp ? emp.nome : itens[0].nome;
+  const nomeF = emp ? emp.nome : (itensCorrecao[0]?.nome || '');
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ unit:'pt', format:'a4' });
   const W = pdf.internal.pageSize.getWidth(), M = 48;
@@ -2898,7 +2908,7 @@ async function gerarTermoAjustesPDF(uid, ym){
   pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
   pdf.text('Termo de Ciência de Ajustes de Ponto', M, y); y+=20;
   pdf.setFontSize(11); pdf.setFont('helvetica','normal');
-  pdf.text('Registros manuais por esquecimento — solicitados e confirmados pela funcionária', M, y); y+=26;
+  pdf.text('Registros manuais — solicitados pela funcionária ou ajustados pelo(a) empregador(a)', M, y); y+=26;
   pdf.setFont('helvetica','bold'); pdf.text('Funcionária:', M, y); pdf.setFont('helvetica','normal'); pdf.text(nomeF, M+80, y); y+=16;
   pdf.setFont('helvetica','bold'); pdf.text('Empregador(a):', M, y); pdf.setFont('helvetica','normal'); pdf.text(currentUser.nome||'—', M+95, y); y+=16;
   pdf.setFont('helvetica','bold'); pdf.text('Referência:', M, y); pdf.setFont('helvetica','normal'); pdf.text(labelMes(ym), M+75, y); y+=26;
@@ -2912,22 +2922,31 @@ async function gerarTermoAjustesPDF(uid, ym){
     pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
     pdf.text(`${idx+1}. ${typeLabel(c.tipo)} — ${dtStr}`, M, y); y+=15;
     pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
-    const just = pdf.splitTextToSize(`Justificativa: ${c.justificativa}`, W-2*M);
-    pdf.text(just, M, y); y += just.length*13 + 3;
-    const termo = pdf.splitTextToSize(`Termo aceito: "${c.termoTexto}"`, W-2*M);
-    pdf.setTextColor(120); pdf.text(termo, M, y); pdf.setTextColor(0); y += termo.length*12 + 4;
-    const assinadoEm = c.criadoEm ? new Date(c.criadoEm).toLocaleString('pt-BR') : '—';
-    pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y);
-    if (c.assinaturaImg) {
-      try { pdf.addImage(c.assinaturaImg, 'PNG', W-M-70, y-14, 70, 28); } catch(e){ console.error('addImage assinatura', e); }
+
+    if (c.origem === 'correcao') {
+      const just = pdf.splitTextToSize(`Justificativa: ${c.justificativa}`, W-2*M);
+      pdf.text(just, M, y); y += just.length*13 + 3;
+      const termo = pdf.splitTextToSize(`Termo aceito: "${c.termoTexto}"`, W-2*M);
+      pdf.setTextColor(120); pdf.text(termo, M, y); pdf.setTextColor(0); y += termo.length*12 + 4;
+      const assinadoEm = c.criadoEm ? new Date(c.criadoEm).toLocaleString('pt-BR') : '—';
+      pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y);
+      if (c.assinaturaImg) {
+        try { pdf.addImage(c.assinaturaImg, 'PNG', W-M-70, y-14, 70, 28); } catch(e){ console.error('addImage assinatura', e); }
+      }
+      y += 30;
+    } else {
+      const ajustadoEm = c.adjustedAt ? new Date(c.adjustedAt).toLocaleString('pt-BR') : '—';
+      pdf.setTextColor(120);
+      pdf.text(`Ajustado manualmente por ${currentUser.nome} — em ${ajustadoEm}`, M, y);
+      pdf.setTextColor(0);
+      y += 22;
     }
-    y += 30;
   });
 
   y += 20;
   if (y > 680) { pdf.addPage(); y = 60; }
   pdf.setFontSize(10); pdf.setFont('helvetica','normal');
-  const declar = pdf.splitTextToSize(`Eu, ${nomeF}, declaro estar de acordo com todos os ajustes de ponto acima listados, referentes ao mês de ${labelMes(ym)}, tendo relatado pessoalmente cada esquecimento e confirmado os horários lançados.`, W-2*M);
+  const declar = pdf.splitTextToSize(`Eu, ${nomeF}, declaro estar de acordo com todos os ajustes de ponto acima listados, referentes ao mês de ${labelMes(ym)}.`, W-2*M);
   pdf.text(declar, M, y); y += declar.length*13 + 40;
 
   pdf.line(M, y, M+200, y); pdf.text('Assinatura da funcionária', M, y+14);
