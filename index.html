@@ -1,123 +1,2945 @@
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    match /users/{userId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == userId ||
-        isEmployerOfHouse(resource.data.houseCode)
-      );
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false;
-      // empregador da mesma casa pode encerrar/reativar o acesso da funcionária
-      // e corrigir o nome completo, mexendo SÓ em 'ativa', 'desligamentoEm' e 'nome'
-      allow update: if request.auth != null
-        && resource.data.role == 'funcionaria'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'empregador'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.houseCode == resource.data.houseCode
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativa', 'desligamentoEm', 'nome']);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PontoCasa</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2D6A4F" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PontoCasa" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F7F5F2; --surface: #FFFFFF; --surface2: #F0EDE8;
+      --ink: #1A1816; --ink2: #6B6560; --ink3: #A09A94;
+      --accent: #2D6A4F; --accent-light: #D8EDDF;
+      --warn: #E07A2F; --warn-light: #FEF0E4;
+      --danger: #C0392B; --danger-light: #FDECEA;
+      --border: #E8E3DD; --radius: 14px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.07);
     }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; }
+    #loginWrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; }
+    .login-emblem { display: block; height: 104px; width: auto; margin: 0 auto 12px; }
+    .login-logo { font-size: 30px; font-weight: 600; margin-bottom: 4px; }
+    .login-logo span { color: var(--accent); }
+    .login-sub { font-size: 14px; color: var(--ink3); margin-bottom: 36px; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 380px; box-shadow: var(--shadow); }
+    .login-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .login-desc { font-size: 13px; color: var(--ink3); margin-bottom: 24px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--surface2); color: var(--ink); outline: none; transition: border-color 0.15s; }
+    .field input:focus { border-color: var(--accent); background: white; }
+    .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 4px; }
+    .btn-login:disabled { opacity: 0.6; cursor: wait; }
+    .login-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--ink3); }
+    .login-switch a { color: var(--accent); cursor: pointer; font-weight: 500; }
+    .login-err { background: var(--danger-light); color: var(--danger); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .role-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .role-tab { flex: 1; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); color: var(--ink2); font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; }
+    .role-tab.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    #appWrap { display: none; flex-direction: column; flex: 1; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 7px; }
+    .logo-mark { height: 26px; width: auto; }
+    .logo span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-time { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--ink2); }
+    .btn-logout { font-size: 12px; color: var(--ink3); background: none; border: none; cursor: pointer; font-family: inherit; padding: 4px 8px; }
+    .user-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; background: var(--accent-light); color: var(--accent); }
+    .user-badge.employer { background: #EAE5FF; color: #5B3FD9; }
+    .alerts-banner { padding: 0 16px 0; }
+    .alert-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px; margin-top: 10px; font-size: 13px; font-weight: 500; }
+    .alert-item.warn { background: var(--warn-light); color: var(--warn); border: 1px solid #F5C49A; }
+    .alert-item.danger { background: var(--danger-light); color: var(--danger); border: 1px solid #F5B3AC; }
+    .alert-item.info { background: var(--accent-light); color: var(--accent); border: 1px solid #A8D5BA; }
+    .alert-icon { font-size: 16px; flex-shrink: 0; }
+    .screen { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
+    .screen.active { display: flex; }
+    .clock-hero { background: var(--accent); color: white; padding: 28px 24px 24px; text-align: center; }
+    .clock-hero .greeting { font-size: 13px; opacity: 0.8; margin-bottom: 3px; }
+    .clock-hero .name { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+    .clock-display { font-family: 'DM Mono', monospace; font-size: 46px; font-weight: 500; letter-spacing: 2px; line-height: 1; }
+    .clock-date { font-size: 13px; opacity: 0.7; margin-top: 6px; }
+    .status-bar { display: flex; gap: 8px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .status-pill { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 100px; font-size: 12px; font-weight: 500; background: var(--surface2); color: var(--ink2); }
+    .status-pill.active { background: var(--accent-light); color: var(--accent); }
+    .status-pill.warn { background: var(--warn-light); color: var(--warn); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+    .action-btn { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 18px 14px; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .action-btn.secondary { background: var(--warn-light); border-color: var(--warn); color: var(--warn); }
+    .action-btn.blue { background: #EAF4FF; border-color: #3498db; color: #2176b5; }
+    .action-btn.disabled { opacity: 0.35; pointer-events: none; }
+    .action-icon { font-size: 26px; line-height: 1; }
+    .action-label { font-size: 13px; font-weight: 600; }
+    .action-sub { font-size: 11px; opacity: 0.7; }
+    .summary-card { margin: 0 16px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .summary-header { background: var(--ink); color: white; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .summary-header .label { font-size: 12px; opacity: 0.6; }
+    .summary-header .value { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
+    .summary-rows { padding: 4px 0; }
+    .summary-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .summary-row .key { font-size: 13px; color: var(--ink2); flex: 1; }
+    .summary-row .val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+    .section-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .section-title { font-size: 16px; font-weight: 600; }
+    .section-sub { font-size: 12px; color: var(--ink3); }
+    .timeline { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .record-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; display: flex; align-items: center; gap: 13px; box-shadow: var(--shadow); }
+    .record-photo { width: 46px; height: 46px; border-radius: 10px; background: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+    .record-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .record-info { flex: 1; min-width: 0; }
+    .record-type { font-size: 11px; font-weight: 600; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.5px; }
+    .record-time { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; line-height: 1.2; }
+    .record-loc { font-size: 11px; color: var(--ink3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-user { font-size: 11px; color: var(--ink3); }
+    .record-badge { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .badge-entrada { background: var(--accent); }
+    .badge-saida { background: var(--danger); }
+    .badge-almoco-saida { background: var(--warn); }
+    .badge-almoco-volta { background: #3498db; }
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--ink3); }
+    .empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 500; color: var(--ink2); }
+    .empty-sub { font-size: 13px; margin-top: 4px; }
+    .employee-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 16px 10px; overflow: hidden; box-shadow: var(--shadow); }
+    .emp-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+    .emp-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .emp-name { font-size: 15px; font-weight: 600; }
+    .emp-status { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+    .emp-badge { margin-left: auto; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .emp-badge.ok { background: var(--accent-light); color: var(--accent); }
+    .emp-badge.warn { background: var(--warn-light); color: var(--warn); }
+    .emp-badge.absent { background: var(--danger-light); color: var(--danger); }
+    .emp-records { border-top: 1px solid var(--border); display: none; }
+    .emp-records.open { display: block; }
+    .emp-rec-row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+    .emp-rec-row:last-child { border-bottom: none; }
+    .settings-section { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .settings-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .settings-row { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row .icon { font-size: 18px; width: 26px; text-align: center; }
+    .settings-row .text { flex: 1; }
+    .settings-row .text .key { font-size: 14px; font-weight: 500; }
+    .settings-row .text .desc { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+    .settings-input { border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: 'DM Mono', monospace; font-size: 14px; color: var(--ink); background: var(--surface2); width: 80px; text-align: center; }
+    .settings-input:focus { outline: none; border-color: var(--accent); }
+    .toggle { width: 42px; height: 24px; background: var(--border); border-radius: 100px; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white; transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    .toggle.on { background: var(--accent); }
+    .toggle.on::after { transform: translateX(18px); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; flex-direction: column; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .camera-wrap { position: relative; width: 100%; max-width: 400px; }
+    #cameraVideo { width: 100%; border-radius: 12px; display: block; transform: scaleX(-1); }
+    .camera-ui { padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 400px; }
+    .camera-info { color: white; text-align: center; }
+    .camera-info .type { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+    .camera-info .label { font-size: 16px; font-weight: 600; margin-top: 4px; }
+    .camera-btn-row { display: flex; gap: 16px; align-items: center; }
+    .btn-cancel { background: rgba(255,255,255,0.15); border: none; color: white; padding: 11px 18px; border-radius: 100px; font-size: 14px; cursor: pointer; }
+    .btn-shoot { width: 64px; height: 64px; border-radius: 50%; background: white; border: 4px solid rgba(255,255,255,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    .photo-confirm { display: none; flex-direction: column; align-items: center; gap: 14px; padding: 18px; width: 100%; max-width: 400px; }
+    .photo-confirm.open { display: flex; }
+    #capturedImg { width: 100%; border-radius: 12px; display: block; transform: scaleX(-1); }
+    .confirm-info { color: white; text-align: center; width: 100%; }
+    .confirm-info .type { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+    .confirm-info .time-stamp { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; margin-top: 4px; }
+    .location-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); border-radius: 100px; padding: 5px 12px; font-size: 12px; color: white; margin-top: 6px; }
+    .confirm-btns { display: flex; gap: 10px; width: 100%; }
+    .btn-retry { flex: 1; background: rgba(255,255,255,0.15); border: none; color: white; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .btn-save { flex: 2; background: var(--accent); border: none; color: white; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-save:disabled { opacity: 0.6; cursor: wait; }
+    nav { background: var(--surface); border-top: 1px solid var(--border); display: flex; position: sticky; bottom: 0; z-index: 100; }
+    .nav-btn { flex: 1; border: none; background: none; padding: 11px 8px 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--ink3); transition: color 0.15s; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn { position: relative; }
+    .nav-badge { position:absolute; top:4px; right:26%; width:16px; height:16px; background:var(--danger); color:#fff; border-radius:50%; font-size:9px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+    .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 500; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: white; padding: 11px 20px; border-radius: 100px; font-size: 13px; font-weight: 500; white-space: nowrap; opacity: 0; transition: all 0.3s; z-index: 500; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; gap: 16px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .config-banner { background: var(--warn-light); color: var(--warn); padding: 12px 16px; font-size: 13px; text-align: center; border-bottom: 1px solid #F5C49A; }
+    .emp-edit-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink2); cursor: pointer; font-family: inherit; flex-shrink: 0; }
+    .emp-danger-btn { background: var(--danger-light); border: 1px solid var(--danger-light); border-radius: 8px; padding: 5px 9px; font-size: 13px; cursor: pointer; font-family: inherit; flex-shrink: 0; line-height: 1; }
+    .inactive-group { margin: 18px 16px 10px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface2); }
+    .inactive-group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--ink2); cursor: pointer; user-select: none; }
+    .inactive-group-header .chev { transition: transform .2s; color: var(--ink3); }
+    .inactive-group.open .inactive-group-header .chev { transform: rotate(180deg); }
+    .inactive-group-body { display: none; padding: 0 12px 12px; }
+    .inactive-group.open .inactive-group-body { display: block; }
+    .inactive-card { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-top: 8px; opacity: .9; }
+    .emp-contract { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 14px; }
+    .contract-item { font-size: 12px; }
+    .contract-item .lbl { color: var(--ink3); }
+    .contract-item .v { font-weight: 600; font-family: 'DM Mono', monospace; }
+    .contract-missing { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--warn); }
+    .form-modal { display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; }
+    .form-modal.open { display: flex; }
+    .form-sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 22px 20px 28px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+    .form-sheet h3 { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+    .form-sheet .sub { font-size: 13px; color: var(--ink3); margin-bottom: 18px; }
+    .frow { margin-bottom: 14px; }
+    .frow label { display:block; font-size:12px; font-weight:600; color: var(--ink2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .frow input { width:100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 10px; font-size:15px; font-family: inherit; background: var(--surface2); color: var(--ink); outline: none; }
+    .frow input:focus { border-color: var(--accent); background: white; }
+    .days-row { display: flex; gap: 6px; }
+    .day-chip { flex:1; padding: 9px 0; border: 1.5px solid var(--border); border-radius: 9px; background: var(--surface2); font-size:12px; font-weight:600; color: var(--ink3); cursor:pointer; text-align:center; }
+    .day-chip.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .form-actions { display:flex; gap:10px; margin-top: 8px; }
+    .form-actions button { flex:1; padding: 13px; border-radius: 10px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; border:none; }
+    .btn-form-cancel { background: var(--surface2); color: var(--ink2); }
+    .btn-form-save { background: var(--accent); color: white; flex:2; }
+    .emp-add-point { width: calc(100% - 32px); margin: 0 16px 12px; padding: 10px; border: 1.5px dashed var(--border); border-radius: 10px; background: none; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .emp-rec-row .rec-edit { opacity: 0.5; cursor: pointer; font-size: 14px; padding: 2px 6px; }
+    .emp-rec-row .rec-edit:hover { opacity: 1; }
+    .rec-adjusted { font-size: 10px; color: var(--warn); font-weight: 600; margin-left: 4px; }
+    .type-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .type-opt { padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); font-size: 13px; font-weight: 600; color: var(--ink2); cursor: pointer; text-align: center; }
+    .type-opt.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .btn-form-delete { background: var(--danger-light); color: var(--danger); flex: 1; }
+    canvas { display: none; }
+    /* ═══ DASHBOARD ═══ */
+    .dash-emp-tabs { display:flex; gap:8px; padding: 0 16px 4px; }
+    .dash-emp-tab { flex:1; padding:9px 8px; border:1.5px solid var(--border); border-radius:10px; background:var(--surface); color:var(--ink2); font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .dash-emp-tab.on { background:var(--accent-light); border-color:var(--accent); color:var(--accent); }
+    .dash-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin:12px 16px; padding:16px; }
+    .dash-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+    .dash-card-title { font-size:15px; font-weight:600; }
+    .dash-card-sub { font-size:12px; color:var(--ink3); margin-top:2px; }
+    .dash-pill { font-size:10px; font-weight:700; padding:4px 9px; border-radius:100px; letter-spacing:0.4px; text-transform:uppercase; flex-shrink:0; }
+    .dash-pill.vigente { background:var(--accent-light); color:var(--accent); }
+    .dash-pill.revisar { background:var(--warn-light); color:var(--warn); }
+    .dash-pill.fechado { background:var(--surface2); color:var(--ink3); }
+    .segbar { display:flex; height:12px; border-radius:100px; overflow:hidden; background:var(--surface2); }
+    .segbar.thin { height:7px; }
+    .segbar i { display:block; height:100%; }
+    .seg-j { background:var(--accent); }
+    .seg-b { background:var(--warn); }
+    .seg-e { background:var(--danger); }
+    .seg-r { background:#E3DED7; }
+    .legend { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
+    .legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink2); }
+    .legend-item b { font-family:'DM Mono',monospace; font-size:12.5px; color:var(--ink); font-weight:500; }
+    .legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .dash-metrics { display:flex; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+    .dash-metric { flex:1; }
+    .dash-metric .lbl { font-size:10.5px; color:var(--ink3); text-transform:uppercase; letter-spacing:0.4px; font-weight:600; }
+    .dash-metric .v { font-family:'DM Mono',monospace; font-size:16px; font-weight:500; margin-top:3px; }
+    .dash-metric .hint { font-size:10.5px; color:var(--ink3); margin-top:2px; line-height:1.35; }
+    .dash-toggle { display:flex; gap:0; background:var(--surface2); border-radius:9px; padding:3px; margin:0 16px; }
+    .dash-toggle button { flex:1; padding:8px; border:none; background:none; border-radius:7px; font-size:13px; font-weight:600; font-family:inherit; color:var(--ink2); cursor:pointer; }
+    .dash-toggle button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+    .dayrow { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:8px 16px; padding:0; overflow:hidden; }
+    .dayrow-click { cursor:pointer; padding:12px 14px; }
+    .dayrow.open { border-color:var(--accent); }
+    .expand-body { border-top:1px solid var(--surface2); background:#FAF8F5; padding:10px 14px; }
+    .expand-label { font-size:10px; font-weight:700; color:var(--ink3); text-transform:uppercase; margin-bottom:8px; }
+    .entry { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+    .entry:last-child { margin-bottom:0; }
+    .entry-photo { width:30px; height:30px; border-radius:7px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; overflow:hidden; }
+    .entry-type { font-size:12.5px; font-weight:500; }
+    .entry-meta { font-size:11px; color:var(--ink3); }
+    .dayrow-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:9px; }
+    .dayrow-date { font-size:13.5px; font-weight:600; }
+    .dayrow-date .dow { color:var(--ink3); font-weight:400; font-size:12px; margin-left:5px; }
+    .dayrow-total { font-family:'DM Mono',monospace; font-size:13px; color:var(--ink2); }
+    .dayrow-nums { display:flex; flex-wrap:wrap; gap:10px; margin-top:9px; }
+    .horarios-row { display:flex; gap:11px; margin:8px 0; }
+    .horario-item { display:flex; align-items:baseline; gap:3px; font-size:11px; white-space:nowrap; }
+    .horario-item span { color:var(--ink3); font-weight:600; }
+    .horario-item b { font-family:'DM Mono',monospace; font-weight:500; color:var(--ink); }
+    .horario-item.falta { opacity:0.4; }
+    .horario-item.falta b { color:var(--ink3); }
+    .dayrow-num { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--ink2); }
+    .dayrow-num b { font-family:'DM Mono',monospace; font-size:12.5px; color:var(--ink); font-weight:500; }
+    .dayrow.incomplete { border-style:dashed; border-color:#F5C49A; }
+    .weekrow { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:8px 16px; overflow:hidden; }
+    .weekrow-head { padding:12px 14px; cursor:pointer; }
+    .weekrow-body { display:none; border-top:1px solid var(--border); background:var(--surface2); padding:2px 0 8px; }
+    .weekrow.open .weekrow-body { display:block; }
+    .weekrow.open .chev { transform:rotate(180deg); }
+    .weekrow .chev { display:inline-block; transition:transform 0.18s; color:var(--ink3); font-size:11px; }
+    .weekrow-body .dayrow { margin:8px 12px; background:var(--surface); }
+    .dash-close-btn { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:white; font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .dash-reopen { background:none; border:none; color:var(--ink3); font-size:11.5px; font-family:inherit; cursor:pointer; text-decoration:underline; padding:8px 0 0; }
+    .dash-sec-label { font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.6px; padding:16px 16px 0; }
+    .vt-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin:8px 16px 12px; padding:16px; }
+    .vt-calc { font-size:14px; color:var(--ink2); margin-bottom:4px; }
+    .vt-calc b { color:var(--ink); font-family:'DM Mono',monospace; font-weight:500; }
+    .vt-total { font-size:21px; font-weight:600; color:var(--accent); margin:6px 0 4px; }
+    .vt-sub { font-size:12px; color:var(--ink3); margin-bottom:14px; }
+    .vt-badge { display:inline-block; font-size:11px; font-weight:700; padding:5px 11px; border-radius:100px; margin-bottom:10px; }
+    .vt-badge.mais { background:var(--warn-light); color:var(--warn); }
+    .vt-badge.menos { background:#E5F1FB; color:#2E75B6; }
+    .vt-badge.ok { background:var(--accent-light); color:var(--accent); }
+    .vt-explica { font-size:13px; color:var(--ink2); line-height:1.5; }
+    .vt-explica b { color:var(--ink); font-family:'DM Mono',monospace; font-weight:500; }
+    .vt-empty { font-size:12.5px; color:var(--ink3); padding:2px 0 6px; }
+    .vt-metrics { display:flex; gap:10px; margin:12px 0; }
+    .vt-metrics .dash-metric { flex:1; }
+    .fer-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+    .fer-row .d { font-family:'DM Mono',monospace; font-size:13px; width:52px; flex-shrink:0; }
+    .fer-row .n { flex:1; font-size:13px; color:var(--ink2); }
+    .fer-row .x { color:var(--danger); cursor:pointer; font-size:15px; padding:0 4px; opacity:0.6; }
+    .fer-list { max-height:44vh; overflow-y:auto; margin-bottom:14px; }
+    .fer-add { display:flex; gap:8px; margin-bottom:14px; }
+    .fer-add input[type=date] { flex:0 0 46%; }
+    .fer-add input[type=text] { flex:1; }
+    .fer-add input { padding:10px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; min-width:0; }
+    /* ═══ AUTOCORREÇÃO DE PONTO ═══ */
+    .hist-correction-bar { padding: 0 16px 12px; }
+    .btn-correction { width:100%; padding:12px; border:1.5px dashed var(--accent); border-radius:10px; background:var(--accent-light); color:var(--accent); font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .my-correction-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:0 16px 10px; padding:12px 14px; }
+    .my-correction-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .my-correction-type { font-size:13.5px; font-weight:600; }
+    .my-correction-when { font-family:'DM Mono',monospace; font-size:12px; color:var(--ink2); margin-top:2px; }
+    .cor-status { font-size:10px; font-weight:700; padding:3px 9px; border-radius:100px; text-transform:uppercase; letter-spacing:0.4px; flex-shrink:0; }
+    .cor-status.pendente { background:var(--warn-light); color:var(--warn); }
+    .cor-status.aprovado { background:var(--accent-light); color:var(--accent); }
+    .cor-status.rejeitado { background:var(--danger-light); color:var(--danger); }
+    .my-correction-just { font-size:12.5px; color:var(--ink2); margin-top:8px; line-height:1.4; }
+    .my-correction-motivo { font-size:12px; color:var(--danger); margin-top:6px; font-style:italic; }
+    .termo-box { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 13px; font-size:12.5px; color:var(--ink2); line-height:1.5; margin:12px 0; }
+    .cor-contexto { background:var(--accent-light); border:1px solid #A8D5BA; border-radius:10px; padding:10px 12px; margin:-4px 0 16px; }
+    .cor-contexto-titulo { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+    .cor-contexto-row { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink); padding:2px 0; }
+    .cor-contexto-row .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .cor-contexto-row b { font-family:'DM Mono',monospace; font-weight:500; margin-left:auto; }
+    .cor-contexto-vazio { font-size:12px; color:var(--ink2); }
+    .termo-check { display:flex; align-items:flex-start; gap:10px; margin:12px 0; cursor:pointer; }
+    .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
+    .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
+    textarea.settings-input, textarea.field-input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; resize:vertical; min-height:70px; }
+    .pend-card { background:var(--surface); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 10px; padding:13px 14px; }
+    .pend-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+    .pend-name { font-size:13.5px; font-weight:600; }
+    .pend-when { font-family:'DM Mono',monospace; font-size:12px; color:var(--ink2); }
+    .pend-just { font-size:12.5px; color:var(--ink2); margin:8px 0; line-height:1.4; background:var(--surface2); border-radius:8px; padding:9px 11px; }
+    .pend-btns { display:flex; gap:8px; margin-top:4px; }
+    .pend-btns button { flex:1; padding:9px; border:none; border-radius:8px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .pend-approve { background:var(--accent); color:white; }
+    .pend-reject { background:var(--danger-light); color:var(--danger); }
+    .cor-report-btn { background:none; border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; color:var(--ink2); cursor:pointer; font-family:inherit; margin-top:10px; }
+    .revisar-box { background:var(--warn-light); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 12px; padding:11px 13px; }
+    .revisar-titulo { font-size:11px; font-weight:700; color:var(--warn); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; }
+    .revisar-item { background:var(--surface); border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .revisar-item:last-child { margin-bottom:0; }
+    .revisar-date { font-size:13.5px; font-weight:600; color:var(--ink); }
+    .revisar-date .dow { font-weight:400; color:var(--ink3); font-size:12px; }
+    .revisar-falta { font-size:12px; color:var(--ink2); margin-top:2px; }
+    .revisar-falta b { font-weight:600; color:var(--danger); }
+    .revisar-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; flex-shrink:0; }
+</style>
+</head>
+<body>
 
-    match /contratos/{userId} {
-      allow read, update, delete: if request.auth != null
-        && isEmployerOfHouse(resource.data.houseCode);
-      allow create: if request.auth != null
-        && isEmployerOfHouse(request.resource.data.houseCode);
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="color:var(--ink3);font-size:13px">Carregando...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginWrap" style="display:none">
+  <img class="login-emblem" src="login.png" alt="AF" />
+  <div class="login-logo">Ponto<span>Casa</span></div>
+  <div class="login-sub">Controle de ponto doméstico</div>
+  <div class="login-card">
+    <div class="login-title" id="loginTitle">Entrar</div>
+    <div class="login-desc" id="loginDesc">Acesse com seu e-mail e senha</div>
+    <div class="login-err" id="loginErr"></div>
+    <div class="role-tabs" id="roleTabs" style="display:none">
+      <button class="role-tab active" id="tabFunc" onclick="selectRole('funcionaria')">👩 Funcionária</button>
+      <button class="role-tab" id="tabEmployer" onclick="selectRole('empregador')">🏠 Empregador(a)</button>
+    </div>
+    <div class="field" id="fieldNome" style="display:none">
+      <label>Nome completo</label>
+      <input type="text" id="inputNome" placeholder="Ex: Maria Silva" />
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="inputEmail" placeholder="seu@email.com" />
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inputSenha" placeholder="********" />
+    </div>
+    <div class="field" id="fieldCodigo" style="display:none">
+      <label>Código da casa (fornecido pelo empregador)</label>
+      <input type="text" id="inputCodigo" placeholder="Ex: CASA-1234" style="text-transform:uppercase" />
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">Entrar</button>
+    <div class="login-switch" id="loginSwitch">Não tem conta? <a onclick="showRegister()">Cadastrar</a></div>
+    <div class="login-switch" id="registerSwitch" style="display:none">Já tem conta? <a onclick="showLogin()">Entrar</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appWrap">
+  <header>
+    <div class="logo"><img class="logo-mark" src="header.png" alt="AF" />Ponto<span>Casa</span></div>
+    <div class="header-right">
+      <div class="header-time" id="headerTime">--:--:--</div>
+      <div class="user-badge" id="userBadge">--</div>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </header>
+
+  <div class="screen active" id="screenRegistro">
+    <div class="clock-hero">
+      <div class="greeting">Olá,</div>
+      <div class="name" id="heroName">Funcionária</div>
+      <div class="clock-display" id="clockDisplay">--:--</div>
+      <div class="clock-date" id="clockDate">carregando...</div>
+    </div>
+    <div class="status-bar">
+      <div class="status-pill" id="statusEntrada"><div class="status-dot"></div>Entrada</div>
+      <div class="status-pill" id="statusAlmoco"><div class="status-dot"></div>Almoço</div>
+      <div class="status-pill" id="statusSaida"><div class="status-dot"></div>Saída</div>
+    </div>
+    <div class="alerts-banner" id="alertsBanner"></div>
+    <div class="actions-grid">
+      <button class="action-btn primary" id="btnEntrada" onclick="openCamera('entrada')"><div class="action-icon">🟢</div><div class="action-label">Entrada</div><div class="action-sub">Início do turno</div></button>
+      <button class="action-btn disabled" id="btnSaida" onclick="openCamera('saida')"><div class="action-icon">🔴</div><div class="action-label">Saída</div><div class="action-sub">Fim do turno</div></button>
+      <button class="action-btn disabled" id="btnAlmocoSaida" onclick="openCamera('almoco-saida')"><div class="action-icon">🍽️</div><div class="action-label">Saída Almoço</div><div class="action-sub">Pausar turno</div></button>
+      <button class="action-btn disabled" id="btnAlmocoVolta" onclick="openCamera('almoco-volta')"><div class="action-icon">↩️</div><div class="action-label">Volta Almoço</div><div class="action-sub">Retomar turno</div></button>
+    </div>
+    <div class="section-header"><div class="section-title">Resumo de hoje</div></div>
+    <div class="summary-card">
+      <div class="summary-header">
+        <div><div class="label">Horas trabalhadas</div><div class="value" id="horasTrabalhadas">--:--</div></div>
+        <div style="text-align:right"><div class="label">Status</div><div class="value" id="statusAtual" style="font-size:14px">Aguardando</div></div>
+      </div>
+      <div class="summary-rows">
+        <div class="summary-row"><div class="dot" style="background:var(--accent)"></div><div class="key">Entrada</div><div class="val" id="sumEntrada">--:--</div></div>
+        <div class="summary-row"><div class="dot" style="background:var(--warn)"></div><div class="key">Saída almoço</div><div class="val" id="sumAlmocoSaida">--:--</div></div>
+        <div class="summary-row"><div class="dot" style="background:#3498db"></div><div class="key">Volta almoço</div><div class="val" id="sumAlmocoVolta">--:--</div></div>
+        <div class="summary-row"><div class="dot" style="background:var(--danger)"></div><div class="key">Saída</div><div class="val" id="sumSaida">--:--</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="screenFechamentos">
+    <div class="section-header">
+      <div><div class="section-title">Fechamentos</div><div class="section-sub">Períodos, vale-transporte e planilha</div></div>
+      <button onclick="abrirFechamento()" style="background:var(--ink);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📤 Fechar competência</button>
+    </div>
+    <div class="dash-emp-tabs" id="fechEmpTabs"></div>
+    <div id="fechBody"></div>
+  </div>
+
+  <div class="screen" id="screenDashboard">
+    <div class="section-header">
+      <div><div class="section-title">Dashboard</div><div class="section-sub" id="dashSectionSub">Visão da casa</div></div>
+    </div>
+    <div class="alerts-banner" id="dashMultiAlert"></div>
+    <div id="dashBody"></div>
+  </div>
+
+  <div class="screen" id="screenEncerrado">
+    <div class="empty-state" style="padding-top:72px">
+      <div class="empty-icon">🔒</div>
+      <div class="empty-title" style="font-size:18px;color:var(--ink)">Acesso encerrado</div>
+      <div class="empty-sub" id="encerradoData" style="margin-top:6px"></div>
+      <div class="empty-sub" style="margin-top:18px;max-width:300px;margin-left:auto;margin-right:auto;line-height:1.55">Olá, <span id="encerradoName"></span>. Seu vínculo neste aplicativo foi encerrado e o registro de ponto está desativado. Seu histórico foi preservado. Em caso de dúvida, fale com o empregador.</div>
+      <button onclick="doLogout()" style="margin-top:26px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:inherit">Sair</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screenHistorico">
+    <div class="section-header"><div><div class="section-title">Minhas Horas</div><div class="section-sub" id="histCount">Carregando...</div></div></div>
+    <div id="diasParaRevisarBox"></div>
+    <div class="hist-correction-bar" id="histCorrectionBar" style="display:none">
+      <button class="btn-correction" onclick="openCorrecaoModal()">✏️ Corrigir ponto esquecido</button>
+    </div>
+    <div id="minhasCorrecoes"></div>
+    <div id="meuMesAtual"></div>
+    <div class="dash-sec-label" id="mesesAnterioresLabel" style="display:none">Meses anteriores</div>
+    <div id="meusMesesAnteriores"></div>
+  </div>
+
+  <div class="screen" id="screenConfig">
+    <div class="section-header"><div class="section-title">Configurações</div></div>
+
+    <div id="cfgEmpregadorSecoes" style="display:none">
+      <div class="section-header" style="padding-top:0">
+        <div><div class="section-title" style="font-size:15px">Correções pendentes</div></div>
+      </div>
+      <div id="correcoesPendentesBox"></div>
+
+      <div class="section-header">
+        <div><div class="section-title" style="font-size:15px">Funcionárias</div><div class="section-sub" id="employerCode"></div></div>
+        <button onclick="openInviteModal()" style="background:var(--accent);color:white;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Nova</button>
+      </div>
+      <div class="alerts-banner" id="alertsEmpregadorBanner"></div>
+      <div id="invitesList"></div>
+      <div id="employeeList" style="margin-top:10px"></div>
+
+      <div class="section-header">
+        <div><div class="section-title" style="font-size:15px">Feriados</div><div class="section-sub">Base para dias úteis e vale-transporte</div></div>
+        <button class="emp-edit-btn" onclick="openFeriadosModal()">📅 Editar</button>
+      </div>
+    </div>
+
+    <div class="settings-section" id="configHorarios">
+      <div class="settings-group">
+        <div class="settings-row"><div class="icon">🔔</div><div class="text"><div class="key">Ativar lembretes</div><div class="desc">Só avisa se você ainda não bateu aquele ponto</div></div><button class="toggle on" id="toggleNotif" onclick="toggleNotif()"></button></div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-row"><div class="icon">🕗</div><div class="text"><div class="key">Entrada</div><div class="desc">Lembrete de ponto</div></div><input class="settings-input" id="cfgEntrada" type="time" value="07:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🍽️</div><div class="text"><div class="key">Saída para almoço</div><div class="desc">Horário de almoço</div></div><input class="settings-input" id="cfgAlmoco" type="time" value="12:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">↩️</div><div class="text"><div class="key">Avisar volta do almoço</div><div class="desc">Minutos depois da saída real pro almoço</div></div><input class="settings-input" id="cfgVoltaAlmocoMin" type="number" value="60" min="10" max="180" style="width:70px" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🕔</div><div class="text"><div class="key">Saída</div><div class="desc">Fim do turno</div></div><input class="settings-input" id="cfgSaida" type="time" value="17:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">⏱️</div><div class="text"><div class="key">Tolerância (min)</div><div class="desc">Margem antes do alerta</div></div><input class="settings-input" id="cfgTolerancia" type="number" value="15" min="0" max="60" onchange="saveConfig()" /></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-group">
+        <div class="settings-row"><div class="icon">📍</div><div class="text"><div class="key">Localização</div><div class="desc">Ajuda a sugerir bater o ponto — só com o app aberto</div></div><button class="toggle on" id="toggleLoc" onclick="toggleLoc()"></button></div>
+      </div>
+      <div class="settings-group" id="employerCodeCard" style="display:none">
+        <div class="settings-row"><div class="icon">🔑</div><div class="text"><div class="key">Código da casa</div><div class="desc">Compartilhe com a funcionária</div></div><span id="employerCodeDisplay" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--accent)"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="cameraModal">
+    <div class="camera-wrap" id="cameraWrap"><video id="cameraVideo" autoplay playsinline></video><canvas id="snapCanvas"></canvas></div>
+    <div class="camera-ui" id="cameraUI">
+      <div class="camera-info"><div class="type" id="cameraType">REGISTRO</div><div class="label" id="cameraLabel">Centralize seu rosto</div></div>
+      <div class="camera-btn-row"><button class="btn-cancel" onclick="closeCamera()">Cancelar</button><button class="btn-shoot" onclick="snapPhoto()">📷</button></div>
+    </div>
+    <div class="photo-confirm" id="photoConfirm">
+      <img id="capturedImg" />
+      <div class="confirm-info"><div class="type" id="confirmType">CONFIRMAR</div><div class="time-stamp" id="confirmTime">--:--:--</div><div class="location-tag" id="confirmLoc">📍 obtendo...</div></div>
+      <div class="confirm-btns"><button class="btn-retry" onclick="retryPhoto()">↩ Refazer</button><button class="btn-save" id="btnSave" onclick="saveRecord()">Salvar ✓</button></div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="contractModal">
+    <div class="form-sheet">
+      <h3>Dados contratuais</h3>
+      <div class="frow">
+        <label>Nome completo</label>
+        <input type="text" id="fNomeCompleto" placeholder="Nome completo da funcionária" />
+      </div>
+      <div class="frow">
+        <label>Salário mensal (R$)</label>
+        <input type="number" id="fSalario" placeholder="Ex: 1518" inputmode="decimal" />
+      </div>
+      <div class="frow">
+        <label>Jornada diária (horas)</label>
+        <input type="number" id="fJornada" placeholder="Ex: 8" step="0.5" inputmode="decimal" />
+      </div>
+      <div class="frow">
+        <label>Dias de trabalho</label>
+        <div class="days-row" id="fDias">
+          <div class="day-chip" data-d="1">Seg</div>
+          <div class="day-chip" data-d="2">Ter</div>
+          <div class="day-chip" data-d="3">Qua</div>
+          <div class="day-chip" data-d="4">Qui</div>
+          <div class="day-chip" data-d="5">Sex</div>
+          <div class="day-chip" data-d="6">Sáb</div>
+          <div class="day-chip" data-d="0">Dom</div>
+        </div>
+      </div>
+      <div class="frow">
+        <label>Data de admissão</label>
+        <input type="date" id="fAdmissao" />
+      </div>
+      <div class="frow">
+        <label>Vale-transporte diário (ida + volta, R$)</label>
+        <input type="number" id="fValeTransporte" placeholder="Ex: 9.00" step="0.01" inputmode="decimal" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeContractModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="saveContract()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="inviteModal">
+    <div class="form-sheet">
+      <h3>Nova funcionária</h3>
+      <div class="sub">Cadastre nome e e-mail. Ela ativa o acesso criando a própria senha no primeiro uso.</div>
+      <div class="frow">
+        <label>Nome completo</label>
+        <input type="text" id="iNome" placeholder="Ex: Maria Silva" />
+      </div>
+      <div class="frow">
+        <label>E-mail</label>
+        <input type="email" id="iEmail" placeholder="email@exemplo.com" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeInviteModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="saveInvite()">Cadastrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="pointModal">
+    <div class="form-sheet">
+      <h3 id="pointModalTitle">Adicionar ponto</h3>
+      <div class="sub" id="pointEmpName">—</div>
+      <div class="frow">
+        <label>Tipo de registro</label>
+        <div class="type-picker" id="pTipo">
+          <div class="type-opt" data-t="entrada">🟢 Entrada</div>
+          <div class="type-opt" data-t="almoco-saida">🍽️ Saída Almoço</div>
+          <div class="type-opt" data-t="almoco-volta">↩️ Volta Almoço</div>
+          <div class="type-opt" data-t="saida">🔴 Saída</div>
+        </div>
+      </div>
+      <div class="frow">
+        <label>Data</label>
+        <input type="date" id="pData" />
+      </div>
+      <div class="frow">
+        <label>Horário</label>
+        <input type="time" id="pHora" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closePointModal()">Cancelar</button>
+        <button class="btn-form-delete" id="pBtnDelete" style="display:none" onclick="deletePoint()">Excluir</button>
+        <button class="btn-form-save" onclick="savePoint()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="feriadosModal">
+    <div class="form-sheet">
+      <h3>Feriados</h3>
+      <div class="sub" id="ferAno">—</div>
+      <div class="fer-add">
+        <input type="date" id="ferData" />
+        <input type="text" id="ferNome" placeholder="Nome do feriado" />
+      </div>
+      <button class="emp-add-point" style="width:100%;margin:0 0 14px" onclick="addFeriado()">+ Adicionar feriado</button>
+      <div class="fer-list" id="ferList"></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeFeriadosModal()">Fechar</button>
+        <button class="btn-form-save" onclick="saveFeriados()">Salvar</button>
+      </div>
+      <button class="dash-reopen" onclick="seedFeriados()">Restaurar lista padrão do ano (nacionais + SP + Ribeirão Preto)</button>
+    </div>
+  </div>
+
+  <div class="form-modal" id="correcaoModal">
+    <div class="form-sheet">
+      <h3>Corrigir ponto esquecido</h3>
+      <div class="sub">Use quando você esqueceu de bater um ponto</div>
+      <div class="field">
+        <label>Tipo de registro <span id="corTipoHint" style="font-weight:400;text-transform:none;color:var(--ink3);font-size:11px;letter-spacing:0"></span></label>
+        <div class="type-picker" id="corTipo">
+          <div class="type-opt" data-v="entrada" onclick="setCorTipo('entrada')">Entrada</div>
+          <div class="type-opt" data-v="almoco-saida" onclick="setCorTipo('almoco-saida')">Saída Almoço</div>
+          <div class="type-opt" data-v="almoco-volta" onclick="setCorTipo('almoco-volta')">Volta Almoço</div>
+          <div class="type-opt" data-v="saida" onclick="setCorTipo('saida')">Saída</div>
+        </div>
+      </div>
+      <div class="field"><label>Data</label><input type="date" id="corData" onchange="atualizarCorContexto()" /></div>
+      <div id="corContexto"></div>
+      <div class="field"><label>Horário</label><input type="time" id="corHora" /></div>
+      <div class="field"><label>O que aconteceu?</label><textarea id="corJustificativa" placeholder="Ex: esqueci"></textarea></div>
+      <div class="termo-box" id="corTermoTexto"></div>
+      <label class="termo-check"><input type="checkbox" id="corAceite" onchange="updateCorSalvarBtn()" /><span>Estou de acordo com o termo acima e confirmo que as informações que inseri são verdadeiras.</span></label>
+      <div class="field" id="corAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="corAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="reassinarCorrecao()">Assinar novamente</button>
+      </div>
+      <div class="field" id="corAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="corSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="sigStart(event)" onpointermove="sigMove(event)" onpointerup="sigEnd(event)" onpointerleave="sigEnd(event)" onpointercancel="sigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="limparAssinatura()">Limpar</button>
+      </div>
+      <div class="field"><label>Assinando como</label><div id="corNomeDisplay" style="font-size:14.5px;font-weight:600;color:var(--ink);padding:11px 14px;background:var(--surface2);border-radius:10px">—</div></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeCorrecaoModal()">Cancelar</button>
+        <button class="btn-form-save" id="corSalvarBtn" disabled onclick="saveCorrecao()">Enviar para aprovação</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="rejeitarModal">
+    <div class="form-sheet">
+      <h3>Rejeitar correção</h3>
+      <div class="sub">Explique o motivo — a funcionária vai ver essa mensagem</div>
+      <div class="field"><textarea id="rejMotivo" placeholder="Ex: horário não confere com o esperado, confirme comigo antes"></textarea></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeRejeitarModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="confirmRejeitar()">Confirmar rejeição</button>
+      </div>
+    </div>
+  </div>
+
+  <nav id="appNav">
+    <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
+    <button class="nav-btn" id="navDashboard" style="display:none" onclick="showScreen('Dashboard')"><div class="nav-icon">📊</div><div class="nav-label">Dashboard</div></button>
+    <button class="nav-btn" id="navFechamentos" style="display:none" onclick="showScreen('Fechamentos')"><div class="nav-icon">🗂️</div><div class="nav-label">Fechamentos</div></button>
+    <button class="nav-btn" id="navHistorico" onclick="showScreen('Historico')"><div class="nav-icon">📊</div><div class="nav-label">Minhas Horas</div></button>
+    <button class="nav-btn" id="navConfig" onclick="showScreen('Config')"><div class="nav-icon">⚙️</div><div class="nav-label">Config</div><div class="nav-badge" id="navConfigBadge" style="display:none">0</div></button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module">
+// ════ FIREBASE IMPORTS ════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  collection, query, where, orderBy, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadString, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+// ════ INIT ════
+let app, auth, db, storage;
+let configOk = true;
+try {
+  if (firebaseConfig.apiKey === "COLE_AQUI") configOk = false;
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+} catch(e) { configOk = false; console.error(e); }
+
+// ════ STATE ════
+let currentUser = null;     // perfil completo do Firestore
+let records = [];
+let config = {};
+let notifTimers = [];
+let stream = null, currentType = null, capturedDataUrl = null, currentLocation = null;
+let alertCheckInterval = null, recordsUnsub = null;
+let isRegistering = false, selectedRole = 'funcionaria';
+
+const DEFAULT_CONFIG = { entrada:'07:00', almoco:'12:00', voltaAlmocoMin:60, saida:'17:00', tolerancia:15, notif:true, loc:true };
+
+// expose handlers to window (module scope)
+Object.assign(window, {
+  selectRole, showRegister, showLogin, doLogin, doLogout,
+  showScreen, openCamera, closeCamera, snapPhoto, retryPhoto, saveRecord,
+  saveConfig, toggleNotif, toggleLoc, toggleEmpRecords,
+  openContractModal, closeContractModal, saveContract,
+  openPointModal, closePointModal, savePoint, deletePoint,
+  openInviteModal, closeInviteModal, saveInvite, deleteInvite,
+  inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
+  setDashView, toggleWeek, consolidarMes, reabrirMes, setVtView, gerarReciboValeTransporte,
+  abrirDetalheFuncionaria, fecharDetalheFuncionaria, setFechEmp, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia,
+  setMinhasHorasView, toggleMesAnterior, gerarMeuRelatorioPDF, toggleDiaExpandido,
+  openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
+  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento,
+  sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
+  aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
+});
+
+// ════ LOGIN UI ════
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('tabFunc').className = 'role-tab' + (r==='funcionaria'?' active':'');
+  document.getElementById('tabEmployer').className = 'role-tab' + (r==='empregador'?' active':'');
+  // Funcionária: primeiro acesso (e-mail pré-cadastrado + senha). Empregador: nome completo.
+  document.getElementById('fieldCodigo').style.display = 'none';
+  document.getElementById('fieldNome').style.display = r==='empregador' ? 'block' : 'none';
+  document.getElementById('loginDesc').textContent = r==='funcionaria'
+    ? 'Primeiro acesso: use o e-mail cadastrado pelo empregador e crie sua senha'
+    : 'Preencha os dados para se cadastrar';
+  if (isRegistering) {
+    document.getElementById('loginTitle').textContent = r==='funcionaria' ? 'Primeiro acesso' : 'Criar conta';
+    document.getElementById('btnLogin').textContent = r==='funcionaria' ? 'Ativar acesso' : 'Criar conta';
+  }
+}
+function showRegister() {
+  isRegistering = true;
+  document.getElementById('loginTitle').textContent = selectedRole==='funcionaria' ? 'Primeiro acesso' : 'Criar conta';
+  document.getElementById('btnLogin').textContent = selectedRole==='funcionaria' ? 'Ativar acesso' : 'Criar conta';
+  document.getElementById('roleTabs').style.display = 'flex';
+  selectRole(selectedRole);
+  document.getElementById('loginSwitch').style.display = 'none';
+  document.getElementById('registerSwitch').style.display = 'block';
+  document.getElementById('loginErr').style.display = 'none';
+}
+function showLogin() {
+  isRegistering = false;
+  document.getElementById('loginTitle').textContent = 'Entrar';
+  document.getElementById('loginDesc').textContent = 'Acesse com seu e-mail e senha';
+  document.getElementById('btnLogin').textContent = 'Entrar';
+  document.getElementById('roleTabs').style.display = 'none';
+  document.getElementById('fieldNome').style.display = 'none';
+  document.getElementById('fieldCodigo').style.display = 'none';
+  document.getElementById('loginSwitch').style.display = 'block';
+  document.getElementById('registerSwitch').style.display = 'none';
+  document.getElementById('loginErr').style.display = 'none';
+}
+function showErr(m){ const e=document.getElementById('loginErr'); e.textContent=m; e.style.display='block'; }
+
+// ════ AUTH ════
+async function doLogin() {
+  if (!configOk) { showErr('Firebase não configurado. Preencha firebase-config.js'); return; }
+  const email = document.getElementById('inputEmail').value.trim().toLowerCase();
+  const senha = document.getElementById('inputSenha').value;
+  const btn = document.getElementById('btnLogin');
+  if (!email || !senha) { showErr('Preencha e-mail e senha.'); return; }
+  btn.disabled = true;
+
+  try {
+    if (isRegistering) {
+      if (senha.length < 6) { showErr('Senha deve ter ao menos 6 caracteres.'); btn.disabled=false; return; }
+
+      if (selectedRole === 'empregador') {
+        const nome = document.getElementById('inputNome').value.trim();
+        if (!nome) { showErr('Informe seu nome completo.'); btn.disabled=false; return; }
+        const houseCode = 'CASA-' + Math.random().toString(36).slice(2,6).toUpperCase();
+        window._signupInProgress = true;
+        const cred = await createUserWithEmailAndPassword(auth, email, senha);
+        const profile = { email, nome, role: 'empregador', houseCode };
+        await setDoc(doc(db,'users',cred.user.uid), profile);
+        await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
+        window._signupInProgress = false;
+        currentUser = { uid: cred.user.uid, ...profile };
+      } else {
+        // PRIMEIRO ACESSO DA FUNCIONÁRIA:
+        // o e-mail precisa ter sido pré-cadastrado pelo empregador (coleção convites).
+        window._signupInProgress = true;
+        const cred = await createUserWithEmailAndPassword(auth, email, senha);
+        const conviteSnap = await getDoc(doc(db,'convites',email));
+        if (!conviteSnap.exists() || conviteSnap.data().usado) {
+          window._signupInProgress = false;
+          try { await cred.user.delete(); } catch(_) {}
+          showErr(conviteSnap.exists()
+            ? 'Este e-mail já foi ativado. Use "Entrar" com sua senha.'
+            : 'E-mail não cadastrado. Peça ao empregador para cadastrá-lo primeiro.');
+          btn.disabled = false;
+          return;
+        }
+        const convite = conviteSnap.data();
+        const profile = { email, nome: convite.nome, role: 'funcionaria', houseCode: convite.houseCode };
+        await setDoc(doc(db,'users',cred.user.uid), profile);
+        await setDoc(doc(db,'configs',cred.user.uid), DEFAULT_CONFIG);
+        await setDoc(doc(db,'convites',email), { usado: true, uid: cred.user.uid }, { merge: true });
+        window._signupInProgress = false;
+        currentUser = { uid: cred.user.uid, ...profile };
+      }
+
+      // Ativacao/cadastro concluido: recarrega para o onAuthStateChanged
+      // montar o app de forma limpa (elimina a corrida da tela branca).
+      location.reload();
+      return;
+    } else {
+      await signInWithEmailAndPassword(auth, email, senha);
     }
+  } catch(e) {
+    const map = {
+      'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
+      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/wrong-password': 'E-mail ou senha incorretos.',
+      'auth/user-not-found': 'E-mail ou senha incorretos.',
+      'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+      'auth/invalid-email': 'E-mail inválido.',
+    };
+    showErr(map[e.code] || ('Erro: ' + e.message));
+    btn.disabled = false;
+  }
+}
 
-    match /records/{recordId} {
-      allow read: if request.auth != null && (
-        resource.data.userId == request.auth.uid ||
-        isEmployerOfHouse(resource.data.houseCode)
-      );
-      allow create: if request.auth != null && (
-        request.resource.data.userId == request.auth.uid ||
-        isEmployerOfHouse(request.resource.data.houseCode)
-      );
-      allow update, delete: if request.auth != null
-        && isEmployerOfHouse(resource.data.houseCode);
+async function doLogout() {
+  if (recordsUnsub) recordsUnsub();
+  clearInterval(alertCheckInterval);
+  notifTimers.forEach(clearTimeout);
+  await signOut(auth);
+}
+
+// monitora estado de login
+if (configOk) {
+  onAuthStateChanged(auth, async (fbUser) => {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    // Se um cadastro está em andamento, deixa o fluxo de cadastro cuidar de tudo
+    // (evita corrida que deslogava antes do perfil ser gravado).
+    if (window._signupInProgress) return;
+    if (fbUser) {
+      try {
+        const snap = await getDoc(doc(db,'users',fbUser.uid));
+        if (!snap.exists()) {
+          // login existe mas não há perfil no banco (conta incompleta)
+          await signOut(auth);
+          showLogin();
+          showErr('Conta sem perfil. Faça o cadastro novamente ou use outro e-mail.');
+          return;
+        }
+        currentUser = { uid: fbUser.uid, ...snap.data() };
+        document.getElementById('loginWrap').style.display = 'none';
+        document.getElementById('appWrap').style.display = 'flex';
+        await initApp();
+      } catch (e) {
+        console.error('Erro ao carregar perfil:', e);
+        await signOut(auth);
+        showLogin();
+        showErr('Não foi possível carregar seu perfil. Tente entrar novamente.');
+      }
+    } else {
+      currentUser = null;
+      document.getElementById('appWrap').style.display = 'none';
+      document.getElementById('loginWrap').style.display = 'flex';
+      showLogin();
     }
+  });
+} else {
+  document.getElementById('loadingOverlay').style.display = 'none';
+  document.getElementById('loginWrap').style.display = 'flex';
+  showLogin();
+  showErr('⚠️ Configure o firebase-config.js antes de usar.');
+}
 
-    match /configs/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+// ════ APP INIT ════
+async function initApp() {
+  // carrega config do usuário
+  const cfgSnap = await getDoc(doc(db,'configs',currentUser.uid));
+  config = cfgSnap.exists() ? { ...DEFAULT_CONFIG, ...cfgSnap.data() } : { ...DEFAULT_CONFIG };
+
+  document.getElementById('heroName').textContent = currentUser.nome.split(' ')[0];
+  const badge = document.getElementById('userBadge');
+  badge.textContent = currentUser.role === 'empregador' ? '🏠 Empregador' : '👩 Funcionária';
+  badge.className = 'user-badge' + (currentUser.role === 'empregador' ? ' employer' : '');
+
+  if (currentUser.role === 'empregador') {
+    document.getElementById('navDashboard').style.display = 'flex';
+    document.getElementById('navFechamentos').style.display = 'flex';
+    document.getElementById('navRegistro').style.display = 'none';
+    document.getElementById('navHistorico').style.display = 'none';
+    document.getElementById('screenRegistro').style.display = 'none';
+    document.getElementById('employerCodeCard').style.display = 'block';
+    document.getElementById('employerCodeDisplay').textContent = currentUser.houseCode;
+    document.getElementById('employerCode').textContent = 'Código: ' + currentUser.houseCode;
+    document.getElementById('cfgEmpregadorSecoes').style.display = 'block';
+    document.getElementById('configHorarios').style.display = 'none';
+    showScreen('Dashboard');
+  } else {
+    if (currentUser.ativa === false) { showInactiveEmployeeScreen(); return; }
+    document.getElementById('navDashboard').style.display = 'none';
+    document.getElementById('navFechamentos').style.display = 'none';
+    document.getElementById('navRegistro').style.display = 'flex';
+    document.getElementById('navHistorico').style.display = 'flex';
+    showScreen('Registro');
+  }
+
+  loadConfigUI();
+  subscribeRecords();
+  updateClock();
+  setInterval(updateClock, 1000);
+  if (config.notif) requestNotifPermission();
+  scheduleReminders();
+  alertCheckInterval = setInterval(checkAlerts, 60000);
+}
+
+// ════ FIRESTORE: REGISTROS EM TEMPO REAL ════
+function subscribeRecords() {
+  if (recordsUnsub) recordsUnsub();
+  let q;
+  if (currentUser.role === 'empregador') {
+    q = query(collection(db,'records'), where('houseCode','==',currentUser.houseCode));
+  } else {
+    q = query(collection(db,'records'), where('userId','==',currentUser.uid));
+  }
+  recordsUnsub = onSnapshot(q, (snap) => {
+    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    records.sort((a,b) => new Date(a.ts) - new Date(b.ts));
+    updateButtons();
+    if (currentUser.role !== 'empregador') { renderMinhasHoras(); scheduleReminders(); }
+    else if (document.getElementById('screenDashboard').classList.contains('active')) { renderDashboard(); }
+    else if (document.getElementById('screenFechamentos').classList.contains('active')) { renderFechamentos(); }
+    checkAlerts();
+  }, (err) => { console.error(err); showToast('Erro ao carregar registros'); });
+}
+
+// ════ CONFIG ════
+function loadConfigUI() {
+  document.getElementById('cfgEntrada').value = config.entrada;
+  document.getElementById('cfgAlmoco').value = config.almoco;
+  document.getElementById('cfgVoltaAlmocoMin').value = config.voltaAlmocoMin;
+  document.getElementById('cfgSaida').value = config.saida;
+  document.getElementById('cfgTolerancia').value = config.tolerancia;
+  document.getElementById('toggleNotif').className = 'toggle ' + (config.notif?'on':'');
+  document.getElementById('toggleLoc').className = 'toggle ' + (config.loc?'on':'');
+}
+async function saveConfig() {
+  config.entrada = document.getElementById('cfgEntrada').value;
+  config.almoco = document.getElementById('cfgAlmoco').value;
+  config.voltaAlmocoMin = parseInt(document.getElementById('cfgVoltaAlmocoMin').value) || 60;
+  config.saida = document.getElementById('cfgSaida').value;
+  config.tolerancia = parseInt(document.getElementById('cfgTolerancia').value) || 15;
+  await setDoc(doc(db,'configs',currentUser.uid), config);
+  scheduleReminders(); checkAlerts();
+  showToast('Configurações salvas');
+}
+async function toggleNotif() {
+  config.notif = !config.notif;
+  document.getElementById('toggleNotif').className = 'toggle ' + (config.notif?'on':'');
+  await setDoc(doc(db,'configs',currentUser.uid), config);
+  if (config.notif) { requestNotifPermission(); scheduleReminders(); }
+}
+async function toggleLoc() {
+  config.loc = !config.loc;
+  document.getElementById('toggleLoc').className = 'toggle ' + (config.loc?'on':'');
+  await setDoc(doc(db,'configs',currentUser.uid), config);
+}
+
+// ════ CLOCK ════
+function updateClock() {
+  const now = new Date(); const pad = n=>String(n).padStart(2,'0');
+  const cd=document.getElementById('clockDisplay');
+  if(cd) cd.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('headerTime').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const days=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const dt=document.getElementById('clockDate');
+  if(dt) dt.textContent = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}`;
+  updateSummary();
+}
+
+// ════ HELPERS ════
+function toMinutes(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+function todayRecordsFor(uid) {
+  const today = new Date().toDateString();
+  return records.filter(r => r.userId===uid && new Date(r.ts).toDateString()===today);
+}
+
+// ════ ALERTAS ════
+function buildAlerts(today, cfg) {
+  const alerts=[]; const now=nowMinutes(); const tol=cfg.tolerancia||15;
+  const has=t=>today.some(r=>r.type===t);
+  if (![1,2,3,4,5].includes(new Date().getDay())) return alerts;
+  const eM=toMinutes(cfg.entrada), aM=toMinutes(cfg.almoco), vM=toMinutes(cfg.voltaAlmoco), sM=toMinutes(cfg.saida);
+  if (!has('entrada') && now > eM+tol) alerts.push({type:'danger',msg:`Entrada não registrada — prevista às ${cfg.entrada}`});
+  if (has('entrada') && !has('almoco-saida') && now > aM+tol && now < sM) alerts.push({type:'warn',msg:`Saída de almoço não registrada — prevista às ${cfg.almoco}`});
+  if (has('almoco-saida') && !has('almoco-volta') && now > vM+tol) alerts.push({type:'warn',msg:`Volta do almoço não registrada — prevista às ${cfg.voltaAlmoco}`});
+  if (has('entrada') && !has('saida') && now > sM+tol) alerts.push({type:'danger',msg:`Saída não registrada — prevista às ${cfg.saida}`});
+  if (!has('entrada') && now >= eM-10 && now < eM) alerts.push({type:'info',msg:`Lembrete: entrada em ${eM-now} minuto(s)`});
+  return alerts;
+}
+function renderAlerts(alerts, id) {
+  const icons={danger:'🚨',warn:'⚠️',info:'💡'};
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML = alerts.map(a=>`<div class="alert-item ${a.type}"><span class="alert-icon">${icons[a.type]}</span>${a.msg}</div>`).join('');
+}
+async function checkAlerts() {
+  if (!currentUser) return;
+  if (currentUser.role === 'funcionaria') {
+    renderAlerts(buildAlerts(todayRecordsFor(currentUser.uid), config), 'alertsBanner');
+  } else {
+    // empregador: lista funcionárias + alertas de cada
+    const q = query(collection(db,'users'), where('role','==','funcionaria'), where('houseCode','==',currentUser.houseCode));
+    const snap = await getDocs(q);
+    const employees = snap.docs.map(d=>({uid:d.id, ...d.data()}));
+    const ativas = employees.filter(e=>e.ativa!==false);
+    const inativas = employees.filter(e=>e.ativa===false);
+    let allAlerts=[];
+    for (const emp of ativas) {
+      const today = records.filter(r=>r.userId===emp.uid && new Date(r.ts).toDateString()===new Date().toDateString());
+      const cfgSnap = await getDoc(doc(db,'configs',emp.uid));
+      const empCfg = cfgSnap.exists()? {...DEFAULT_CONFIG, ...cfgSnap.data()} : DEFAULT_CONFIG;
+      allAlerts = allAlerts.concat(buildAlerts(today, empCfg).map(a=>({...a, msg:`${emp.nome.split(' ')[0]}: ${a.msg}`})));
     }
+    if (ativas.length===0) allAlerts=[{type:'info',msg:'Nenhuma funcionária ativa. Código: '+currentUser.houseCode}];
+    renderAlerts(allAlerts, 'alertsEmpregadorBanner');
+    // carrega os contratos privados da casa para exibir no painel
+    try {
+      const ctSnap = await getDocs(query(collection(db,'contratos'), where('houseCode','==',currentUser.houseCode)));
+      window._contractCache = {};
+      ctSnap.docs.forEach(d => { window._contractCache[d.id] = d.data(); });
+    } catch(e) { console.error('contratos:', e); window._contractCache = window._contractCache || {}; }
+    renderEmployeeList(ativas, inativas);
+    renderInvites();
+    loadCorrecoesPendentes();
+  }
+}
 
-    match /convites/{email} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && isEmployerOfHouse(request.resource.data.houseCode);
-      allow delete: if request.auth != null
-        && isEmployerOfHouse(resource.data.houseCode);
-      allow update: if request.auth != null && (
-        isEmployerOfHouse(resource.data.houseCode) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usado','uid'])
-      );
+// ════ PAINEL EMPREGADOR ════
+function renderEmployeeList(ativas, inativas) {
+  const c=document.getElementById('employeeList');
+  const inat = inativas || [];
+  if (ativas.length===0 && inat.length===0){ c.innerHTML=`<div class="empty-state"><div class="empty-icon">👩</div><div class="empty-title">Nenhuma funcionária vinculada</div><div class="empty-sub">Compartilhe o código ${currentUser.houseCode}</div></div>`; window._empCache=[]; return; }
+  const tn={entrada:'Entrada',saida:'Saída','almoco-saida':'Saída Almoço','almoco-volta':'Volta Almoço'};
+  const bc={entrada:'var(--accent)',saida:'var(--danger)','almoco-saida':'var(--warn)','almoco-volta':'#3498db'};
+  c.innerHTML = ativas.map(emp=>{
+    const today = records.filter(r=>r.userId===emp.uid && new Date(r.ts).toDateString()===new Date().toDateString());
+    const has=t=>today.find(r=>r.type===t);
+    const fmt=ts=>ts?new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'--:--';
+    let status='Sem registros hoje', bcl='absent';
+    if (has('saida')){status='Turno encerrado';bcl='ok';}
+    else if (has('almoco-saida')&&!has('almoco-volta')){status='Em almoço';bcl='warn';}
+    else if (has('entrada')){status='Trabalhando';bcl='ok';}
+    const recs=today.sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(r=>`<div class="emp-rec-row"><div style="width:8px;height:8px;border-radius:50%;background:${bc[r.type]};flex-shrink:0"></div><div style="flex:1;font-size:13px;color:var(--ink2)">${tn[r.type]}${r.adjusted?'<span class="rec-adjusted">ajustado</span>':''}</div><div style="font-family:'DM Mono',monospace;font-size:13px">${fmt(r.ts)}</div><span class="rec-edit" onclick="openPointModal('${emp.uid}','${r.id}')">✏️</span></div>`).join('');
+    const id='emp_'+emp.uid;
+    const fmtR=v=>v?Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+    const diasMap={0:'Dom',1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb'};
+    const ct = (window._contractCache||{})[emp.uid] || {};
+    let contractHtml;
+    if (ct.salario || ct.jornadaDiaria) {
+      const dias=(ct.diasTrabalho||[]).map(d=>diasMap[d]).join(', ')||'—';
+      contractHtml=`<div class="emp-contract">
+        <div class="contract-item"><div class="lbl">Salário</div><div class="v">R$ ${fmtR(ct.salario)}</div></div>
+        <div class="contract-item"><div class="lbl">Jornada</div><div class="v">${ct.jornadaDiaria||'—'}h/dia</div></div>
+        <div class="contract-item"><div class="lbl">Dias</div><div class="v" style="font-family:'DM Sans'">${dias}</div></div>
+      </div>`;
+    } else {
+      contractHtml=`<div class="contract-missing">⚠️ Dados contratuais não preenchidos — necessários para o fechamento</div>`;
     }
+    return `<div class="employee-card">
+      <div class="emp-header">
+        <div class="emp-avatar" onclick="toggleEmpRecords('${id}')" style="cursor:pointer">👩</div>
+        <div onclick="toggleEmpRecords('${id}')" style="cursor:pointer;flex:1">
+          <div class="emp-name">${emp.nome}</div>
+          <div class="emp-status">${status}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="emp-edit-btn" onclick="openContractModal('${emp.uid}')">⚙️ Contrato</button>
+          <button class="emp-danger-btn" onclick="inactivateEmployee('${emp.uid}')" title="Encerrar acesso">🚫</button>
+        </div>
+      </div>
+      ${contractHtml}
+      <div class="emp-records" id="${id}">
+        ${recs||'<div style="padding:12px 16px;font-size:13px;color:var(--ink3)">Nenhum ponto hoje</div>'}
+        <button class="emp-add-point" onclick="openPointModal('${emp.uid}')">+ Adicionar ponto manual</button>
+      </div>
+    </div>`;
+  }).join('');
+  if (ativas.length===0) c.innerHTML = `<div class="empty-state" style="padding:24px 20px"><div class="empty-sub">Nenhuma funcionária ativa no momento.</div></div>`;
+  if (inat.length) {
+    const fmtD = iso => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—';
+    c.innerHTML += `<div class="inactive-group" id="inactiveGroup">
+      <div class="inactive-group-header" onclick="toggleInactiveGroup()">
+        <span>🗄️ Funcionárias inativas (${inat.length})</span><span class="chev">▾</span>
+      </div>
+      <div class="inactive-group-body">
+        ${inat.map(emp=>`<div class="inactive-card">
+          <div style="flex:1">
+            <div class="emp-name" style="color:var(--ink2)">${emp.nome}</div>
+            <div class="emp-status">Acesso encerrado em ${fmtD(emp.desligamentoEm)}</div>
+          </div>
+          <button class="emp-edit-btn" onclick="reactivateEmployee('${emp.uid}')">↩️ Reativar</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  window._empCache = [...ativas, ...inat];
+}
+function toggleEmpRecords(id){ document.getElementById(id).classList.toggle('open'); }
+function toggleInactiveGroup(){ const g=document.getElementById('inactiveGroup'); if(g) g.classList.toggle('open'); }
+async function inactivateEmployee(uid) {
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  const nome = emp ? emp.nome.split(' ')[0] : 'esta funcionária';
+  if (!confirm(`Encerrar o acesso de ${nome}?\n\nO histórico de pontos é preservado (exigência da legislação doméstica). Ela deixa de aparecer no painel ativo e não poderá bater ponto. Você pode reativar depois.`)) return;
+  try {
+    await updateDoc(doc(db,'users',uid), { ativa:false, desligamentoEm:new Date().toISOString() });
+    showToast('Acesso encerrado ✓');
+    checkAlerts();
+  } catch(e){ console.error(e); showToast('Erro ao encerrar acesso'); }
+}
+async function reactivateEmployee(uid) {
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  const nome = emp ? emp.nome.split(' ')[0] : 'esta funcionária';
+  if (!confirm(`Reativar o acesso de ${nome}? Ela volta ao painel ativo e poderá bater ponto normalmente.`)) return;
+  try {
+    await updateDoc(doc(db,'users',uid), { ativa:true, desligamentoEm:null });
+    showToast('Acesso reativado ✓');
+    checkAlerts();
+  } catch(e){ console.error(e); showToast('Erro ao reativar'); }
+}
+function showInactiveEmployeeScreen() {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const scr=document.getElementById('screenEncerrado'); if(scr) scr.classList.add('active');
+  const nav=document.getElementById('appNav'); if(nav) nav.style.display='none';
+  const dt = currentUser.desligamentoEm ? new Date(currentUser.desligamentoEm).toLocaleDateString('pt-BR') : null;
+  const de=document.getElementById('encerradoData'); if(de) de.textContent = dt ? `Encerrado em ${dt}` : '';
+  const en=document.getElementById('encerradoName'); if(en) en.textContent = (currentUser.nome||'').split(' ')[0];
+}
 
-    // Local/cerca da casa (definido pelo empregador, lido pela funcionária)
-    match /casas/{houseCode} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isEmployerOfHouse(houseCode);
+// ════════════════════════════════════════════════════════════════
+// FECHAR COMPETÊNCIA → GOOGLE SHEETS
+// ════════════════════════════════════════════════════════════════
+const SHEETS_URL   = 'https://script.google.com/macros/s/AKfycbwIBwlmNV8ZeO1vNaIyXWhwtdSZM9ttv3R4f5T38sAA_6h_5pT1w35UIkCta-jSNJneFg/exec';
+const SHEETS_TOKEN = 'pcasa_7kQm2xVr9nP4tLwZ8sYbF3'; // igual ao Codigo.gs
+
+const TIPO_MAP = {
+  'entrada':      'entrada',
+  'almoco-saida': 'almocoSaida',
+  'almoco-volta': 'almocoVolta',
+  'saida':        'saida'
+};
+
+/** Monta o payload da competência a partir dos records já carregados. */
+function montarPayload(competencia, empUid) {
+  const emps = (window._empCache || []).filter(e => e.ativa !== false && (!empUid || e.uid === empUid));
+  const contratos = window._contractCache || {};
+
+  const funcionarias = emps.map(e => {
+    const ct = contratos[e.uid] || {};
+    return {
+      nome: e.nome,
+      uid: e.uid,
+      salario: Number(ct.salario) || null,
+      jornadaDiaria: Number(ct.jornadaDiaria) || null,
+      diasTrabalho: ct.diasTrabalho || [],
+      admissao: ct.admissao || null
+    };
+  });
+
+  // Agrupa os registros do mês por funcionária + data
+  const bucket = {};
+  (window.records || records).forEach(r => {
+    if (!r.ts) return;
+    const d = new Date(r.ts);
+    const data = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (data.slice(0, 7) !== competencia) return;
+    const emp = emps.find(e => e.uid === r.userId);
+    if (!emp) return;
+    const k = emp.nome + '|' + data;
+    if (!bucket[k]) {
+      bucket[k] = {
+        nome: emp.nome, data, tipoDia: r.tipoDia || 'NORMAL',
+        entrada: null, almocoSaida: null, almocoVolta: null, saida: null,
+        manual: false, foraCerca: 0, obs: ''
+      };
     }
-
-    // Feriados: leitura para todos os logados; escrita só empregador.
-    // Editado 1x/ano pelo empregador. Doc id = ano ("2026").
-    match /feriados/{ano} {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'empregador';
-      allow delete: if false;
+    const campo = TIPO_MAP[r.type];
+    if (campo) {
+      bucket[k][campo] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
+    if (r.adjusted || r.origem === 'MANUAL') bucket[k].manual = true;
+    if (r.foraCerca) bucket[k].foraCerca++;
+    if (r.justificativa) bucket[k].obs = r.justificativa;
+  });
 
-    // Fechamentos mensais consolidados. Doc id = "{uid}_{YYYY-MM}".
-    // Empregador da casa: leitura e escrita. Funcionária: só o próprio, leitura.
-    match /fechamentos/{fid} {
-      allow read: if request.auth != null && (
-        resource.data.uid == request.auth.uid ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'empregador'
-      );
-      allow create, update: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'empregador'
-        && request.resource.data.houseCode ==
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.houseCode;
-      allow delete: if false;   // fechamento não se apaga — reabre (status = 'revisar')
+  return { token: SHEETS_TOKEN, competencia, funcionarias, dias: Object.values(bucket) };
+}
+
+/** Valida antes de enviar. Retorna array de problemas. */
+function validarFechamento(payload) {
+  const p = [];
+  payload.funcionarias.forEach(f => {
+    if (!f.salario || !f.jornadaDiaria) p.push(`${f.nome}: dados contratuais incompletos`);
+  });
+  payload.dias.forEach(d => {
+    const faltando = ['entrada', 'saida'].filter(c => !d[c]);
+    if (faltando.length && !['FERIADO', 'FALTA', 'ATESTADO', 'DSR', 'FERIAS'].includes(d.tipoDia)) {
+      p.push(`${d.nome} ${d.data.split('-').reverse().join('/')}: falta ${faltando.join(' e ')}`);
     }
+  });
+  return p;
+}
 
-    // Correções de ponto (autocorreção da funcionária + fila de aprovação).
-    // A funcionária cria (status sempre 'pendente' na criação, nunca pode
-    // se auto-aprovar). Leitura: a própria funcionária ou o empregador da casa.
-    // Só o empregador pode mudar o status (aprovar/rejeitar).
-    match /correcoes/{cid} {
-      allow read: if request.auth != null && (
-        resource.data.uid == request.auth.uid ||
-        isEmployerOfHouse(resource.data.houseCode)
-      );
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.status == 'pendente';
-      allow update: if request.auth != null
-        && isEmployerOfHouse(resource.data.houseCode);
-      allow delete: if false;
+/** Fluxo completo: confirma → valida → envia. */
+async function abrirFechamento() {
+  const emps = (window._empCache || []).filter(e => e.ativa !== false);
+  if (!emps.length) { showToast('Nenhuma funcionária ativa'); return; }
+
+  let escolhida;
+  if (emps.length === 1) {
+    escolhida = emps[0];
+  } else {
+    const lista = emps.map((e, i) => `${i + 1}) ${e.nome}`).join('\n');
+    const resp = prompt(`Fechar competência de qual funcionária?\n\n${lista}\n\nDigite o número:`, '1');
+    if (!resp) return;
+    const idx = parseInt(resp.trim(), 10) - 1;
+    if (isNaN(idx) || !emps[idx]) { showToast('Opção inválida'); return; }
+    escolhida = emps[idx];
+  }
+
+  const hoje = new Date();
+  const sug = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  const comp = prompt(`Fechar qual competência de ${escolhida.nome}? (AAAA-MM)`, sug);
+  if (!comp || !/^\d{4}-\d{2}$/.test(comp)) return;
+
+  const payload = montarPayload(comp, escolhida.uid);
+  if (!payload.dias.length) { showToast('Nenhum registro nessa competência'); return; }
+
+  const probs = validarFechamento(payload);
+  if (probs.length) {
+    const msg = `⚠️ ${probs.length} pendência(s):\n\n` + probs.slice(0, 12).join('\n') +
+      (probs.length > 12 ? `\n… e mais ${probs.length - 12}` : '') +
+      '\n\nEnviar mesmo assim?';
+    if (!confirm(msg)) return;
+  } else if (!confirm(`${escolhida.nome}: ${payload.dias.length} dias conferidos. Enviar ${comp} para a planilha?`)) {
+    return;
+  }
+
+  showToast('Enviando para a planilha…');
+  try {
+    // text/plain evita o preflight CORS do Apps Script
+    const res = await fetch(SHEETS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const out = await res.json();
+    showToast(out.ok ? `✓ ${out.linhas} dias na planilha` : 'Erro: ' + out.erro);
+  } catch (e) {
+    console.error(e);
+    showToast('Falha no envio — verifique a URL do Apps Script');
+  }
+}
+
+// ════ DADOS CONTRATUAIS (coleção privada 'contratos' — só o empregador lê/escreve) ════
+let editingEmpUid = null;
+function openContractModal(uid) {
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  if (!emp) return;
+  editingEmpUid = uid;
+  const ct = (window._contractCache||{})[uid] || {};
+  document.getElementById('fNomeCompleto').value = emp.nome || '';
+
+  document.getElementById('fSalario').value = ct.salario || '';
+  document.getElementById('fJornada').value = ct.jornadaDiaria || '';
+  document.getElementById('fAdmissao').value = ct.admissao || '';
+  document.getElementById('fValeTransporte').value = ct.valeTransporteDiario != null ? ct.valeTransporteDiario : '';
+  const dias = ct.diasTrabalho || [1,2,3,4,5];
+  document.querySelectorAll('#fDias .day-chip').forEach(chip=>{
+    const d = parseInt(chip.dataset.d);
+    chip.className = 'day-chip' + (dias.includes(d)?' on':'');
+  });
+  document.getElementById('contractModal').classList.add('open');
+}
+function closeContractModal(){ document.getElementById('contractModal').classList.remove('open'); editingEmpUid=null; }
+async function saveContract() {
+  if (!editingEmpUid) return;
+  const nomeCompleto = document.getElementById('fNomeCompleto').value.trim();
+  if (nomeCompleto.length < 3) { showToast('Informe o nome completo'); return; }
+  const dias = [...document.querySelectorAll('#fDias .day-chip.on')].map(c=>parseInt(c.dataset.d));
+  const dados = {
+    salario: parseFloat(document.getElementById('fSalario').value) || null,
+    jornadaDiaria: parseFloat(document.getElementById('fJornada').value) || null,
+    diasTrabalho: dias.length ? dias : [1,2,3,4,5],
+    admissao: document.getElementById('fAdmissao').value || null,
+    valeTransporteDiario: parseFloat(document.getElementById('fValeTransporte').value) || null,
+    houseCode: currentUser.houseCode,
+  };
+  try {
+    const emp = (window._empCache||[]).find(e=>e.uid===editingEmpUid);
+    if (emp && nomeCompleto !== emp.nome) {
+      await updateDoc(doc(db,'users',editingEmpUid), { nome: nomeCompleto });
+      emp.nome = nomeCompleto;
     }
+    await setDoc(doc(db,'contratos',editingEmpUid), dados);
+    window._contractCache = window._contractCache || {};
+    window._contractCache[editingEmpUid] = dados;
+    closeContractModal();
+    showToast('Dados salvos ✓');
+    checkAlerts();
+  } catch(e){ console.error(e); showToast('Erro ao salvar'); }
+}
 
-    // Atividade (download/compartilhamento do relatório mensal pela funcionária).
-    // Ela só cria a própria; o empregador da casa lê todas, pra ver o aviso
-    // no Resumo Geral. Ninguém edita ou apaga — é um log.
-    match /atividades/{aid} {
-      allow read: if request.auth != null && (
-        resource.data.uid == request.auth.uid ||
-        isEmployerOfHouse(resource.data.houseCode)
-      );
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if false;
+// chips de dias clicáveis
+document.addEventListener('click', (e)=>{
+  if (e.target.classList && e.target.classList.contains('day-chip') && e.target.closest('#fDias')) {
+    e.target.classList.toggle('on');
+  }
+  if (e.target.classList && e.target.classList.contains('type-opt') && e.target.closest('#pTipo')) {
+    document.querySelectorAll('#pTipo .type-opt').forEach(o=>o.classList.remove('on'));
+    e.target.classList.add('on');
+  }
+});
+
+// ════ CONVITES (pré-cadastro de funcionárias) ════
+function openInviteModal() {
+  document.getElementById('iNome').value = '';
+  document.getElementById('iEmail').value = '';
+  document.getElementById('inviteModal').classList.add('open');
+}
+function closeInviteModal(){ document.getElementById('inviteModal').classList.remove('open'); }
+
+async function saveInvite() {
+  const nome = document.getElementById('iNome').value.trim();
+  const email = document.getElementById('iEmail').value.trim().toLowerCase();
+  if (!nome || !email || !email.includes('@')) { showToast('Preencha nome e e-mail válidos'); return; }
+  try {
+    await setDoc(doc(db,'convites',email), {
+      nome, email, houseCode: currentUser.houseCode,
+      usado: false, criadoEm: new Date().toISOString()
+    });
+    closeInviteModal();
+    showToast('Funcionária cadastrada ✓ Ela já pode ativar o acesso');
+    renderInvites();
+  } catch(e){ console.error(e); showToast('Erro ao cadastrar'); }
+}
+
+async function deleteInvite(email) {
+  if (!confirm('Remover o pré-cadastro de ' + email + '?')) return;
+  try { await deleteDoc(doc(db,'convites',email)); renderInvites(); showToast('Removido'); }
+  catch(e){ console.error(e); showToast('Erro ao remover'); }
+}
+
+async function renderInvites() {
+  const c = document.getElementById('invitesList');
+  if (!c || !currentUser || currentUser.role !== 'empregador') return;
+  try {
+    const q = query(collection(db,'convites'), where('houseCode','==',currentUser.houseCode), where('usado','==',false));
+    const snap = await getDocs(q);
+    if (snap.empty) { c.innerHTML = ''; return; }
+    c.innerHTML = '<div class="section-header" style="padding-top:6px"><div class="section-sub">Aguardando primeiro acesso</div></div>' +
+      snap.docs.map(d => {
+        const v = d.data();
+        return `<div class="employee-card" style="opacity:0.85"><div class="emp-header" style="cursor:default">
+          <div class="emp-avatar">⏳</div>
+          <div style="flex:1"><div class="emp-name">${v.nome}</div><div class="emp-status">${v.email}</div></div>
+          <button class="emp-edit-btn" onclick="deleteInvite('${v.email}')">Remover</button>
+        </div></div>`;
+      }).join('');
+  } catch(e){ console.error(e); }
+}
+
+// ════ ADICIONAR / CORRIGIR PONTO MANUAL ════
+let editingPoint = null; // { empUid, recordId } ou { empUid } para novo
+function openPointModal(empUid, recordId=null) {
+  const emp = (window._empCache||[]).find(e=>e.uid===empUid);
+  if (!emp) return;
+  editingPoint = { empUid, recordId };
+  document.getElementById('pointEmpName').textContent = emp.nome;
+  document.querySelectorAll('#pTipo .type-opt').forEach(o=>o.classList.remove('on'));
+
+  if (recordId) {
+    const rec = records.find(r=>r.id===recordId);
+    document.getElementById('pointModalTitle').textContent = 'Corrigir ponto';
+    document.getElementById('pBtnDelete').style.display = 'block';
+    const d = new Date(rec.ts);
+    document.querySelector(`#pTipo .type-opt[data-t="${rec.type}"]`)?.classList.add('on');
+    document.getElementById('pData').value = d.toISOString().slice(0,10);
+    document.getElementById('pHora').value = d.toTimeString().slice(0,5);
+  } else {
+    document.getElementById('pointModalTitle').textContent = 'Adicionar ponto';
+    document.getElementById('pBtnDelete').style.display = 'none';
+    document.getElementById('pData').value = new Date().toISOString().slice(0,10);
+    document.getElementById('pHora').value = '';
+  }
+  document.getElementById('pointModal').classList.add('open');
+}
+function closePointModal(){ document.getElementById('pointModal').classList.remove('open'); editingPoint=null; }
+
+async function savePoint() {
+  if (!editingPoint) return;
+  const tipoEl = document.querySelector('#pTipo .type-opt.on');
+  const data = document.getElementById('pData').value;
+  const hora = document.getElementById('pHora').value;
+  if (!tipoEl) { showToast('Escolha o tipo de registro'); return; }
+  if (!data || !hora) { showToast('Preencha data e horário'); return; }
+  const tipo = tipoEl.dataset.t;
+  const ts = new Date(`${data}T${hora}:00`).toISOString();
+  const emp = (window._empCache||[]).find(e=>e.uid===editingPoint.empUid);
+
+  try {
+    if (editingPoint.recordId) {
+      await updateDoc(doc(db,'records',editingPoint.recordId), {
+        type: tipo, ts, adjusted: true,
+        adjustedBy: currentUser.uid, adjustedAt: serverTimestamp()
+      });
+      showToast('Ponto corrigido ✓');
+    } else {
+      await addDoc(collection(db,'records'), {
+        type: tipo, ts, photoUrl: null, location: null,
+        userId: editingPoint.empUid, userName: emp?.nome || '',
+        houseCode: currentUser.houseCode || null,
+        adjusted: true, adjustedBy: currentUser.uid,
+        createdAt: serverTimestamp()
+      });
+      showToast('Ponto adicionado ✓');
     }
+    closePointModal();
+  } catch(e){ console.error(e); showToast('Erro ao salvar ponto'); }
+}
 
-    function isEmployerOfHouse(houseCode) {
-      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return u.role == 'empregador' && u.houseCode == houseCode;
+async function deletePoint() {
+  if (!editingPoint?.recordId) return;
+  if (!confirm('Excluir este registro de ponto?')) return;
+  try {
+    await deleteDoc(doc(db,'records',editingPoint.recordId));
+    closePointModal();
+    showToast('Ponto excluído');
+  } catch(e){ console.error(e); showToast('Erro ao excluir'); }
+}
+
+
+// ════ BOTÕES ════
+function updateButtons() {
+  if (!currentUser || currentUser.role==='empregador') return;
+  const today = todayRecordsFor(currentUser.uid);
+  const has=t=>today.some(r=>r.type===t);
+  document.getElementById('btnEntrada').className = has('entrada')?'action-btn disabled':'action-btn primary';
+  document.getElementById('btnAlmocoSaida').className = (has('entrada')&&!has('almoco-saida'))?'action-btn secondary':'action-btn disabled';
+  document.getElementById('btnAlmocoVolta').className = (has('almoco-saida')&&!has('almoco-volta'))?'action-btn blue':'action-btn disabled';
+  // Saída SÓ é liberada com o almoço completo registrado (saída e volta)
+  const canSaida = has('entrada')&&!has('saida')&&has('almoco-saida')&&has('almoco-volta');
+  document.getElementById('btnSaida').className = canSaida?'action-btn':'action-btn disabled';
+  document.getElementById('statusEntrada').className = 'status-pill '+(has('entrada')?'active':'');
+  document.getElementById('statusAlmoco').className = 'status-pill '+(has('almoco-saida')?(has('almoco-volta')?'active':'warn'):'');
+  document.getElementById('statusSaida').className = 'status-pill '+(has('saida')?'active':'');
+}
+function updateSummary() {
+  if (!currentUser || currentUser.role==='empregador') return;
+  const today = todayRecordsFor(currentUser.uid);
+  const get=t=>today.find(r=>r.type===t);
+  const fmt=ts=>ts?new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'--:--';
+  const se=document.getElementById('sumEntrada'); if(!se) return;
+  se.textContent=fmt(get('entrada')?.ts);
+  document.getElementById('sumAlmocoSaida').textContent=fmt(get('almoco-saida')?.ts);
+  document.getElementById('sumAlmocoVolta').textContent=fmt(get('almoco-volta')?.ts);
+  document.getElementById('sumSaida').textContent=fmt(get('saida')?.ts);
+  const entrada=get('entrada'),saida=get('saida'); let status='Aguardando entrada',horas='--:--';
+  if (entrada){
+    const base=saida?new Date(saida.ts):new Date();
+    let work=base-new Date(entrada.ts);
+    const as=get('almoco-saida'),av=get('almoco-volta');
+    if(as&&av)work-=(new Date(av.ts)-new Date(as.ts));
+    else if(as&&!av)work-=(Date.now()-new Date(as.ts));
+    const min=Math.max(0,Math.floor(work/60000));
+    horas=`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+    status=saida?'Turno encerrado':(as&&!av?'Em almoço':'Trabalhando');
+  }
+  document.getElementById('horasTrabalhadas').textContent=horas;
+  document.getElementById('statusAtual').textContent=status;
+}
+
+// ════ CÂMERA ════
+const typeLabels={entrada:['ENTRADA','Início do turno'],saida:['SAÍDA','Fim do turno'],'almoco-saida':['SAÍDA ALMOÇO','Pausa para refeição'],'almoco-volta':['VOLTA ALMOÇO','Retorno do almoço']};
+const ALMOCO_MINIMO_MIN = 60; // 1 hora de almoço, mínimo legal
+
+async function openCamera(type) {
+  if (currentUser && currentUser.ativa === false) { showToast('Acesso encerrado — fale com o empregador'); return; }
+  // Validação: volta do almoço só após 1h da saída
+  if (type === 'almoco-volta') {
+    const as = todayRecordsFor(currentUser.uid).find(r=>r.type==='almoco-saida');
+    if (as) {
+      const decorrido = Math.floor((Date.now() - new Date(as.ts)) / 60000);
+      if (decorrido < ALMOCO_MINIMO_MIN) {
+        showToast(`Almoço mínimo de 1h — faltam ${ALMOCO_MINIMO_MIN - decorrido} min`);
+        return;
+      }
+    }
+  }
+  currentType=type;
+  document.getElementById('cameraType').textContent=typeLabels[type][0];
+  document.getElementById('cameraLabel').textContent=typeLabels[type][1];
+  document.getElementById('cameraModal').classList.add('open');
+  document.getElementById('cameraUI').style.display='flex';
+  document.getElementById('cameraWrap').style.display='';
+  document.getElementById('photoConfirm').classList.remove('open');
+  try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); document.getElementById('cameraVideo').srcObject=stream; }
+  catch(e){ showToast('Câmera não disponível — use HTTPS'); closeCamera(); return; }
+  if (config.loc) getLocation();
+}
+function getLocation() {
+  currentLocation=null;
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p=>{currentLocation={lat:p.coords.latitude.toFixed(5),lng:p.coords.longitude.toFixed(5)};},()=>{});
+}
+function closeCamera() {
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  document.getElementById('cameraModal').classList.remove('open');
+}
+function snapPhoto() {
+  const v=document.getElementById('cameraVideo'),c=document.getElementById('snapCanvas');
+  c.width=v.videoWidth||320; c.height=v.videoHeight||240;
+  c.getContext('2d').drawImage(v,0,0);
+  capturedDataUrl=c.toDataURL('image/jpeg',0.6);
+  document.getElementById('capturedImg').src=capturedDataUrl;
+  document.getElementById('confirmType').textContent=typeLabels[currentType][0];
+  document.getElementById('confirmTime').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('confirmLoc').textContent=currentLocation?`📍 ${currentLocation.lat}, ${currentLocation.lng}`:(config.loc?'📍 Localização não obtida':'📍 Desativada');
+  document.getElementById('cameraUI').style.display='none';
+  document.getElementById('cameraWrap').style.display='none';
+  document.getElementById('photoConfirm').classList.add('open');
+}
+function retryPhoto() {
+  document.getElementById('cameraUI').style.display='flex';
+  document.getElementById('cameraWrap').style.display='';
+  document.getElementById('photoConfirm').classList.remove('open');
+}
+async function saveRecord() {
+  // Defesa extra: volta do almoço antes de 1h não é gravada
+  if (currentType === 'almoco-volta') {
+    const as = todayRecordsFor(currentUser.uid).find(r=>r.type==='almoco-saida');
+    if (as && (Date.now() - new Date(as.ts)) / 60000 < ALMOCO_MINIMO_MIN) {
+      showToast('Almoço mínimo de 1h ainda não completou');
+      closeCamera();
+      return;
+    }
+  }
+  const btn=document.getElementById('btnSave'); btn.disabled=true;
+  try {
+    const ts=new Date().toISOString();
+    // 1. upload da foto
+    const photoRef=ref(storage,`pontos/${currentUser.uid}/${Date.now()}.jpg`);
+    await uploadString(photoRef, capturedDataUrl, 'data_url');
+    const photoUrl=await getDownloadURL(photoRef);
+    // 2. grava o registro
+    await addDoc(collection(db,'records'), {
+      type: currentType, ts,
+      photoUrl, location: currentLocation,
+      userId: currentUser.uid, userName: currentUser.nome,
+      houseCode: currentUser.houseCode || null,
+      createdAt: serverTimestamp()
+    });
+    closeCamera();
+    const labels={entrada:'Entrada registrada ✓',saida:'Saída registrada ✓','almoco-saida':'Saída p/ almoço ✓','almoco-volta':'Volta do almoço ✓'};
+    showToast(labels[currentType]);
+  } catch(e) { console.error(e); showToast('Erro ao salvar registro'); }
+  btn.disabled=false;
+}
+
+// ════ TIMELINE ════
+const typeNames={entrada:'Entrada',saida:'Saída','almoco-saida':'Saída Almoço','almoco-volta':'Volta Almoço'};
+const badgeClass={entrada:'badge-entrada',saida:'badge-saida','almoco-saida':'badge-almoco-saida','almoco-volta':'badge-almoco-volta'};
+let minhasHorasView = 'dia';
+let mesAnteriorExpandido = null;
+function setMinhasHorasView(v){ minhasHorasView = v; renderMinhasHoras(); }
+function toggleMesAnterior(ym){ mesAnteriorExpandido = (mesAnteriorExpandido===ym) ? null : ym; renderMinhasHoras(); }
+
+function renderMinhasHoras(){
+  if (!currentUser || currentUser.role === 'empregador') return;
+  const uid = currentUser.uid;
+  const vigente = ymdOf(new Date()).slice(0,7);
+  document.getElementById('histCount').textContent = `${records.length} registro(s)`;
+
+  const ag = agregarMes(uid, vigente);
+  let mesHtml = `<div class="dash-card hl">
+    <div class="dash-card-sub" style="margin-bottom:8px">${labelMes(vigente)} · este mês</div>
+    <div class="dash-metrics">
+      <div class="dash-metric"><div class="lbl">Jornada</div><div class="v">${fmtHM(ag.jornada)}</div></div>
+      <div class="dash-metric"><div class="lbl">Banco</div><div class="v">${fmtHM(ag.pote)}</div></div>
+      <div class="dash-metric"><div class="lbl">Extra</div><div class="v">${fmtHM(ag.extra)}</div></div>
+    </div>
+  </div>
+  <div class="dash-toggle">
+    <button class="${minhasHorasView==='dia'?'on':''}" onclick="setMinhasHorasView('dia')">Resumo</button>
+    <button class="${minhasHorasView==='semana'?'on':''}" onclick="setMinhasHorasView('semana')">Semana</button>
+  </div>`;
+
+  if (!ag.dias.length) {
+    mesHtml += '<div class="empty-state" style="padding:24px 20px"><div class="empty-sub">Nenhum registro neste mês ainda.</div></div>';
+  } else if (minhasHorasView === 'dia') {
+    mesHtml += ag.dias.slice().reverse().map(d=>linhaDia(d,uid)).join('');
+  } else {
+    mesHtml += semanasDe(ag.dias).map(w=>`<div class="weekrow${dashWeekOpen[w.k]?' open':''}" id="wk_${w.k}">
+      <div class="weekrow-head" onclick="toggleWeek('${w.k}')">
+        <div class="dayrow-top"><div class="dayrow-date">Semana ${w.rot}<span class="chev"> ▾</span></div><div class="dayrow-total">${fmtHM(w.ag.trab)}</div></div>
+        ${segbar(w.ag, Math.max(1, w.dias.filter(d=>d.esperado>0).length*JORNADA_MIN), true)}
+      </div>
+      <div class="weekrow-body">${w.dias.map(d=>linhaDia(d,uid)).join('')}</div>
+    </div>`).join('');
+  }
+  document.getElementById('meuMesAtual').innerHTML = mesHtml;
+
+  const passados = mesesComRegistro(uid).filter(ym=>ym !== vigente);
+  const labelEl = document.getElementById('mesesAnterioresLabel');
+  const boxEl = document.getElementById('meusMesesAnteriores');
+  if (!passados.length) { labelEl.style.display='none'; boxEl.innerHTML=''; return; }
+  labelEl.style.display = 'block';
+  boxEl.innerHTML = passados.map(ym=>{
+    const a = agregarMes(uid, ym);
+    const fechado = statusMes(uid, ym, false) === 'fechado';
+    const aberto = mesAnteriorExpandido === ym;
+    let card = `<div class="dash-card" style="padding:12px 16px">
+      <div class="dash-card-head" style="cursor:pointer;margin-bottom:0" onclick="toggleMesAnterior('${ym}')">
+        <div><div class="dash-card-title" style="font-size:14px">${labelMes(ym)}</div>
+          <div class="dash-card-sub">jornada ${fmtHM(a.jornada)} · banco ${fmtHM(a.pote)} · extra ${fmtHM(a.extra)}</div></div>
+        <span class="dash-pill ${fechado?'fechado':'revisar'}">${fechado?'Fechado':'Revisar'}</span>
+      </div>
+      ${aberto ? a.dias.slice().reverse().map(d=>linhaDia(d,uid)).join('') : ''}`;
+    if (fechado) {
+      card += `<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="cor-report-btn" style="flex:1;margin-top:0" onclick="gerarMeuRelatorioPDF('${ym}','baixar')">📄 Baixar PDF</button>
+        <button class="cor-report-btn" style="flex:1;margin-top:0" onclick="gerarMeuRelatorioPDF('${ym}','compartilhar')">📤 Compartilhar</button>
+      </div>`;
+    }
+    card += `</div>`;
+    return card;
+  }).join('');
+}
+
+async function gerarMeuRelatorioPDF(ym, modo){
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const uid = currentUser.uid;
+  const ag = agregarMes(uid, ym);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 70;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
+  pdf.text('Meu Relatório de Ponto', M, y); y += 24;
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text(`${currentUser.nome} · Referência: ${labelMes(ym)}`, M, y); y += 30;
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y += 24;
+
+  pdf.setFontSize(12);
+  pdf.text(`Jornada normal: ${fmtHM(ag.jornada)}`, M, y); y += 18;
+  pdf.text(`Banco de horas: ${fmtHM(ag.pote)}`, M, y); y += 18;
+  pdf.text(`Horas extras: ${fmtHM(ag.extra)}`, M, y); y += 18;
+  pdf.text(`Dias com registro: ${ag.dias.length}`, M, y); y += 30;
+
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+  pdf.text('Data', M, y); pdf.text('Entrada', M+90, y); pdf.text('Alm. saída', M+170, y); pdf.text('Alm. volta', M+260, y); pdf.text('Saída', M+350, y);
+  y += 8; pdf.line(M, y, W-M, y); y += 14;
+  pdf.setFont('helvetica','normal');
+  ag.dias.forEach(d=>{
+    if (y > 760) { pdf.addPage(); y = 50; }
+    const [Y,Mo,D] = d.ds.split('-').map(Number);
+    pdf.text(`${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}`, M, y);
+    pdf.text(d.horarios.entrada || '—', M+90, y);
+    pdf.text(d.horarios.almocoSaida || '—', M+170, y);
+    pdf.text(d.horarios.almocoVolta || '—', M+260, y);
+    pdf.text(d.horarios.saida || '—', M+350, y);
+    y += 15;
+  });
+
+  y += 20;
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '. Guarde para seu controle pessoal.', M, y);
+
+  const filename = `Meu-Relatorio-${currentUser.nome.split(' ')[0]}-${ym}.pdf`;
+
+  if (modo === 'compartilhar' && navigator.share && navigator.canShare) {
+    try {
+      const blob = pdf.output('blob');
+      const file = new File([blob], filename, { type:'application/pdf' });
+      if (navigator.canShare({ files:[file] })) {
+        await navigator.share({ files:[file], title:'Meu Relatório de Ponto', text:`Relatório de ${labelMes(ym)}` });
+        await registrarAtividade('compartilhar_relatorio', ym);
+        return;
+      }
+    } catch(e){ console.error('share', e); }
+    showToast('Compartilhamento indisponível — baixando o PDF');
+  }
+  pdf.save(filename);
+  await registrarAtividade('download_relatorio', ym);
+}
+
+// ════ NOTIFICAÇÕES ════
+function requestNotifPermission(){ if('Notification'in window&&Notification.permission==='default')Notification.requestPermission(); }
+function dispararLembrete(m){
+  if ('Notification' in window && Notification.permission==='granted') new Notification('PontoCasa',{body:m});
+  else showToast(m);
+}
+function scheduleReminders() {
+  notifTimers.forEach(clearTimeout); notifTimers=[];
+  if(!config.notif || !currentUser || currentUser.role==='empregador') return;
+
+  const jaTemHoje = (tipo) => {
+    const hoje = ymdOf(new Date());
+    return records.some(r => r.userId===currentUser.uid && r.type===tipo && ymdOf(new Date(r.ts))===hoje);
+  };
+
+  // horários fixos — só avisa se ainda não bateu aquele ponto (checado na hora do disparo)
+  const fixos=[{t:config.entrada,tipo:'entrada',m:'🟢 Hora de bater o ponto de entrada!'},{t:config.almoco,tipo:'almoco-saida',m:'🍽️ Hora de registrar saída para almoço!'},{t:config.saida,tipo:'saida',m:'🔴 Hora de bater o ponto de saída!'}];
+  fixos.forEach(({t,tipo,m})=>{
+    const [h,mi]=t.split(':').map(Number); const tgt=new Date(); tgt.setHours(h,mi,0,0);
+    if(tgt<=new Date())tgt.setDate(tgt.getDate()+1);
+    notifTimers.push(setTimeout(()=>{ if (!jaTemHoje(tipo)) dispararLembrete(m); }, tgt-new Date()));
+  });
+
+  // volta do almoço — relativo ao horário real que ela bateu a saída, não um horário fixo
+  if (!jaTemHoje('almoco-volta')) {
+    const hoje = ymdOf(new Date());
+    const saidaAlmocoHoje = records.find(r=>r.userId===currentUser.uid && r.type==='almoco-saida' && ymdOf(new Date(r.ts))===hoje);
+    if (saidaAlmocoHoje) {
+      const min = config.voltaAlmocoMin || 60;
+      const alvo = new Date(saidaAlmocoHoje.ts).getTime() + min*60000;
+      const delta = alvo - Date.now();
+      if (delta > 0) {
+        notifTimers.push(setTimeout(()=>{ if (!jaTemHoje('almoco-volta')) dispararLembrete('↩️ Hora de registrar volta do almoço!'); }, delta));
+      }
     }
   }
 }
+
+// ════ NAV ════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen'+name).classList.add('active');
+  const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
+  if(name==='Historico') { renderMinhasHoras(); }
+  if(name==='Dashboard') openDashboard();
+  if(name==='Fechamentos') openFechamentos();
+  if(name==='Config' && currentUser && currentUser.role==='empregador') checkAlerts();
+}
+
+// ════ DASHBOARD: REGRA DE JORNADA / BANCO / EXTRA ════
+// Jornada contratual 8,8h/dia (528min), seg-sex.
+// Até +2h/dia (120min) -> pote do mês (compensa com dias curtos, sem desconto se negativo).
+// Acima de 10,8h/dia (648min) -> hora extra marcada em tempo real.
+// Fechamento: pote positivo + extras diárias = pago na folha do mês. Zera; nada atravessa.
+const JORNADA_MIN = 528, BANCO_CAP = 120;
+let ferByAno = {};
+let fechamentos = {};        // 'uid|YYYY-MM' -> { status, ... }
+let dashView = 'dia';
+let diaExpandidoKey = null;
+let vtView = 'inicio';
+let dashEmpUid = null;
+let dashWeekOpen = {};
+let feriadosDraft = [], feriadosAnoEdit = null;
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function ymdOf(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function fmtHM(min){
+  const neg = min < 0; min = Math.abs(Math.round(min));
+  return (neg?'-':'') + Math.floor(min/60) + 'h' + pad2(min%60);
+}
+const MESES_LONGOS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_CURTOS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const DOW_CURTOS = ['dom','seg','ter','qua','qui','sex','sáb'];
+function labelMes(ym){ const [y,m]=ym.split('-').map(Number); return MESES_LONGOS[m-1]+' '+y; }
+function proximoMes(ym){
+  const [y,m] = ym.split('-').map(Number);
+  const d = new Date(y, m, 1); // m já é 1-indexado -> Date(y,m,1) cai no mês seguinte
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1);
+}
+function fmtBRL(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+// ════ FERIADOS ════
+function pascoa(ano){
+  const a=ano%19, b=Math.floor(ano/100), c=ano%100, d=Math.floor(b/4), e=b%4;
+  const f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30, i=Math.floor(c/4), k=c%4;
+  const l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451);
+  const mes=Math.floor((h+l-7*m+114)/31), dia=((h+l-7*m+114)%31)+1;
+  return new Date(ano, mes-1, dia);
+}
+function feriadosPadrao(ano){
+  const P = pascoa(ano);
+  const rel = (n) => { const d=new Date(P.getTime()); d.setDate(d.getDate()+n); return ymdOf(d); };
+  const fix = (mm,dd) => ano+'-'+pad2(mm)+'-'+pad2(dd);
+  return [
+    { d: fix(1,1),  nome:'Confraternização Universal' },
+    { d: fix(1,20), nome:'São Sebastião (Ribeirão Preto)' },
+    { d: rel(-48),  nome:'Carnaval (segunda)' },
+    { d: rel(-47),  nome:'Carnaval (terça)' },
+    { d: rel(-2),   nome:'Sexta-feira Santa' },
+    { d: fix(4,21), nome:'Tiradentes' },
+    { d: fix(5,1),  nome:'Dia do Trabalho' },
+    { d: rel(60),   nome:'Corpus Christi (Ribeirão Preto)' },
+    { d: fix(6,19), nome:'Aniversário de Ribeirão Preto' },
+    { d: fix(7,9),  nome:'Revolução Constitucionalista (SP)' },
+    { d: fix(9,7),  nome:'Independência do Brasil' },
+    { d: fix(10,12),nome:'Nossa Senhora Aparecida' },
+    { d: fix(11,2), nome:'Finados' },
+    { d: fix(11,15),nome:'Proclamação da República' },
+    { d: fix(11,20),nome:'Consciência Negra' },
+    { d: fix(12,25),nome:'Natal' }
+  ].sort((a,b)=>a.d.localeCompare(b.d));
+}
+async function ensureFeriados(anos){
+  for (const a of anos) {
+    const k = String(a);
+    if (ferByAno[k]) continue;
+    try {
+      const sn = await getDoc(doc(db,'feriados',k));
+      ferByAno[k] = sn.exists() ? (sn.data().datas || []) : feriadosPadrao(Number(a));
+    } catch(e) { console.error('feriados', e); ferByAno[k] = feriadosPadrao(Number(a)); }
+  }
+}
+function isFeriado(ds){ return (ferByAno[ds.slice(0,4)]||[]).some(f=>f.d===ds); }
+function isDiaUtil(ds){
+  const [Y,M,D] = ds.split('-').map(Number);
+  const dow = new Date(Y,M-1,D).getDay();
+  return dow>=1 && dow<=5 && !isFeriado(ds);
+}
+function diasUteisMes(ym){
+  const [Y,M] = ym.split('-').map(Number);
+  const ultimo = new Date(Y,M,0).getDate();
+  const hoje = ymdOf(new Date());
+  let total=0, restantes=0;
+  for (let d=1; d<=ultimo; d++) {
+    const ds = ym+'-'+pad2(d);
+    if (!isDiaUtil(ds)) continue;
+    total++;
+    if (ds >= hoje) restantes++;
+  }
+  return { total, restantes };
+}
+
+// ════ CÁLCULO DIÁRIO ════
+function minutosDoDia(recs){
+  const get = t => recs.find(r=>r.type===t);
+  const e=get('entrada'), s=get('saida'), as=get('almoco-saida'), av=get('almoco-volta');
+  if (!e || !s) return null;                              // dia incompleto
+  let ms = new Date(s.ts) - new Date(e.ts);
+  if (as && av) ms -= (new Date(av.ts) - new Date(as.ts));
+  return Math.max(0, Math.round(ms/60000));
+}
+function dividirDia(trab, ds){
+  const esperado = isDiaUtil(ds) ? JORNADA_MIN : 0;       // sáb/dom/feriado = exceção
+  const delta = trab - esperado;
+  const jornada = Math.min(trab, esperado);
+  const banco = delta > BANCO_CAP ? BANCO_CAP : delta;    // pode ser negativo (compensa)
+  const extra = delta > BANCO_CAP ? delta - BANCO_CAP : 0;
+  return { jornada, banco, extra, trab, esperado };
+}
+function horariosDoDia(recs){
+  const get = t => recs.find(r=>r.type===t);
+  const fmt = r => r ? new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : null;
+  return {
+    entrada: fmt(get('entrada')),
+    almocoSaida: fmt(get('almoco-saida')),
+    almocoVolta: fmt(get('almoco-volta')),
+    saida: fmt(get('saida'))
+  };
+}
+function diasDoMes(uid, ym){
+  const porDia = {};
+  records.filter(r=>r.userId===uid).forEach(r=>{
+    const ds = ymdOf(new Date(r.ts));
+    if (ds.slice(0,7) !== ym) return;
+    (porDia[ds] = porDia[ds] || []).push(r);
+  });
+  return Object.keys(porDia).sort().map(ds=>{
+    const recs = porDia[ds];
+    const horarios = horariosDoDia(recs);
+    const trab = minutosDoDia(recs);
+    if (trab === null) return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
+    return { ds, incompleto:false, horarios, ...dividirDia(trab, ds) };
+  });
+}
+function agregarMes(uid, ym){
+  const dias = diasDoMes(uid, ym);
+  const ag = { dias, jornada:0, banco:0, bancoPos:0, extra:0, trab:0, incompletos:0 };
+  dias.forEach(d=>{
+    if (d.incompleto) { ag.incompletos++; return; }
+    ag.jornada += d.jornada; ag.banco += d.banco; ag.extra += d.extra; ag.trab += d.trab;
+    if (d.banco > 0) ag.bancoPos += d.banco;
+  });
+  ag.pote = ag.banco;                                     // líquido (positivos - dias curtos)
+  ag.pagar = Math.max(0, ag.pote) + ag.extra;
+  return ag;
+}
+function mesesComRegistro(uid){
+  const set = new Set(records.filter(r=>r.userId===uid).map(r=>ymdOf(new Date(r.ts)).slice(0,7)));
+  set.add(ymdOf(new Date()).slice(0,7));
+  return [...set].sort().reverse();
+}
+
+// ════ FECHAMENTOS ════
+async function loadFechamentos(){
+  try {
+    const sn = await getDocs(query(collection(db,'fechamentos'), where('houseCode','==',currentUser.houseCode)));
+    fechamentos = {};
+    sn.docs.forEach(d=>{ const v=d.data(); fechamentos[v.uid+'|'+v.mes] = { id:d.id, ...v }; });
+  } catch(e) { console.error('fechamentos', e); }
+}
+function statusMes(uid, ym, vigente){
+  if (vigente) return 'vigente';
+  const f = fechamentos[uid+'|'+ym];
+  return (f && f.status === 'fechado') ? 'fechado' : 'revisar';
+}
+async function consolidarMes(uid, ym){
+  const ag = agregarMes(uid, ym);
+  if (!confirm(`Consolidar ${labelMes(ym)}?\n\nPote do mês: ${fmtHM(ag.pote)}\nHoras extras: ${fmtHM(ag.extra)}\nA pagar: ${fmtHM(ag.pagar)}\n\nO mês fica fechado e travado para ajustes. Você pode reabrir depois.`)) return;
+  try {
+    await setDoc(doc(db,'fechamentos', uid+'_'+ym), {
+      uid, mes: ym, houseCode: currentUser.houseCode, status:'fechado',
+      jornadaMin: ag.jornada, poteMin: ag.pote, extraMin: ag.extra, pagarMin: ag.pagar,
+      diasComRegistro: ag.dias.length, consolidadoEm: new Date().toISOString(), consolidadoPor: currentUser.uid
+    });
+    showToast('Mês consolidado ✓');
+    await loadFechamentos(); renderDashboard();
+  } catch(e){ console.error(e); showToast('Erro ao consolidar'); }
+}
+async function reabrirMes(uid, ym){
+  if (!confirm(`Reabrir ${labelMes(ym)} para ajustes?`)) return;
+  try {
+    await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { status:'revisar', reabertoEm:new Date().toISOString() });
+    showToast('Mês reaberto');
+    await loadFechamentos(); renderDashboard();
+  } catch(e){ console.error(e); showToast('Erro ao reabrir'); }
+}
+
+// ════ RENDER ════
+function segbar(ag, orcamento, thin){
+  const pct = v => Math.max(0, Math.min(100, (v/orcamento)*100));
+  const j = pct(ag.jornada), b = pct(Math.max(0,ag.bancoPos!==undefined?ag.bancoPos:ag.banco)), e = pct(ag.extra);
+  const r = Math.max(0, 100 - j - b - e);
+  return `<div class="segbar${thin?' thin':''}">
+    <i class="seg-j" style="width:${j}%"></i><i class="seg-b" style="width:${b}%"></i><i class="seg-e" style="width:${e}%"></i><i class="seg-r" style="width:${r}%"></i>
+  </div>`;
+}
+function legenda(ag){
+  return `<div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>jornada <b>${fmtHM(ag.jornada)}</b></div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span>banco <b>${fmtHM(ag.pote!==undefined?ag.pote:ag.banco)}</b></div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>extra <b>${fmtHM(ag.extra)}</b></div>
+  </div>`;
+}
+function horariosRow(h){
+  if (!h) return '';
+  const itens = [
+    ['E',h.entrada],
+    ['A',h.almocoSaida],
+    ['V',h.almocoVolta],
+    ['S',h.saida]
+  ];
+  return `<div class="horarios-row">` + itens.map(([label,val])=>
+    `<div class="horario-item${val?'':' falta'}"><span>${label}</span><b>${val||'--:--'}</b></div>`
+  ).join('') + `</div>`;
+}
+function entriesDoDia(uid, ds){
+  return records.filter(r=>r.userId===uid && ymdOf(new Date(r.ts))===ds).sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+}
+function renderEntradasExpandidas(uid, ds){
+  const ents = entriesDoDia(uid, ds);
+  if (!ents.length) return '<div class="expand-body"><div class="expand-label">Sem lançamentos neste dia</div></div>';
+  return `<div class="expand-body"><div class="expand-label">Lançamentos do dia</div>` +
+    ents.map(r=>{
+      const hora = new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const loc = r.location ? `📍 ${r.location.lat}, ${r.location.lng}` : '';
+      const foto = r.photoUrl ? `<img src="${r.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:7px" />` : '👤';
+      return `<div class="entry"><div class="entry-photo">${foto}</div>
+        <div><div class="entry-type">${typeLabel(r.type)}${r.adjusted?' <span style="color:var(--ink3);font-weight:400">· ajustado</span>':''}</div><div class="entry-meta">${hora}${loc?(' · '+loc):''}</div></div></div>`;
+    }).join('') + `</div>`;
+}
+function linhaDia(d, uid){
+  const [Y,M,D] = d.ds.split('-').map(Number);
+  const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+  const key = uid+'|'+d.ds;
+  const aberto = diaExpandidoKey === key;
+  const expandBtn = `<span style="color:var(--ink3);font-size:11px;margin-left:6px">${aberto?'▲':'▾'}</span>`;
+  if (d.incompleto) {
+    return `<div class="dayrow incomplete${aberto?' open':''}">
+      <div class="dayrow-click" onclick="toggleDiaExpandido('${uid}','${d.ds}')">
+        <div class="dayrow-top"><div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div><div class="dayrow-total" style="color:var(--warn)">⚠️ dia incompleto${expandBtn}</div></div>
+        ${horariosRow(d.horarios)}
+      </div>
+      ${aberto ? renderEntradasExpandidas(uid, d.ds) : ''}
+    </div>`;
+  }
+  const orc = Math.max(d.esperado || JORNADA_MIN, d.trab);
+  return `<div class="dayrow${aberto?' open':''}">
+    <div class="dayrow-click" onclick="toggleDiaExpandido('${uid}','${d.ds}')">
+      <div class="dayrow-top">
+        <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}${d.esperado===0?' · exceção':''}</span></div>
+        <div class="dayrow-total">${fmtHM(d.trab)}${expandBtn}</div>
+      </div>
+      ${horariosRow(d.horarios)}
+      ${segbar({jornada:d.jornada, bancoPos:Math.max(0,d.banco), extra:d.extra}, orc, true)}
+      <div class="dayrow-nums">
+        <div class="dayrow-num"><span class="legend-dot" style="background:var(--accent)"></span>jornada <b>${fmtHM(d.jornada)}</b></div>
+        <div class="dayrow-num"><span class="legend-dot" style="background:var(--warn)"></span>banco <b>${fmtHM(d.banco)}</b></div>
+        <div class="dayrow-num"><span class="legend-dot" style="background:var(--danger)"></span>extra <b>${fmtHM(d.extra)}</b></div>
+      </div>
+    </div>
+    ${aberto ? renderEntradasExpandidas(uid, d.ds) : ''}
+  </div>`;
+}
+function toggleDiaExpandido(uid, ds){
+  const key = uid+'|'+ds;
+  diaExpandidoKey = (diaExpandidoKey === key) ? null : key;
+  if (document.getElementById('screenDashboard').classList.contains('active')) renderDashboard();
+  else if (document.getElementById('screenHistorico').classList.contains('active')) renderMinhasHoras();
+}
+function semanasDe(dias){
+  const grupos = {};
+  dias.forEach(d=>{
+    const [Y,M,D] = d.ds.split('-').map(Number);
+    const dt = new Date(Y,M-1,D);
+    const seg = new Date(dt.getTime()); seg.setDate(seg.getDate() - ((dt.getDay()+6)%7));
+    const k = ymdOf(seg);
+    (grupos[k] = grupos[k] || []).push(d);
+  });
+  return Object.keys(grupos).sort().reverse().map(k=>{
+    const ds = grupos[k];
+    const ag = { jornada:0, banco:0, bancoPos:0, extra:0, trab:0, incompletos:0 };
+    ds.forEach(d=>{ if(d.incompleto){ag.incompletos++;return;} ag.jornada+=d.jornada; ag.banco+=d.banco; ag.extra+=d.extra; ag.trab+=d.trab; if(d.banco>0)ag.bancoPos+=d.banco; });
+    ag.pote = ag.banco;
+    const p = ds[0].ds.split('-').map(Number), u = ds[ds.length-1].ds.split('-').map(Number);
+    const rot = p[1]===u[1] ? `${p[2]}–${u[2]} ${MESES_CURTOS[u[1]-1]}` : `${p[2]} ${MESES_CURTOS[p[1]-1]} – ${u[2]} ${MESES_CURTOS[u[1]-1]}`;
+    return { k, rot, ag, dias: ds.slice().reverse() };
+  });
+}
+function ritmoDot(ag){
+  if (ag.extra > 0) return '🔴';
+  if (ag.pote > 120) return '🟡';
+  return '🟢';
+}
+function jornadaMinDoEmp(uid){
+  const ct = (window._contractCache||{})[uid] || {};
+  return ct.jornadaDiaria ? Math.round(ct.jornadaDiaria*60) : JORNADA_MIN;
+}
+function fmtJornadaH(min){
+  const h = min/60;
+  return (Math.round(h*10)/10).toString().replace('.',',');
+}
+
+// ════ ATIVIDADE RECENTE (download/compartilhamento de relatório pela funcionária) ════
+let atividadesCache = [];
+async function loadAtividades(){
+  try {
+    const sn = await getDocs(query(collection(db,'atividades'), where('houseCode','==',currentUser.houseCode)));
+    atividadesCache = sn.docs.map(d=>d.data()).sort((a,b)=> new Date(b.ts)-new Date(a.ts)).slice(0,6);
+  } catch(e){ console.error('atividades', e); atividadesCache = []; }
+}
+async function registrarAtividade(tipo, mes){
+  try {
+    await addDoc(collection(db,'atividades'), {
+      uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
+      tipo, mes, ts: new Date().toISOString()
+    });
+  } catch(e){ console.error('registrarAtividade', e); }
+}
+function renderAtividadeRecenteHtml(){
+  if (!atividadesCache.length) return '';
+  const rotulo = a => a.tipo==='compartilhar_relatorio' ? 'compartilhou' : 'baixou';
+  return `<div class="card" style="background:var(--surface2);border:none">
+    <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:6px">Atividade recente</div>
+    ${atividadesCache.map(a=>{
+      const dt = new Date(a.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `<div style="font-size:12.5px;color:var(--ink2);margin-bottom:4px">📄 ${a.nome.split(' ')[0]} ${rotulo(a)} o relatório de ${labelMes(a.mes)} — ${dt}</div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ════ DASHBOARD: RESUMO GERAL (home) + DETALHE POR FUNCIONÁRIA ════
+let dashScreenState = 'resumo';
+let dashDetalheMesOffset = 0;
+function ymComOffset(baseYm, offset){
+  const [y,m] = baseYm.split('-').map(Number);
+  const d = new Date(y, m-1+offset, 1);
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1);
+}
+function mudaMesDetalhe(delta){
+  const novo = dashDetalheMesOffset + delta;
+  if (novo > 0) return; // não deixa ir além do mês vigente
+  dashDetalheMesOffset = novo;
+  renderDashboard();
+}
+function abrirDetalheFuncionaria(uid){
+  dashEmpUid = uid; dashScreenState = 'detalhe'; dashWeekOpen = {}; diaExpandidoKey = null; dashDetalheMesOffset = 0;
+  renderDashboard();
+}
+function fecharDetalheFuncionaria(){ dashScreenState = 'resumo'; renderDashboard(); }
+
+function renderDashboard(){
+  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const sub = document.getElementById('dashSectionSub');
+  if (!emps.length) {
+    sub.textContent = 'Visão da casa';
+    document.getElementById('dashBody').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Sem funcionárias para exibir</div></div>';
+    return;
+  }
+  if (!dashEmpUid || !emps.some(e=>e.uid===dashEmpUid)) dashEmpUid = emps[0].uid;
+
+  if (dashScreenState === 'detalhe') {
+    sub.textContent = 'Detalhe individual';
+    renderDashboardDetalhe(emps);
+  } else {
+    sub.textContent = 'Visão da casa';
+    renderDashboardResumo(emps);
+  }
+}
+
+function minutosHojeDoEmp(uid){
+  const hoje = ymdOf(new Date());
+  const recs = records.filter(r=>r.userId===uid && ymdOf(new Date(r.ts))===hoje);
+  const get = t => recs.find(r=>r.type===t);
+  const entrada = get('entrada');
+  if (!entrada) return 0;
+  const saida = get('saida');
+  const almocoSaida = get('almoco-saida');
+  const almocoVolta = get('almoco-volta');
+  const fim = saida ? new Date(saida.ts) : new Date();
+  let ms = fim - new Date(entrada.ts);
+  if (almocoSaida) {
+    const inicioAlmoco = new Date(almocoSaida.ts);
+    const fimAlmoco = almocoVolta ? new Date(almocoVolta.ts) : new Date();
+    if (fimAlmoco > inicioAlmoco) ms -= (fimAlmoco - inicioAlmoco);
+  }
+  return Math.max(0, Math.round(ms/60000));
+}
+function renderDashboardResumo(emps){
+  const vigente = ymdOf(new Date()).slice(0,7);
+  const du = diasUteisMes(vigente);
+  let bancoTot = 0, extraTot = 0, pendTot = 0, previstoTot = 0, trabalhadoTot = 0;
+  const pendPorEmp = [];
+
+  const cardsHtml = emps.map(e=>{
+    const ag = agregarMes(e.uid, vigente);
+    bancoTot += ag.pote; extraTot += ag.extra;
+    if (ag.incompletos) { pendTot += ag.incompletos; pendPorEmp.push(`${e.nome.split(' ')[0]} (${ag.incompletos} dia${ag.incompletos>1?'s':''})`); }
+    const jm = jornadaMinDoEmp(e.uid);
+    const previsto = du.total * jm;
+    const trabalhado = ag.trab;
+    previstoTot += previsto; trabalhadoTot += trabalhado;
+    const pct = previsto>0 ? Math.min(100, Math.round(trabalhado/previsto*100)) : 0;
+    const faltamMin = Math.max(0, previsto - trabalhado);
+    const hojeMin = minutosHojeDoEmp(e.uid);
+    return `<div class="card" style="cursor:pointer" onclick="abrirDetalheFuncionaria('${e.uid}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="emp-avatar">👤</div>
+        <div style="flex:1">
+          <div class="emp-name">${e.nome}</div>
+          <div style="font-size:11px;color:var(--ink3)">jornada ${fmtJornadaH(jm)}h/dia · hoje <b style="font-family:'DM Mono',monospace;font-weight:400;color:var(--ink2)">${fmtHM(hojeMin)}</b></div>
+        </div>
+        <span style="font-size:15px">${ritmoDot(ag)}</span>
+      </div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px">
+        <div style="font-size:13px;color:var(--ink2)"><b style="font-family:'DM Mono',monospace;font-size:15px;color:var(--ink);font-weight:400">${fmtHM(trabalhado)}</b> de ${fmtHM(previsto)} no mês</div>
+        <div style="font-size:11.5px;color:var(--ink2)">faltam <b style="font-family:'DM Mono',monospace;color:var(--ink);font-weight:400">${fmtHM(faltamMin)}</b> em <b style="font-family:'DM Mono',monospace;color:var(--ink);font-weight:400">${du.restantes}</b>d</div>
+      </div>
+      <div class="bar" style="height:7px;border-radius:100px;background:#E3DED7;overflow:hidden;margin-bottom:8px"><div style="background:var(--accent);width:${pct}%;height:100%"></div></div>
+      <div style="font-size:11.5px;color:var(--ink3)">banco <b style="color:var(--warn);font-family:'DM Mono',monospace;font-weight:400">${fmtHM(ag.pote)}</b> · extra <b style="color:var(--danger);font-family:'DM Mono',monospace;font-weight:400">${fmtHM(ag.extra)}</b></div>
+    </div>`;
+  }).join('');
+
+  const pendHtml = pendTot > 0
+    ? `<div class="card" style="background:var(--danger-light);border:none">
+        <div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;margin-bottom:6px">⚠️ ${pendTot} dia${pendTot>1?'s':''} com pendência</div>
+        <div style="font-size:12.5px;color:var(--ink2)">${pendPorEmp.join(' · ')}</div>
+      </div>`
+    : '';
+
+  const faltamTot = Math.max(0, previstoTot - trabalhadoTot);
+  const pctTot = previstoTot>0 ? Math.min(100, Math.round(trabalhadoTot/previstoTot*100)) : 0;
+
+  document.getElementById('dashMultiAlert').innerHTML = '';
+  document.getElementById('dashBody').innerHTML = `
+    ${pendHtml}
+    <div class="dash-card hl">
+      <div class="dash-card-sub" style="margin-bottom:8px">${labelMes(vigente)} · todas as funcionárias</div>
+      <div style="font-size:14px;color:var(--ink2);line-height:1.6">
+        <b style="font-family:'DM Mono',monospace;color:var(--ink);font-size:19px;font-weight:400">${fmtHM(previstoTot)}</b> no mês ·
+        já trabalhou <b style="font-family:'DM Mono',monospace;color:var(--ink);font-weight:400">${fmtHM(trabalhadoTot)}</b> ·
+        faltam <b style="font-family:'DM Mono',monospace;color:var(--ink);font-weight:400">${fmtHM(faltamTot)}</b> em <b style="font-family:'DM Mono',monospace;color:var(--ink);font-weight:400">${du.restantes}</b> dia(s) útil(eis)
+      </div>
+      <div class="bar" style="height:7px;border-radius:100px;background:#E3DED7;overflow:hidden;margin:10px 0 12px"><div style="background:var(--accent);width:${pctTot}%;height:100%"></div></div>
+      <div class="dash-metrics">
+        <div class="dash-metric"><div class="lbl">Banco total</div><div class="v">${fmtHM(bancoTot)}</div></div>
+        <div class="dash-metric"><div class="lbl">Extra total</div><div class="v">${fmtHM(extraTot)}</div></div>
+        <div class="dash-metric"><div class="lbl">A pagar</div><div class="v">${fmtHM(Math.max(0,bancoTot)+extraTot)}</div></div>
+      </div>
+    </div>
+    <div class="dash-sec-label">Funcionárias</div>
+    ${cardsHtml}
+    ${renderAtividadeRecenteHtml()}
+  `;
+}
+
+function renderDashboardDetalhe(emps){
+  const uid = dashEmpUid;
+  const emp = emps.find(e=>e.uid===uid);
+  const hojeYm = ymdOf(new Date()).slice(0,7);
+  const vigente = ymComOffset(hojeYm, dashDetalheMesOffset);
+  const consulta = dashDetalheMesOffset !== 0;
+  const du = diasUteisMes(vigente);
+  const ag = agregarMes(uid, vigente);
+  const orcamento = Math.max(1, du.total * JORNADA_MIN);
+  let ritmoTxt, ritmoHint;
+  if (consulta) { ritmoTxt = '—'; ritmoHint = 'Mês anterior — consulta apenas. Ajustes acontecem em Fechamentos.'; }
+  else if (du.restantes === 0) { ritmoTxt = '—'; ritmoHint = 'Mês encerrado — consolide em Fechamentos.'; }
+  else if (ag.pote <= 0) { ritmoTxt = fmtHM(JORNADA_MIN); ritmoHint = ag.pote < 0 ? 'Pote negativo — sem desconto, jornada normal.' : 'Pote zerado — jornada normal.'; }
+  else { ritmoTxt = fmtHM(JORNADA_MIN - (ag.pote / du.restantes)); ritmoHint = `Média/dia para zerar o pote em ${du.restantes} dia(s) útil(eis).`; }
+
+  let html = `<div style="padding:0 16px 8px"><span style="cursor:pointer;color:var(--ink2);font-size:13px" onclick="fecharDetalheFuncionaria()">← Todas</span></div>
+  <div class="dash-card-head" style="padding:0 16px;margin-bottom:10px">
+    <div class="dash-card-title" style="font-size:16px">${emp ? emp.nome : ''}</div>
+  </div>
+  <div class="dash-card">
+    <div class="dash-card-head">
+      <div>
+        <div class="dash-card-title" style="display:flex;align-items:center;gap:8px">
+          <span style="cursor:pointer;color:var(--ink3);font-size:13px" onclick="mudaMesDetalhe(-1)">◀</span>
+          ${labelMes(vigente)}
+          <span style="cursor:${dashDetalheMesOffset<0?'pointer':'default'};color:var(--ink3);font-size:13px;opacity:${dashDetalheMesOffset<0?'1':'.3'}" onclick="${dashDetalheMesOffset<0?'mudaMesDetalhe(1)':''}">▶</span>
+        </div>
+        <div class="dash-card-sub">${ag.dias.length} dia(s) com registro de ${du.total} úteis${ag.incompletos?` · ${ag.incompletos} incompleto(s)`:''}</div>
+      </div>
+      <span class="dash-pill ${consulta?'fechado':'vigente'}">${consulta?'Consulta':'Mês vigente'}</span>
+    </div>
+    ${segbar(ag, orcamento, false)}
+    ${legenda(ag)}
+    <div class="dash-metrics">
+      <div class="dash-metric"><div class="lbl">Dias úteis restantes</div><div class="v">${du.restantes}</div><div class="hint">de ${du.total} no mês</div></div>
+      <div class="dash-metric"><div class="lbl">Ritmo recomendado</div><div class="v">${ritmoTxt}</div><div class="hint">${ritmoHint}</div></div>
+      <div class="dash-metric"><div class="lbl">A pagar (previsto)</div><div class="v">${fmtHM(ag.pagar)}</div><div class="hint">pote + extras, se fechasse hoje</div></div>
+    </div>
+  </div>
+  <div class="dash-toggle">
+    <button class="${dashView==='dia'?'on':''}" onclick="setDashView('dia')">Resumo</button>
+    <button class="${dashView==='semana'?'on':''}" onclick="setDashView('semana')">Semana</button>
+  </div>`;
+
+  if (!ag.dias.length) {
+    html += '<div class="empty-state" style="padding:28px 20px"><div class="empty-sub">Nenhum registro neste mês ainda.</div></div>';
+  } else if (dashView === 'dia') {
+    html += ag.dias.slice().reverse().map(d=>linhaDia(d,uid)).join('');
+  } else {
+    html += semanasDe(ag.dias).map(w=>`<div class="weekrow${dashWeekOpen[w.k]?' open':''}" id="wk_${w.k}">
+      <div class="weekrow-head" onclick="toggleWeek('${w.k}')">
+        <div class="dayrow-top"><div class="dayrow-date">Semana ${w.rot}<span class="chev"> ▾</span></div><div class="dayrow-total">${fmtHM(w.ag.trab)}</div></div>
+        ${segbar(w.ag, Math.max(1, w.dias.filter(d=>d.esperado>0).length*JORNADA_MIN), true)}
+        <div class="dayrow-nums">
+          <div class="dayrow-num"><span class="legend-dot" style="background:var(--accent)"></span>jornada <b>${fmtHM(w.ag.jornada)}</b></div>
+          <div class="dayrow-num"><span class="legend-dot" style="background:var(--warn)"></span>banco <b>${fmtHM(w.ag.banco)}</b></div>
+          <div class="dayrow-num"><span class="legend-dot" style="background:var(--danger)"></span>extra <b>${fmtHM(w.ag.extra)}</b></div>
+        </div>
+      </div>
+      <div class="weekrow-body">${w.dias.map(d=>linhaDia(d,uid)).join('')}</div>
+    </div>`).join('');
+  }
+  document.getElementById('dashBody').innerHTML = html;
+}
+function setDashView(v){ dashView = v; renderDashboard(); }
+
+// ════ FECHAMENTOS (tela própria: períodos, vale-transporte, planilha) ════
+let fechEmpUid = null;
+let fechMesExpandido = null;
+function setFechEmp(uid){ fechEmpUid = uid; fechMesExpandido = null; renderFechamentos(); }
+function toggleFechMes(ym){ fechMesExpandido = (fechMesExpandido===ym) ? null : ym; renderFechamentos(); }
+function abrirPontoParaDia(uid, ds){
+  openPointModal(uid);
+  document.getElementById('pData').value = ds;
+}
+function renderDiasFechamento(uid, ag, editable){
+  if (!ag.dias.length) return '<div class="vt-empty" style="padding:10px 0 0">Nenhum registro neste mês.</div>';
+  return ag.dias.slice().reverse().map(d=>{
+    const [Y,M,D] = d.ds.split('-').map(Number);
+    const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+    const ents = entriesDoDia(uid, d.ds);
+    return `<div style="border-top:1px solid var(--surface2);padding:10px 0">
+      <div class="dayrow-top" style="margin-bottom:6px">
+        <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div>
+        <div class="dayrow-total">${d.incompleto?'⚠️ incompleto':fmtHM(d.trab)}</div>
+      </div>
+      ${ents.map(r=>{
+        const hora = new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        return `<div style="display:flex;gap:8px;align-items:center;padding:3px 0">
+          <div style="flex:1;font-size:12px;color:var(--ink2)">${typeLabel(r.type)} · ${hora}${r.adjusted?' <span style="color:var(--ink3)">· ajustado</span>':''}</div>
+          ${editable ? `<span style="cursor:pointer;font-size:13px" onclick="openPointModal('${uid}','${r.id}')">✏️</span>` : ''}
+        </div>`;
+      }).join('')}
+      ${editable ? `<button class="cor-report-btn" style="margin-top:6px;width:100%" onclick="abrirPontoParaDia('${uid}','${d.ds}')">+ Adicionar ponto nesse dia</button>` : ''}
+    </div>`;
+  }).join('');
+}
+function renderFechamentos(){
+  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const tabs = document.getElementById('fechEmpTabs');
+  if (!emps.length) {
+    tabs.innerHTML = '';
+    document.getElementById('fechBody').innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-title">Sem funcionárias para exibir</div></div>';
+    return;
+  }
+  if (!fechEmpUid || !emps.some(e=>e.uid===fechEmpUid)) fechEmpUid = emps[0].uid;
+  tabs.innerHTML = emps.length > 1 ? emps.map(e=>`<button class="dash-emp-tab${e.uid===fechEmpUid?' on':''}" onclick="setFechEmp('${e.uid}')">${e.nome.split(' ')[0]}${e.ativa===false?' 🗄️':''}</button>`).join('') : '';
+
+  const uid = fechEmpUid;
+  const vigente = ymdOf(new Date()).slice(0,7);
+  const meses = mesesComRegistro(uid);
+  const emRevisar = meses.filter(ym => ym !== vigente && statusMes(uid, ym, false) === 'revisar');
+
+  let html = emRevisar.length >= 2
+    ? `<div class="alerts-banner"><div class="alert-item warn"><span class="alert-icon">⚠️</span>${emRevisar.length} meses aguardando consolidação (${emRevisar.slice().reverse().map(labelMes).join(', ')}). Consolide o mais antigo primeiro.</div></div>`
+    : '';
+
+  html += '<div class="dash-sec-label">Vale-transporte</div>';
+  html += `<div class="dash-toggle">
+    <button class="${vtView==='inicio'?'on':''}" onclick="setVtView('inicio')">Início do mês</button>
+    <button class="${vtView==='fechamento'?'on':''}" onclick="setVtView('fechamento')">Fechamento</button>
+  </div>`;
+  html += renderVT(uid, vigente, agregarMes(uid, vigente));
+
+  const passados = meses.filter(ym=>ym !== vigente);
+  html += '<div class="dash-sec-label">Aberto para fechamento / Consolidado</div>';
+  if (!passados.length) {
+    html += '<div class="empty-state" style="padding:20px"><div class="empty-sub">Nenhum mês anterior com registro ainda.</div></div>';
+  }
+  passados.forEach(ym=>{
+    const st = statusMes(uid, ym, false);
+    const a = agregarMes(uid, ym);
+    const duM = diasUteisMes(ym);
+    const f = fechamentos[uid+'|'+ym];
+    if (st === 'revisar') {
+      html += `<div class="dash-card">
+        <div class="dash-card-head">
+          <div><div class="dash-card-title">${labelMes(ym)}</div><div class="dash-card-sub">${a.dias.length} dia(s) com registro de ${duM.total} úteis${a.incompletos?` · ${a.incompletos} incompleto(s)`:''}</div></div>
+          <span class="dash-pill revisar">Revisar</span>
+        </div>
+        ${segbar(a, Math.max(1, duM.total*JORNADA_MIN), false)}
+        ${legenda(a)}
+        <div class="dash-metrics">
+          <div class="dash-metric"><div class="lbl">Pote do mês</div><div class="v">${fmtHM(a.pote)}</div></div>
+          <div class="dash-metric"><div class="lbl">Extras</div><div class="v">${fmtHM(a.extra)}</div></div>
+          <div class="dash-metric"><div class="lbl">A pagar</div><div class="v" style="color:var(--accent)">${fmtHM(a.pagar)}</div></div>
+        </div>
+        <button class="dash-close-btn" onclick="consolidarMes('${uid}','${ym}')">Consolidar ${labelMes(ym)}</button>
+        <button class="cor-report-btn" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
+        <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver e ajustar os dias'}</div>
+        ${fechMesExpandido===ym ? renderDiasFechamento(uid, a, true) : ''}
+      </div>`;
+    } else {
+      html += `<div class="dash-card" style="padding:13px 16px">
+        <div class="dash-card-head" style="margin-bottom:0;align-items:center">
+          <div><div class="dash-card-title" style="font-size:14px;color:var(--ink2)">${labelMes(ym)}</div>
+            <div class="dash-card-sub">Pago ${fmtHM(f?f.pagarMin:a.pagar)} · pote ${fmtHM(f?f.poteMin:a.pote)} · extra ${fmtHM(f?f.extraMin:a.extra)}</div></div>
+          <span class="dash-pill fechado">Fechado</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="dash-reopen" onclick="reabrirMes('${uid}','${ym}')">Reabrir para ajustes</button>
+          <button class="cor-report-btn" style="margin-top:0" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
+        </div>
+        <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver os dias'}</div>
+        ${fechMesExpandido===ym ? renderDiasFechamento(uid, a, false) : ''}
+      </div>`;
+    }
+  });
+  document.getElementById('fechBody').innerHTML = html;
+}
+function setVtView(v){ vtView = v; renderFechamentos(); }
+function renderVT(uid, vigente, agVigente){
+  const ct = (window._contractCache||{})[uid] || {};
+  const valor = ct.valeTransporteDiario;
+  if (!valor) {
+    return `<div class="vt-card"><div class="vt-empty">Cadastre o valor diário do vale-transporte (ida + volta) em ⚙️ Contrato desta funcionária pra ativar o cálculo.</div></div>`;
+  }
+  if (vtView === 'inicio') {
+    const prox = proximoMes(vigente);
+    const du = diasUteisMes(prox);
+    const total = du.total * valor;
+    return `<div class="vt-card">
+      <div class="dash-card-sub" style="margin-bottom:8px">Antecipação para ${labelMes(prox)}</div>
+      <div class="vt-calc">${du.total} dias úteis × <b>${fmtBRL(valor)}</b></div>
+      <div class="vt-total">${fmtBRL(total)}</div>
+      <div class="vt-sub">Baseado na mesma tabela de feriados usada no cálculo de hora extra.</div>
+      <button class="dash-close-btn" onclick="gerarReciboValeTransporte('${uid}','${prox}')">🖨️ Gerar recibo do mês</button>
+    </div>`;
+  }
+  const duPrevisto = diasUteisMes(vigente).total;
+  const trabalhados = agVigente.dias.length;
+  const diff = trabalhados - duPrevisto;
+  let badge = '', explica = '';
+  if (diff > 0) {
+    const y = diff * valor;
+    badge = `<div class="vt-badge mais">⚠️ ${diff} dia(s) além do previsto</div>`;
+    explica = `Ela trabalhou <b>${trabalhados}</b> dias neste mês, mas a antecipação cobriu só <b>${duPrevisto}</b>. O vale antecipado não cobre <b>${fmtBRL(y)}</b> — considere complementar.`;
+  } else if (diff < 0) {
+    const y = Math.abs(diff) * valor;
+    badge = `<div class="vt-badge menos">${Math.abs(diff)} dia(s) a menos</div>`;
+    explica = `Ela trabalhou <b>${trabalhados}</b> dias neste mês, menos que os <b>${duPrevisto}</b> previstos. O vale foi pago a maior em <b>${fmtBRL(y)}</b> — pode abater no repasse do mês seguinte.`;
+  } else {
+    badge = `<div class="vt-badge ok">✓ Sem divergência</div>`;
+    explica = `Dias trabalhados bateram exatamente com o previsto (<b>${duPrevisto}</b> dias).`;
+  }
+  return `<div class="vt-card">
+    <div class="dash-card-sub" style="margin-bottom:8px">Fechamento de ${labelMes(vigente)}</div>
+    ${badge}
+    <div class="vt-metrics">
+      <div class="dash-metric"><div class="lbl">Previsto</div><div class="v">${duPrevisto}</div><div class="hint">dias úteis (tabela)</div></div>
+      <div class="dash-metric"><div class="lbl">Trabalhado</div><div class="v">${trabalhados}</div><div class="hint">dias com registro real</div></div>
+    </div>
+    <div class="vt-explica">${explica}</div>
+  </div>`;
+}
+
+function toggleWeek(k){ dashWeekOpen[k] = !dashWeekOpen[k]; renderDashboard(); }
+async function gerarReciboValeTransporte(uid, ym){
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const ct = (window._contractCache||{})[uid] || {};
+  const valor = ct.valeTransporteDiario;
+  if (!valor) { showToast('Cadastre o valor diário do vale-transporte antes'); return; }
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  const nomeF = emp ? emp.nome : '';
+  const du = diasUteisMes(ym);
+  const total = du.total * valor;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 70;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
+  pdf.text('Recibo de Vale-Transporte', M, y); y += 26;
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text(`Referência: ${labelMes(ym)}`, M, y); y += 34;
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y += 30;
+
+  pdf.setFontSize(12);
+  const texto = pdf.splitTextToSize(
+    `Eu, ${nomeF}, declaro ter recebido de ${currentUser.nome}, referente à antecipação do vale-transporte ` +
+    `para o mês de ${labelMes(ym)}, a quantia de ${fmtBRL(total)}, correspondente a ${du.total} dia(s) útil(eis) ` +
+    `× ${fmtBRL(valor)} por dia (valor diário já incluindo ida e volta).`,
+    W-2*M);
+  pdf.text(texto, M, y); y += texto.length*16 + 30;
+
+  pdf.setFont('helvetica','bold'); pdf.text('Dias úteis do mês:', M, y); pdf.setFont('helvetica','normal'); pdf.text(String(du.total), M+140, y); y += 18;
+  pdf.setFont('helvetica','bold'); pdf.text('Valor diário:', M, y); pdf.setFont('helvetica','normal'); pdf.text(fmtBRL(valor), M+140, y); y += 18;
+  pdf.setFont('helvetica','bold'); pdf.text('Total antecipado:', M, y); pdf.setFont('helvetica','normal'); pdf.text(fmtBRL(total), M+140, y); y += 50;
+
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text('Data: _____ / _____ / __________', M, y); y += 60;
+  pdf.line(M, y, M+220, y); pdf.text('Assinatura da funcionária', M, y+14);
+  pdf.line(W-M-220, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y+14);
+  y += 40;
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y);
+
+  pdf.save(`Recibo-VT-${(nomeF||'funcionaria').split(' ')[0]}-${ym}.pdf`);
+}
+async function ensureDadosGestao(){
+  const hoje = new Date();
+  await ensureFeriados([hoje.getFullYear(), hoje.getFullYear()-1]);
+  await loadFechamentos();
+  if (!window._empCache || !window._empCache.length) await checkAlerts();
+  await loadAtividades();
+}
+async function openDashboard(){
+  await ensureDadosGestao();
+  renderDashboard();
+}
+async function openFechamentos(){
+  await ensureDadosGestao();
+  renderFechamentos();
+}
+
+// ════ MODAL DE FERIADOS (editável 1x/ano pelo empregador) ════
+async function openFeriadosModal(){
+  feriadosAnoEdit = new Date().getFullYear();
+  await ensureFeriados([feriadosAnoEdit]);
+  feriadosDraft = (ferByAno[String(feriadosAnoEdit)] || []).map(f=>({...f}));
+  document.getElementById('ferAno').textContent = `Ano ${feriadosAnoEdit} — dia útil = seg-sex fora desta lista`;
+  document.getElementById('ferData').value = '';
+  document.getElementById('ferNome').value = '';
+  renderFeriadosList();
+  document.getElementById('feriadosModal').classList.add('open');
+}
+function closeFeriadosModal(){ document.getElementById('feriadosModal').classList.remove('open'); }
+function renderFeriadosList(){
+  feriadosDraft.sort((a,b)=>a.d.localeCompare(b.d));
+  document.getElementById('ferList').innerHTML = feriadosDraft.length
+    ? feriadosDraft.map((f,i)=>{
+        const [,M,D] = f.d.split('-').map(Number);
+        return `<div class="fer-row"><div class="d">${pad2(D)}/${pad2(M)}</div><div class="n">${f.nome}</div><span class="x" onclick="removeFeriado(${i})">✕</span></div>`;
+      }).join('')
+    : '<div style="font-size:13px;color:var(--ink3);padding:10px 0">Nenhum feriado cadastrado.</div>';
+}
+function addFeriado(){
+  const d = document.getElementById('ferData').value;
+  const n = document.getElementById('ferNome').value.trim();
+  if (!d) { showToast('Escolha a data'); return; }
+  if (d.slice(0,4) !== String(feriadosAnoEdit)) { showToast('A data precisa ser de '+feriadosAnoEdit); return; }
+  if (feriadosDraft.some(f=>f.d===d)) { showToast('Data já cadastrada'); return; }
+  feriadosDraft.push({ d, nome: n || 'Feriado' });
+  document.getElementById('ferData').value = ''; document.getElementById('ferNome').value = '';
+  renderFeriadosList();
+}
+function removeFeriado(i){ feriadosDraft.splice(i,1); renderFeriadosList(); }
+function seedFeriados(){
+  if (!confirm(`Restaurar a lista padrão de ${feriadosAnoEdit}? As alterações não salvas serão perdidas.`)) return;
+  feriadosDraft = feriadosPadrao(feriadosAnoEdit);
+  renderFeriadosList();
+  showToast('Lista padrão carregada — confira e salve');
+}
+async function saveFeriados(){
+  try {
+    const ano = String(feriadosAnoEdit);
+    await setDoc(doc(db,'feriados',ano), {
+      ano: Number(ano), houseCode: currentUser.houseCode,
+      datas: feriadosDraft, atualizadoEm: new Date().toISOString(), atualizadoPor: currentUser.uid
+    });
+    ferByAno[ano] = feriadosDraft.map(f=>({...f}));
+    closeFeriadosModal();
+    showToast('Feriados salvos ✓');
+    renderDashboard();
+  } catch(e){ console.error(e); showToast('Erro ao salvar feriados'); }
+}
+
+// ════ AUTOCORREÇÃO DE PONTO (funcionária relata, empregador aprova) ════
+const TERMO_TEXTO = uid => 'Declaro que esqueci de bater o ponto no horário informado acima e solicito a inclusão manual deste registro. Estou de acordo com o horário informado e confirmo que as informações prestadas são verdadeiras, para os devidos fins de registro de jornada.';
+let corTipoSel = null;
+let correcoesPendentesCache = [];
+let rejeitarAlvoId = null;
+let forcarNovaAssinatura = false;
+let sigCtx = null, sigDrawing = false, sigHasStroke = false;
+
+function typeLabel(t){ return {entrada:'Entrada', saida:'Saída', 'almoco-saida':'Saída Almoço', 'almoco-volta':'Volta Almoço'}[t] || t; }
+
+// ── assinatura desenhada no celular (pointer events cobrem toque e mouse) ──
+function initSigCanvas(){
+  const c = document.getElementById('corSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  sigCtx = c.getContext('2d');
+  sigCtx.scale(dpr,dpr);
+  sigCtx.lineWidth = 2.3;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+  sigCtx.strokeStyle = '#1A1816';
+  sigHasStroke = false;
+  sigDrawing = false;
+}
+function sigPos(e, c){
+  const rect = c.getBoundingClientRect();
+  return { x: e.clientX-rect.left, y: e.clientY-rect.top };
+}
+function sigStart(e){
+  e.preventDefault();
+  sigDrawing = true;
+  const p = sigPos(e, e.currentTarget);
+  sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);
+}
+function sigMove(e){
+  if (!sigDrawing || !sigCtx) return;
+  e.preventDefault();
+  const p = sigPos(e, e.currentTarget);
+  sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
+  if (!sigHasStroke) { sigHasStroke = true; updateCorSalvarBtn(); }
+}
+function sigEnd(){ sigDrawing = false; }
+function limparAssinatura(){
+  const c = document.getElementById('corSigCanvas');
+  if (!c || !sigCtx) return;
+  sigCtx.clearRect(0,0,c.width,c.height);
+  sigHasStroke = false;
+  updateCorSalvarBtn();
+}
+function reassinarCorrecao(){
+  forcarNovaAssinatura = true;
+  refreshAssinaturaUI();
+  initSigCanvas();
+}
+function refreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !forcarNovaAssinatura);
+  document.getElementById('corAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('corAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('corAssinaturaPreview').src = salva;
+}
+function assinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !forcarNovaAssinatura) return true;
+  return sigHasStroke;
+}
+
+async function mesEstaFechado(uid, ym){
+  try {
+    const sn = await getDoc(doc(db,'fechamentos', uid+'_'+ym));
+    return sn.exists() && sn.data().status === 'fechado';
+  } catch(e){ console.error(e); return false; }
+}
+
+function openCorrecaoModal(prefDs, prefTipos){
+  const permitidos = prefTipos ? (Array.isArray(prefTipos) ? prefTipos : [prefTipos]) : null;
+  corTipoSel = permitidos && permitidos.length===1 ? permitidos[0] : null;
+  document.querySelectorAll('#corTipo .type-opt').forEach(el=>{
+    const v = el.dataset.v;
+    const permitido = !permitidos || permitidos.includes(v);
+    el.style.display = permitido ? '' : 'none';
+    el.classList.toggle('on', v === corTipoSel);
+  });
+  document.getElementById('corTipoHint').textContent = permitidos ? '— só o que faltou nesse dia' : '';
+  document.getElementById('corData').value = prefDs || ymdOf(new Date());
+  document.getElementById('corData').max = ymdOf(new Date());
+  document.getElementById('corHora').value = '';
+  document.getElementById('corJustificativa').value = '';
+  document.getElementById('corAceite').checked = false;
+  document.getElementById('corNomeDisplay').textContent = (currentUser && currentUser.nome) || '—';
+  document.getElementById('corTermoTexto').textContent = TERMO_TEXTO();
+  forcarNovaAssinatura = false;
+  refreshAssinaturaUI();
+  atualizarCorContexto();
+  document.getElementById('correcaoModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('corAssinaturaPadBox').style.display !== 'none') initSigCanvas(); });
+  updateCorSalvarBtn();
+}
+function atualizarCorContexto(){
+  const box = document.getElementById('corContexto');
+  if (!box) return;
+  const ds = document.getElementById('corData').value;
+  if (!ds) { box.innerHTML = ''; return; }
+  const dotColor = { entrada:'var(--accent)', saida:'var(--danger)', 'almoco-saida':'var(--warn)', 'almoco-volta':'#3498db' };
+  const doDia = records
+    .filter(r => r.userId === currentUser.uid && ymdOf(new Date(r.ts)) === ds)
+    .sort((a,b)=> new Date(a.ts)-new Date(b.ts));
+  if (!doDia.length) {
+    box.innerHTML = `<div class="cor-contexto"><div class="cor-contexto-vazio">Nenhum outro ponto registrado nesse dia ainda.</div></div>`;
+    return;
+  }
+  box.innerHTML = `<div class="cor-contexto"><div class="cor-contexto-titulo">Já registrado nesse dia</div>` +
+    doDia.map(r=>{
+      const hora = new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="cor-contexto-row"><span class="dot" style="background:${dotColor[r.type]||'var(--ink3)'}"></span>${typeLabel(r.type)}<b>${hora}</b></div>`;
+    }).join('') + '</div>';
+}
+function closeCorrecaoModal(){ document.getElementById('correcaoModal').classList.remove('open'); }
+function setCorTipo(t){
+  corTipoSel = t;
+  document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.toggle('on', el.dataset.v===t));
+}
+function updateCorSalvarBtn(){
+  const aceite = document.getElementById('corAceite').checked;
+  document.getElementById('corSalvarBtn').disabled = !(aceite && assinaturaOk());
+}
+async function saveCorrecao(){
+  const data = document.getElementById('corData').value;
+  const hora = document.getElementById('corHora').value;
+  const justificativa = document.getElementById('corJustificativa').value.trim();
+  const nome = currentUser.nome;
+  if (!corTipoSel) { showToast('Escolha o tipo de registro'); return; }
+  if (!data || !hora) { showToast('Preencha data e horário'); return; }
+  if (justificativa.length < 3) { showToast('Conte rapidamente o que houve'); return; }
+  if (!assinaturaOk()) { showToast('Assine no campo antes de enviar'); return; }
+  const ym = data.slice(0,7);
+  if (await mesEstaFechado(currentUser.uid, ym)) {
+    showToast('Este mês já foi fechado — peça ao empregador para reabrir antes de corrigir');
+    return;
+  }
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !forcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('corSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
+  const ts = new Date(data+'T'+hora+':00').toISOString();
+  try {
+    await addDoc(collection(db,'correcoes'), {
+      uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
+      tipo: corTipoSel, ts, justificativa,
+      termoTexto: TERMO_TEXTO(), assinadoComo: nome, aceite: true, assinaturaImg,
+      status: 'pendente', criadoEm: new Date().toISOString()
+    });
+    closeCorrecaoModal();
+    showToast('Enviado para aprovação ✓');
+    renderMinhasCorrecoes();
+  } catch(e){ console.error(e); showToast('Erro ao enviar correção'); }
+
+}
+
+// ── funcionária: dias com batida parcial (esqueceu de bater outro ponto do mesmo dia) ──
+let minhasCorrecoesRaw = [];
+let meusFechamentos = {};
+async function loadMeusFechamentos(){
+  try {
+    const sn = await getDocs(query(collection(db,'fechamentos'), where('uid','==',currentUser.uid)));
+    meusFechamentos = {};
+    sn.docs.forEach(d=>{ const v=d.data(); meusFechamentos[v.mes] = v.status; });
+  } catch(e){ console.error('meusFechamentos', e); meusFechamentos = {}; }
+}
+function computeDiasParaRevisar(){
+  const hoje = ymdOf(new Date());
+  const limite = new Date(); limite.setDate(limite.getDate()-60);
+  const limiteStr = ymdOf(limite);
+  const porDia = {};
+  records.forEach(r=>{
+    const ds = ymdOf(new Date(r.ts));
+    if (ds >= hoje || ds < limiteStr) return;
+    (porDia[ds] = porDia[ds] || []).push(r.type);
+  });
+  const pendentes = new Set(
+    minhasCorrecoesRaw.filter(c=>c.status!=='rejeitado').map(c=> ymdOf(new Date(c.ts))+'|'+c.tipo)
+  );
+  const out = [];
+  Object.keys(porDia).sort().forEach(ds=>{
+    if (meusFechamentos[ds.slice(0,7)] === 'fechado') return;
+    const tipos = porDia[ds];
+    const has = t => tipos.includes(t);
+    let faltando = [];
+    if (has('entrada') && !has('saida')) faltando.push('saida');
+    if (!has('entrada') && has('saida')) faltando.push('entrada');
+    if (has('almoco-saida') && !has('almoco-volta')) faltando.push('almoco-volta');
+    if (has('almoco-volta') && !has('almoco-saida')) faltando.push('almoco-saida');
+    faltando = faltando.filter(t => !pendentes.has(ds+'|'+t));
+    if (faltando.length) out.push({ ds, faltando });
+  });
+  return out;
+}
+function renderDiasParaRevisar(){
+  const box = document.getElementById('diasParaRevisarBox');
+  if (!box) return;
+  const lista = computeDiasParaRevisar();
+  if (!lista.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="revisar-box"><div class="revisar-titulo">${lista.length} dia${lista.length>1?'s':''} para você revisar</div>` +
+    lista.map(d=>{
+      const [Y,M,D] = d.ds.split('-').map(Number);
+      const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+      const faltStr = d.faltando.map(t=>`<b>${typeLabel(t)}</b>`).join(', ');
+      return `<div class="revisar-item">
+        <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
+        <div class="revisar-falta">Faltou: ${faltStr}</div></div>
+        <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+// ── funcionária: acompanha suas solicitações ──
+async function renderMinhasCorrecoes(){
+  if (!currentUser || currentUser.role !== 'funcionaria') return;
+  document.getElementById('histCorrectionBar').style.display = 'block';
+  try {
+    const sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',currentUser.uid)));
+    minhasCorrecoesRaw = sn.docs.map(d=>({id:d.id, ...d.data()}));
+    await loadMeusFechamentos();
+    renderDiasParaRevisar();
+    const list = minhasCorrecoesRaw.slice().sort((a,b)=> new Date(b.criadoEm)-new Date(a.criadoEm)).slice(0,8);
+    const el = document.getElementById('minhasCorrecoes');
+    el.innerHTML = list.map(c=>{
+      const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `<div class="my-correction-card">
+        <div class="my-correction-top">
+          <div><div class="my-correction-type">${typeLabel(c.tipo)}</div><div class="my-correction-when">${dt}</div></div>
+          <span class="cor-status ${c.status}">${c.status}</span>
+        </div>
+        <div class="my-correction-just">${c.justificativa}</div>
+        ${c.status==='rejeitado' && c.motivoRejeicao ? `<div class="my-correction-motivo">Motivo: ${c.motivoRejeicao}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e){ console.error('minhasCorrecoes', e); }
+}
+
+// ── empregador: fila de aprovação ──
+async function loadCorrecoesPendentes(){
+  try {
+    const sn = await getDocs(query(collection(db,'correcoes'), where('houseCode','==',currentUser.houseCode), where('status','==','pendente')));
+    correcoesPendentesCache = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> new Date(a.ts)-new Date(b.ts));
+  } catch(e){ console.error('loadCorrecoesPendentes', e); correcoesPendentesCache = []; }
+  renderCorrecoesPendentes();
+}
+function renderCorrecoesPendentes(){
+  const box = document.getElementById('correcoesPendentesBox');
+  const badge = document.getElementById('navConfigBadge');
+  if (badge) {
+    const n = correcoesPendentesCache.length;
+    badge.style.display = n > 0 ? 'flex' : 'none';
+    badge.textContent = n > 9 ? '9+' : String(n);
+  }
+  if (!box) return;
+  if (!correcoesPendentesCache.length) { box.innerHTML=''; return; }
+  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${correcoesPendentesCache.length})</div>` +
+    correcoesPendentesCache.map(c=>{
+      const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `<div class="pend-card">
+        <div class="pend-top"><div class="pend-name">${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
+        <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
+        <div class="pend-btns">
+          <button class="pend-reject" onclick="openRejeitarModal('${c.id}')">Rejeitar</button>
+          <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+async function aprovarCorrecao(id){
+  const c = correcoesPendentesCache.find(x=>x.id===id);
+  if (!c) return;
+  const ym = c.ts.slice(0,7);
+  if (await mesEstaFechado(c.uid, ym)) { showToast('Este mês já está fechado — reabra antes de aprovar'); return; }
+  try {
+    await addDoc(collection(db,'records'), {
+      userId: c.uid, userName: c.nome, houseCode: c.houseCode,
+      type: c.tipo, ts: c.ts, adjusted: true,
+      source: 'autocorrecao', correcaoId: id,
+      adjustedBy: currentUser.uid, adjustedAt: new Date().toISOString()
+    });
+    await updateDoc(doc(db,'correcoes',id), { status:'aprovado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+    showToast('Correção aprovada ✓');
+    await loadCorrecoesPendentes();
+  } catch(e){ console.error(e); showToast('Erro ao aprovar'); }
+}
+function openRejeitarModal(id){ rejeitarAlvoId = id; document.getElementById('rejMotivo').value=''; document.getElementById('rejeitarModal').classList.add('open'); }
+function closeRejeitarModal(){ document.getElementById('rejeitarModal').classList.remove('open'); rejeitarAlvoId = null; }
+async function confirmRejeitar(){
+  if (!rejeitarAlvoId) return;
+  const motivo = document.getElementById('rejMotivo').value.trim();
+  try {
+    await updateDoc(doc(db,'correcoes',rejeitarAlvoId), { status:'rejeitado', motivoRejeicao: motivo || 'Sem motivo informado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+    showToast('Correção rejeitada');
+    closeRejeitarModal();
+    await loadCorrecoesPendentes();
+  } catch(e){ console.error(e); showToast('Erro ao rejeitar'); }
+}
+
+// ── PDF do termo mensal (compilado das correções aprovadas) ──
+async function gerarTermoAjustesPDF(uid, ym){
+  let sn;
+  try {
+    sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',uid), where('status','==','aprovado')));
+  } catch(e){ console.error(e); showToast('Erro ao buscar correções'); return; }
+  const itens = sn.docs.map(d=>d.data()).filter(c=>c.ts.slice(0,7)===ym).sort((a,b)=>a.ts.localeCompare(b.ts));
+  if (!itens.length) { showToast('Nenhuma correção aprovada neste mês'); return; }
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  const nomeF = emp ? emp.nome : itens[0].nome;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 60;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+  pdf.text('Termo de Ciência de Ajustes de Ponto', M, y); y+=20;
+  pdf.setFontSize(11); pdf.setFont('helvetica','normal');
+  pdf.text('Registros manuais por esquecimento — solicitados e confirmados pela funcionária', M, y); y+=26;
+  pdf.setFont('helvetica','bold'); pdf.text('Funcionária:', M, y); pdf.setFont('helvetica','normal'); pdf.text(nomeF, M+80, y); y+=16;
+  pdf.setFont('helvetica','bold'); pdf.text('Empregador(a):', M, y); pdf.setFont('helvetica','normal'); pdf.text(currentUser.nome||'—', M+95, y); y+=16;
+  pdf.setFont('helvetica','bold'); pdf.text('Referência:', M, y); pdf.setFont('helvetica','normal'); pdf.text(labelMes(ym), M+75, y); y+=26;
+
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y+=18;
+
+  itens.forEach((c,idx)=>{
+    if (y > 700) { pdf.addPage(); y = 60; }
+    const dt = new Date(c.ts);
+    const dtStr = dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    pdf.text(`${idx+1}. ${typeLabel(c.tipo)} — ${dtStr}`, M, y); y+=15;
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
+    const just = pdf.splitTextToSize(`Justificativa: ${c.justificativa}`, W-2*M);
+    pdf.text(just, M, y); y += just.length*13 + 3;
+    const termo = pdf.splitTextToSize(`Termo aceito: "${c.termoTexto}"`, W-2*M);
+    pdf.setTextColor(120); pdf.text(termo, M, y); pdf.setTextColor(0); y += termo.length*12 + 4;
+    const assinadoEm = c.criadoEm ? new Date(c.criadoEm).toLocaleString('pt-BR') : '—';
+    pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y);
+    if (c.assinaturaImg) {
+      try { pdf.addImage(c.assinaturaImg, 'PNG', W-M-70, y-14, 70, 28); } catch(e){ console.error('addImage assinatura', e); }
+    }
+    y += 30;
+  });
+
+  y += 20;
+  if (y > 680) { pdf.addPage(); y = 60; }
+  pdf.setFontSize(10); pdf.setFont('helvetica','normal');
+  const declar = pdf.splitTextToSize(`Eu, ${nomeF}, declaro estar de acordo com todos os ajustes de ponto acima listados, referentes ao mês de ${labelMes(ym)}, tendo relatado pessoalmente cada esquecimento e confirmado os horários lançados.`, W-2*M);
+  pdf.text(declar, M, y); y += declar.length*13 + 40;
+
+  pdf.line(M, y, M+200, y); pdf.text('Assinatura da funcionária', M, y+14);
+  pdf.line(W-M-200, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-200, y+14);
+  y += 40;
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y);
+
+  pdf.save(`Termo-Ajustes-${nomeF.split(' ')[0]}-${ym}.pdf`);
+}
+
+// ════ TOAST ════
+function showToast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200); }
+</script>
+</body>
+</html>
