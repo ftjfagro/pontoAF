@@ -784,7 +784,7 @@ Object.assign(window, {
   valeSigStart, valeSigMove, valeSigEnd, confirmarValeAssinatura,
   setMinhasHorasView, toggleMesAnterior, gerarMeuRelatorioPDF, toggleDiaExpandido,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
-  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento,
+  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento, enviarParaPlanilha,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1286,6 +1286,24 @@ function validarFechamento(payload) {
 }
 
 /** Fluxo completo: confirma → valida → envia. */
+async function enviarPayloadParaPlanilha(payload){
+  showToast('Enviando para a planilha…');
+  try {
+    // text/plain evita o preflight CORS do Apps Script
+    const res = await fetch(SHEETS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const out = await res.json();
+    showToast(out.ok ? `✓ ${out.linhas} dias na planilha` : 'Erro: ' + out.erro);
+  } catch (e) {
+    console.error(e);
+    showToast('Falha no envio — verifique a URL do Apps Script');
+  }
+}
+
 async function abrirFechamento() {
   const emps = (window._empCache || []).filter(e => e.ativa !== false);
   if (!emps.length) { showToast('Nenhuma funcionária ativa'); return; }
@@ -1320,21 +1338,31 @@ async function abrirFechamento() {
     return;
   }
 
-  showToast('Enviando para a planilha…');
-  try {
-    // text/plain evita o preflight CORS do Apps Script
-    const res = await fetch(SHEETS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
-    });
-    const out = await res.json();
-    showToast(out.ok ? `✓ ${out.linhas} dias na planilha` : 'Erro: ' + out.erro);
-  } catch (e) {
-    console.error(e);
-    showToast('Falha no envio — verifique a URL do Apps Script');
+  await enviarPayloadParaPlanilha(payload);
+}
+
+/** Envio direto de um mês já consolidado, sem prompts — uid/mês já conhecidos pelo card. */
+async function enviarParaPlanilha(uid, ym){
+  const emp = (window._empCache || []).find(e => e.uid === uid);
+  const payload = montarPayload(ym, uid);
+  if (!payload.dias.length) { showToast('Nenhum registro nesse mês'); return; }
+
+  const probs = validarFechamento(payload);
+  if (probs.length) {
+    const msg = `⚠️ ${probs.length} pendência(s):\n\n` + probs.slice(0, 12).join('\n') +
+      (probs.length > 12 ? `\n… e mais ${probs.length - 12}` : '') +
+      '\n\nEnviar mesmo assim?';
+    if (!confirm(msg)) return;
+  } else if (!confirm(`${emp ? emp.nome : ''}: ${payload.dias.length} dia(s) de ${labelMes(ym)} conferidos. Enviar para a planilha?`)) {
+    return;
   }
+
+  await enviarPayloadParaPlanilha(payload);
+  try {
+    await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { enviadoPlanilhaEm: new Date().toISOString() });
+    await loadFechamentos();
+    renderFechamentos();
+  } catch(e){ console.error('marcar envio planilha', e); }
 }
 
 // ════ DADOS CONTRATUAIS (coleção privada 'contratos' — só o empregador lê/escreve) ════
@@ -2440,6 +2468,9 @@ function renderFechamentos(){
         ${fechMesExpandido===ym ? renderDiasFechamento(uid, ym, a, true) : ''}
       </div>`;
     } else {
+      const statusPlanilha = f && f.enviadoPlanilhaEm
+        ? `<div class="vt-status-pago">📤 Enviado à planilha em ${new Date(f.enviadoPlanilhaEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`
+        : `<button class="cor-report-btn" style="margin-top:0;background:var(--ink);color:#fff" onclick="enviarParaPlanilha('${uid}','${ym}')">📤 Enviar para planilha</button>`;
       html += `<div class="dash-card" style="padding:13px 16px">
         <div class="dash-card-head" style="margin-bottom:0;align-items:center">
           <div><div class="dash-card-title" style="font-size:14px;color:var(--ink2)">${labelMes(ym)}</div>
@@ -2450,6 +2481,7 @@ function renderFechamentos(){
           <button class="dash-reopen" onclick="reabrirMes('${uid}','${ym}')">Reabrir para ajustes</button>
           <button class="cor-report-btn" style="margin-top:0" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
         </div>
+        ${statusPlanilha}
         <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver os dias'}</div>
         ${fechMesExpandido===ym ? renderDiasFechamento(uid, ym, a, false) : ''}
       </div>`;
