@@ -269,6 +269,20 @@
     .dash-close-btn { width:100%; margin-top:14px; padding:12px; border:none; border-radius:10px; background:var(--accent); color:white; font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; }
     .dash-reopen { background:none; border:none; color:var(--ink3); font-size:11.5px; font-family:inherit; cursor:pointer; text-decoration:underline; padding:8px 0 0; }
     .dash-sec-label { font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:0.6px; padding:16px 16px 0; }
+    .vt-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin:8px 16px 12px; padding:16px; }
+    .vt-calc { font-size:14px; color:var(--ink2); margin-bottom:4px; }
+    .vt-calc b { color:var(--ink); font-family:'DM Mono',monospace; font-weight:500; }
+    .vt-total { font-size:21px; font-weight:600; color:var(--accent); margin:6px 0 4px; }
+    .vt-sub { font-size:12px; color:var(--ink3); margin-bottom:14px; }
+    .vt-badge { display:inline-block; font-size:11px; font-weight:700; padding:5px 11px; border-radius:100px; margin-bottom:10px; }
+    .vt-badge.mais { background:var(--warn-light); color:var(--warn); }
+    .vt-badge.menos { background:#E5F1FB; color:#2E75B6; }
+    .vt-badge.ok { background:var(--accent-light); color:var(--accent); }
+    .vt-explica { font-size:13px; color:var(--ink2); line-height:1.5; }
+    .vt-explica b { color:var(--ink); font-family:'DM Mono',monospace; font-weight:500; }
+    .vt-empty { font-size:12.5px; color:var(--ink3); padding:2px 0 6px; }
+    .vt-metrics { display:flex; gap:10px; margin:12px 0; }
+    .vt-metrics .dash-metric { flex:1; }
     .fer-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
     .fer-row .d { font-family:'DM Mono',monospace; font-size:13px; width:52px; flex-shrink:0; }
     .fer-row .n { flex:1; font-size:13px; color:var(--ink2); }
@@ -413,7 +427,10 @@
   <div class="screen" id="screenEmpregador">
     <div class="section-header">
       <div><div class="section-title">Painel da Casa</div><div class="section-sub" id="employerCode"></div></div>
-      <button onclick="openInviteModal()" style="background:var(--accent);color:white;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Nova funcionária</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="abrirFechamento()" style="background:var(--ink);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📤 Fechar competência</button>
+        <button onclick="openInviteModal()" style="background:var(--accent);color:white;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Nova funcionária</button>
+      </div>
     </div>
     <div class="alerts-banner" id="alertsEmpregadorBanner"></div>
     <div id="invitesList"></div>
@@ -514,6 +531,10 @@
       <div class="frow">
         <label>Data de admissão</label>
         <input type="date" id="fAdmissao" />
+      </div>
+      <div class="frow">
+        <label>Vale-transporte diário (ida + volta, R$)</label>
+        <input type="number" id="fValeTransporte" placeholder="Ex: 9.00" step="0.01" inputmode="decimal" />
       </div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeContractModal()">Cancelar</button>
@@ -696,9 +717,9 @@ Object.assign(window, {
   openPointModal, closePointModal, savePoint, deletePoint,
   openInviteModal, closeInviteModal, saveInvite, deleteInvite,
   inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
-  setDashView, setDashEmp, toggleWeek, consolidarMes, reabrirMes,
+  setDashView, setDashEmp, toggleWeek, consolidarMes, reabrirMes, setVtView, gerarReciboValeTransporte,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
-  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto,
+  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1119,6 +1140,117 @@ function showInactiveEmployeeScreen() {
   const en=document.getElementById('encerradoName'); if(en) en.textContent = (currentUser.nome||'').split(' ')[0];
 }
 
+// ════════════════════════════════════════════════════════════════
+// FECHAR COMPETÊNCIA → GOOGLE SHEETS
+// ════════════════════════════════════════════════════════════════
+const SHEETS_URL   = 'https://script.google.com/macros/s/COLE_SEU_ID_AQUI/exec';
+const SHEETS_TOKEN = 'TROQUE_ESTE_TOKEN_POR_ALGO_LONGO_E_ALEATORIO'; // igual ao Codigo.gs
+
+const TIPO_MAP = {
+  'entrada':      'entrada',
+  'almoco-saida': 'almocoSaida',
+  'almoco-volta': 'almocoVolta',
+  'saida':        'saida'
+};
+
+/** Monta o payload da competência a partir dos records já carregados. */
+function montarPayload(competencia) {
+  const emps = (window._empCache || []).filter(e => e.ativa !== false);
+  const contratos = window._contractCache || {};
+
+  const funcionarias = emps.map(e => {
+    const ct = contratos[e.uid] || {};
+    return {
+      nome: e.nome,
+      uid: e.uid,
+      salario: Number(ct.salario) || null,
+      jornadaDiaria: Number(ct.jornadaDiaria) || null,
+      diasTrabalho: ct.diasTrabalho || [],
+      admissao: ct.admissao || null
+    };
+  });
+
+  // Agrupa os registros do mês por funcionária + data
+  const bucket = {};
+  (window.records || records).forEach(r => {
+    if (!r.ts) return;
+    const d = new Date(r.ts);
+    const data = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (data.slice(0, 7) !== competencia) return;
+    const emp = emps.find(e => e.uid === r.userId);
+    if (!emp) return;
+    const k = emp.nome + '|' + data;
+    if (!bucket[k]) {
+      bucket[k] = {
+        nome: emp.nome, data, tipoDia: r.tipoDia || 'NORMAL',
+        entrada: null, almocoSaida: null, almocoVolta: null, saida: null,
+        manual: false, foraCerca: 0, obs: ''
+      };
+    }
+    const campo = TIPO_MAP[r.type];
+    if (campo) {
+      bucket[k][campo] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    if (r.adjusted || r.origem === 'MANUAL') bucket[k].manual = true;
+    if (r.foraCerca) bucket[k].foraCerca++;
+    if (r.justificativa) bucket[k].obs = r.justificativa;
+  });
+
+  return { token: SHEETS_TOKEN, competencia, funcionarias, dias: Object.values(bucket) };
+}
+
+/** Valida antes de enviar. Retorna array de problemas. */
+function validarFechamento(payload) {
+  const p = [];
+  payload.funcionarias.forEach(f => {
+    if (!f.salario || !f.jornadaDiaria) p.push(`${f.nome}: dados contratuais incompletos`);
+  });
+  payload.dias.forEach(d => {
+    const faltando = ['entrada', 'saida'].filter(c => !d[c]);
+    if (faltando.length && !['FERIADO', 'FALTA', 'ATESTADO', 'DSR', 'FERIAS'].includes(d.tipoDia)) {
+      p.push(`${d.nome} ${d.data.split('-').reverse().join('/')}: falta ${faltando.join(' e ')}`);
+    }
+  });
+  return p;
+}
+
+/** Fluxo completo: confirma → valida → envia. */
+async function abrirFechamento() {
+  const hoje = new Date();
+  const sug = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  const comp = prompt('Fechar qual competência? (AAAA-MM)', sug);
+  if (!comp || !/^\d{4}-\d{2}$/.test(comp)) return;
+
+  const payload = montarPayload(comp);
+  if (!payload.dias.length) { showToast('Nenhum registro nessa competência'); return; }
+
+  const probs = validarFechamento(payload);
+  if (probs.length) {
+    const msg = `⚠️ ${probs.length} pendência(s):\n\n` + probs.slice(0, 12).join('\n') +
+      (probs.length > 12 ? `\n… e mais ${probs.length - 12}` : '') +
+      '\n\nEnviar mesmo assim?';
+    if (!confirm(msg)) return;
+  } else if (!confirm(`${payload.dias.length} dias conferidos. Enviar ${comp} para a planilha?`)) {
+    return;
+  }
+
+  showToast('Enviando para a planilha…');
+  try {
+    // text/plain evita o preflight CORS do Apps Script
+    const res = await fetch(SHEETS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const out = await res.json();
+    showToast(out.ok ? `✓ ${out.linhas} dias na planilha` : 'Erro: ' + out.erro);
+  } catch (e) {
+    console.error(e);
+    showToast('Falha no envio — verifique a URL do Apps Script');
+  }
+}
+
 // ════ DADOS CONTRATUAIS (coleção privada 'contratos' — só o empregador lê/escreve) ════
 let editingEmpUid = null;
 function openContractModal(uid) {
@@ -1127,9 +1259,11 @@ function openContractModal(uid) {
   editingEmpUid = uid;
   const ct = (window._contractCache||{})[uid] || {};
   document.getElementById('fNomeCompleto').value = emp.nome || '';
+
   document.getElementById('fSalario').value = ct.salario || '';
   document.getElementById('fJornada').value = ct.jornadaDiaria || '';
   document.getElementById('fAdmissao').value = ct.admissao || '';
+  document.getElementById('fValeTransporte').value = ct.valeTransporteDiario != null ? ct.valeTransporteDiario : '';
   const dias = ct.diasTrabalho || [1,2,3,4,5];
   document.querySelectorAll('#fDias .day-chip').forEach(chip=>{
     const d = parseInt(chip.dataset.d);
@@ -1148,6 +1282,7 @@ async function saveContract() {
     jornadaDiaria: parseFloat(document.getElementById('fJornada').value) || null,
     diasTrabalho: dias.length ? dias : [1,2,3,4,5],
     admissao: document.getElementById('fAdmissao').value || null,
+    valeTransporteDiario: parseFloat(document.getElementById('fValeTransporte').value) || null,
     houseCode: currentUser.houseCode,
   };
   try {
@@ -1471,6 +1606,7 @@ const JORNADA_MIN = 528, BANCO_CAP = 120;
 let ferByAno = {};
 let fechamentos = {};        // 'uid|YYYY-MM' -> { status, ... }
 let dashView = 'dia';
+let vtView = 'inicio';
 let dashEmpUid = null;
 let dashWeekOpen = {};
 let feriadosDraft = [], feriadosAnoEdit = null;
@@ -1485,6 +1621,12 @@ const MESES_LONGOS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Jul
 const MESES_CURTOS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const DOW_CURTOS = ['dom','seg','ter','qua','qui','sex','sáb'];
 function labelMes(ym){ const [y,m]=ym.split('-').map(Number); return MESES_LONGOS[m-1]+' '+y; }
+function proximoMes(ym){
+  const [y,m] = ym.split('-').map(Number);
+  const d = new Date(y, m, 1); // m já é 1-indexado -> Date(y,m,1) cai no mês seguinte
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1);
+}
+function fmtBRL(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
 // ════ FERIADOS ════
 function pascoa(ano){
@@ -1755,6 +1897,12 @@ function renderDashboard(){
       <div class="dash-metric"><div class="lbl">A pagar (previsto)</div><div class="v">${fmtHM(ag.pagar)}</div><div class="hint">pote + extras, se fechasse hoje</div></div>
     </div>
   </div>
+  <div class="dash-sec-label">Vale-transporte</div>
+  <div class="dash-toggle">
+    <button class="${vtView==='inicio'?'on':''}" onclick="setVtView('inicio')">Início do mês</button>
+    <button class="${vtView==='fechamento'?'on':''}" onclick="setVtView('fechamento')">Fechamento</button>
+  </div>
+  ${renderVT(uid, vigente, ag)}
   <div class="dash-toggle">
     <button class="${dashView==='dia'?'on':''}" onclick="setDashView('dia')">Dia</button>
     <button class="${dashView==='semana'?'on':''}" onclick="setDashView('semana')">Semana</button>
@@ -1821,6 +1969,93 @@ function renderDashboard(){
   document.getElementById('dashBody').innerHTML = html;
 }
 function setDashView(v){ dashView = v; renderDashboard(); }
+function setVtView(v){ vtView = v; renderDashboard(); }
+function renderVT(uid, vigente, agVigente){
+  const ct = (window._contractCache||{})[uid] || {};
+  const valor = ct.valeTransporteDiario;
+  if (!valor) {
+    return `<div class="vt-card"><div class="vt-empty">Cadastre o valor diário do vale-transporte (ida + volta) em ⚙️ Contrato desta funcionária pra ativar o cálculo.</div></div>`;
+  }
+  if (vtView === 'inicio') {
+    const prox = proximoMes(vigente);
+    const du = diasUteisMes(prox);
+    const total = du.total * valor;
+    return `<div class="vt-card">
+      <div class="dash-card-sub" style="margin-bottom:8px">Antecipação para ${labelMes(prox)}</div>
+      <div class="vt-calc">${du.total} dias úteis × <b>${fmtBRL(valor)}</b></div>
+      <div class="vt-total">${fmtBRL(total)}</div>
+      <div class="vt-sub">Baseado na mesma tabela de feriados usada no cálculo de hora extra.</div>
+      <button class="dash-close-btn" onclick="gerarReciboValeTransporte('${uid}','${prox}')">🖨️ Gerar recibo do mês</button>
+    </div>`;
+  }
+  // fechamento: dias previstos (tabela) vs dias realmente trabalhados (presença no ponto), no mês vigente
+  const duPrevisto = diasUteisMes(vigente).total;
+  const trabalhados = agVigente.dias.length;
+  const diff = trabalhados - duPrevisto;
+  let badge = '', explica = '';
+  if (diff > 0) {
+    const y = diff * valor;
+    badge = `<div class="vt-badge mais">⚠️ ${diff} dia(s) além do previsto</div>`;
+    explica = `Ela trabalhou <b>${trabalhados}</b> dias neste mês, mas a antecipação cobriu só <b>${duPrevisto}</b>. O vale antecipado não cobre <b>${fmtBRL(y)}</b> — considere complementar.`;
+  } else if (diff < 0) {
+    const y = Math.abs(diff) * valor;
+    badge = `<div class="vt-badge menos">${Math.abs(diff)} dia(s) a menos</div>`;
+    explica = `Ela trabalhou <b>${trabalhados}</b> dias neste mês, menos que os <b>${duPrevisto}</b> previstos. O vale foi pago a maior em <b>${fmtBRL(y)}</b> — pode abater no repasse do mês seguinte.`;
+  } else {
+    badge = `<div class="vt-badge ok">✓ Sem divergência</div>`;
+    explica = `Dias trabalhados bateram exatamente com o previsto (<b>${duPrevisto}</b> dias).`;
+  }
+  return `<div class="vt-card">
+    <div class="dash-card-sub" style="margin-bottom:8px">Fechamento de ${labelMes(vigente)}</div>
+    ${badge}
+    <div class="vt-metrics">
+      <div class="dash-metric"><div class="lbl">Previsto</div><div class="v">${duPrevisto}</div><div class="hint">dias úteis (tabela)</div></div>
+      <div class="dash-metric"><div class="lbl">Trabalhado</div><div class="v">${trabalhados}</div><div class="hint">dias com registro real</div></div>
+    </div>
+    <div class="vt-explica">${explica}</div>
+  </div>`;
+}
+async function gerarReciboValeTransporte(uid, ym){
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const ct = (window._contractCache||{})[uid] || {};
+  const valor = ct.valeTransporteDiario;
+  if (!valor) { showToast('Cadastre o valor diário do vale-transporte antes'); return; }
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  const nomeF = emp ? emp.nome : '';
+  const du = diasUteisMes(ym);
+  const total = du.total * valor;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 70;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
+  pdf.text('Recibo de Vale-Transporte', M, y); y += 26;
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text(`Referência: ${labelMes(ym)}`, M, y); y += 34;
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y += 30;
+
+  pdf.setFontSize(12);
+  const texto = pdf.splitTextToSize(
+    `Eu, ${nomeF}, declaro ter recebido de ${currentUser.nome}, referente à antecipação do vale-transporte ` +
+    `para o mês de ${labelMes(ym)}, a quantia de ${fmtBRL(total)}, correspondente a ${du.total} dia(s) útil(eis) ` +
+    `× ${fmtBRL(valor)} por dia (valor diário já incluindo ida e volta).`,
+    W-2*M);
+  pdf.text(texto, M, y); y += texto.length*16 + 30;
+
+  pdf.setFont('helvetica','bold'); pdf.text('Dias úteis do mês:', M, y); pdf.setFont('helvetica','normal'); pdf.text(String(du.total), M+140, y); y += 18;
+  pdf.setFont('helvetica','bold'); pdf.text('Valor diário:', M, y); pdf.setFont('helvetica','normal'); pdf.text(fmtBRL(valor), M+140, y); y += 18;
+  pdf.setFont('helvetica','bold'); pdf.text('Total antecipado:', M, y); pdf.setFont('helvetica','normal'); pdf.text(fmtBRL(total), M+140, y); y += 50;
+
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text('Data: _____ / _____ / __________', M, y); y += 60;
+  pdf.line(M, y, M+220, y); pdf.text('Assinatura da funcionária', M, y+14);
+  pdf.line(W-M-220, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y+14);
+  y += 40;
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y);
+
+  pdf.save(`Recibo-VT-${(nomeF||'funcionaria').split(' ')[0]}-${ym}.pdf`);
+}
 function setDashEmp(uid){ dashEmpUid = uid; dashWeekOpen = {}; renderDashboard(); }
 function toggleWeek(k){ dashWeekOpen[k] = !dashWeekOpen[k]; renderDashboard(); }
 async function openDashboard(){
