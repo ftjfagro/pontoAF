@@ -779,7 +779,7 @@ Object.assign(window, {
   openInviteModal, closeInviteModal, saveInvite, deleteInvite,
   inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
   setDashView, toggleWeek, consolidarMes, reabrirMes, setVtView, gerarReciboValeTransporte,
-  abrirDetalheFuncionaria, fecharDetalheFuncionaria, setFechEmp, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia,
+  abrirDetalheFuncionaria, fecharDetalheFuncionaria, setFechEmp, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia, abrirPontoParaMes,
   marcarValePago, openValeAssinaturaModal, closeValeAssinaturaModal, valeReassinar, valeLimparAssinatura,
   valeSigStart, valeSigMove, valeSigEnd, confirmarValeAssinatura,
   setMinhasHorasView, toggleMesAnterior, gerarMeuRelatorioPDF, toggleDiaExpandido,
@@ -2352,8 +2352,18 @@ function abrirPontoParaDia(uid, ds){
   openPointModal(uid);
   document.getElementById('pData').value = ds;
 }
-function renderDiasFechamento(uid, ag, editable){
-  if (!ag.dias.length) return '<div class="vt-empty" style="padding:10px 0 0">Nenhum registro neste mês.</div>';
+function abrirPontoParaMes(uid, ym){
+  openPointModal(uid);
+  const [y,m] = ym.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const pData = document.getElementById('pData');
+  pData.min = ym + '-01';
+  pData.max = ym + '-' + pad2(lastDay);
+  pData.value = ym + '-01';
+}
+function renderDiasFechamento(uid, ym, ag, editable){
+  const botaoGeral = editable ? `<button class="cor-report-btn" style="margin-top:8px;width:100%" onclick="abrirPontoParaMes('${uid}','${ym}')">+ Adicionar ponto em outro dia deste mês</button>` : '';
+  if (!ag.dias.length) return `<div class="vt-empty" style="padding:10px 0 0">Nenhum registro neste mês.</div>${botaoGeral}`;
   return ag.dias.slice().reverse().map(d=>{
     const [Y,M,D] = d.ds.split('-').map(Number);
     const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
@@ -2372,7 +2382,7 @@ function renderDiasFechamento(uid, ag, editable){
       }).join('')}
       ${editable ? `<button class="cor-report-btn" style="margin-top:6px;width:100%" onclick="abrirPontoParaDia('${uid}','${d.ds}')">+ Adicionar ponto nesse dia</button>` : ''}
     </div>`;
-  }).join('');
+  }).join('') + botaoGeral;
 }
 function renderFechamentos(){
   const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
@@ -2427,7 +2437,7 @@ function renderFechamentos(){
         <button class="dash-close-btn" onclick="consolidarMes('${uid}','${ym}')">Consolidar ${labelMes(ym)}</button>
         <button class="cor-report-btn" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
         <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver e ajustar os dias'}</div>
-        ${fechMesExpandido===ym ? renderDiasFechamento(uid, a, true) : ''}
+        ${fechMesExpandido===ym ? renderDiasFechamento(uid, ym, a, true) : ''}
       </div>`;
     } else {
       html += `<div class="dash-card" style="padding:13px 16px">
@@ -2441,7 +2451,7 @@ function renderFechamentos(){
           <button class="cor-report-btn" style="margin-top:0" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
         </div>
         <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver os dias'}</div>
-        ${fechMesExpandido===ym ? renderDiasFechamento(uid, a, false) : ''}
+        ${fechMesExpandido===ym ? renderDiasFechamento(uid, ym, a, false) : ''}
       </div>`;
     }
   });
