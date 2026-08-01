@@ -293,6 +293,10 @@
     .vt-explica { font-size:13px; color:var(--ink2); line-height:1.5; }
     .vt-explica b { color:var(--ink); font-family:'DM Mono',monospace; font-weight:500; }
     .vt-empty { font-size:12.5px; color:var(--ink3); padding:2px 0 6px; }
+    .vt-confirma-card { background:var(--accent-light); border:1px solid #A8D5BA; border-radius:14px; margin:0 16px 14px; padding:14px 16px; }
+    .vt-confirma-title { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+    .vt-confirma-valor { font-size:19px; font-weight:600; color:var(--ink); font-family:'DM Mono',monospace; margin:2px 0 10px; }
+    .vt-status-pago { font-size:12px; color:var(--ink2); margin-top:8px; }
     .vt-metrics { display:flex; gap:10px; margin:12px 0; }
     .vt-metrics .dash-metric { flex:1; }
     .fer-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
@@ -403,6 +407,7 @@
   </header>
 
   <div class="screen active" id="screenRegistro">
+    <div id="valeConfirmaBox"></div>
     <div class="clock-hero">
       <div class="greeting">Olá,</div>
       <div class="name" id="heroName">Funcionária</div>
@@ -690,6 +695,30 @@
     </div>
   </div>
 
+  <div class="form-modal" id="valeAssinaturaModal">
+    <div class="form-sheet">
+      <h3>Confirmar recebimento do vale-transporte</h3>
+      <div class="sub" id="valeAssinaturaSub">—</div>
+      <div class="termo-box" id="valeTermoTexto"></div>
+
+      <div class="field" id="valeAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="valeAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="valeReassinar()">Assinar novamente</button>
+      </div>
+      <div class="field" id="valeAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="valeSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="valeSigStart(event)" onpointermove="valeSigMove(event)" onpointerup="valeSigEnd(event)" onpointerleave="valeSigEnd(event)" onpointercancel="valeSigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="valeLimparAssinatura()">Limpar</button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeValeAssinaturaModal()">Cancelar</button>
+        <button class="btn-form-save" id="valeSalvarBtn" disabled onclick="confirmarValeAssinatura()">Confirmar recebimento</button>
+      </div>
+    </div>
+  </div>
+
   <nav id="appNav">
     <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
     <button class="nav-btn" id="navDashboard" style="display:none" onclick="showScreen('Dashboard')"><div class="nav-icon">📊</div><div class="nav-label">Dashboard</div></button>
@@ -751,6 +780,8 @@ Object.assign(window, {
   inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
   setDashView, toggleWeek, consolidarMes, reabrirMes, setVtView, gerarReciboValeTransporte,
   abrirDetalheFuncionaria, fecharDetalheFuncionaria, setFechEmp, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia,
+  marcarValePago, openValeAssinaturaModal, closeValeAssinaturaModal, valeReassinar, valeLimparAssinatura,
+  valeSigStart, valeSigMove, valeSigEnd, confirmarValeAssinatura,
   setMinhasHorasView, toggleMesAnterior, gerarMeuRelatorioPDF, toggleDiaExpandido,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
   openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento,
@@ -1782,6 +1813,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
+  if(name==='Registro' && currentUser && currentUser.role!=='empregador') checkMeuValePendente();
   if(name==='Historico') { renderMinhasHoras(); }
   if(name==='Dashboard') openDashboard();
   if(name==='Fechamentos') openFechamentos();
@@ -2416,6 +2448,31 @@ function renderFechamentos(){
   document.getElementById('fechBody').innerHTML = html;
 }
 function setVtView(v){ vtView = v; renderFechamentos(); }
+// ════ VALE-TRANSPORTE: confirmação digital assinada pela funcionária ════
+let valePagamentosCache = {}; // key: uid|ym
+async function loadValePagamentos(){
+  try {
+    const sn = await getDocs(query(collection(db,'valePagamentos'), where('houseCode','==',currentUser.houseCode)));
+    valePagamentosCache = {};
+    sn.docs.forEach(d=>{ const v=d.data(); valePagamentosCache[v.uid+'|'+v.mes] = { id:d.id, ...v }; });
+  } catch(e){ console.error('valePagamentos', e); valePagamentosCache = {}; }
+}
+async function marcarValePago(uid, ym, valor, diasUteis, valorDiario){
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  if (!confirm(`Marcar vale-transporte de ${labelMes(ym)} (${fmtBRL(valor)}) como pago para ${emp?emp.nome:''}?\n\nEla vai ver um card na tela inicial pra confirmar o recebimento com assinatura.`)) return;
+  try {
+    await setDoc(doc(db,'valePagamentos', uid+'_'+ym), {
+      uid, nome: emp?emp.nome:'', houseCode: currentUser.houseCode,
+      mes: ym, valor, diasUteis, valorDiario,
+      empregadorNome: currentUser.nome,
+      marcadoPagoEm: new Date().toISOString(), marcadoPagoPor: currentUser.uid,
+      assinado: false, assinaturaImg: null, assinadoEm: null
+    });
+    showToast('Marcado como pago — aguardando confirmação dela');
+    await loadValePagamentos();
+    renderFechamentos();
+  } catch(e){ console.error(e); showToast('Erro ao marcar como pago'); }
+}
 function renderVT(uid, vigente, agVigente){
   const ct = (window._contractCache||{})[uid] || {};
   const valor = ct.valeTransporteDiario;
@@ -2426,12 +2483,23 @@ function renderVT(uid, vigente, agVigente){
     const prox = proximoMes(vigente);
     const du = diasUteisMes(prox);
     const total = du.total * valor;
+    const pag = valePagamentosCache[uid+'|'+prox];
+    let statusHtml;
+    if (pag && pag.assinado) {
+      const dt = new Date(pag.assinadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      statusHtml = `<div class="vt-status-pago">✅ Confirmado por ela em ${dt}</div>`;
+    } else if (pag && !pag.assinado) {
+      statusHtml = `<div class="vt-status-pago">⏳ Marcado como pago — aguardando a assinatura dela</div>`;
+    } else {
+      statusHtml = `<button class="dash-close-btn" style="background:var(--ink)" onclick="marcarValePago('${uid}','${prox}',${total},${du.total},${valor})">✅ Marcar vale como pago</button>`;
+    }
     return `<div class="vt-card">
       <div class="dash-card-sub" style="margin-bottom:8px">Antecipação para ${labelMes(prox)}</div>
       <div class="vt-calc">${du.total} dias úteis × <b>${fmtBRL(valor)}</b></div>
       <div class="vt-total">${fmtBRL(total)}</div>
       <div class="vt-sub">Baseado na mesma tabela de feriados usada no cálculo de hora extra.</div>
       <button class="dash-close-btn" onclick="gerarReciboValeTransporte('${uid}','${prox}')">🖨️ Gerar recibo do mês</button>
+      ${statusHtml}
     </div>`;
   }
   const duPrevisto = diasUteisMes(vigente).total;
@@ -2462,6 +2530,100 @@ function renderVT(uid, vigente, agVigente){
 }
 
 function toggleWeek(k){ dashWeekOpen[k] = !dashWeekOpen[k]; renderDashboard(); }
+
+// ── funcionária: confirma recebimento do vale-transporte com assinatura ──
+let valePendenteAtual = null;
+let valeSigCtx = null, valeSigDrawing = false, valeSigHasStroke = false;
+let valeForcarNovaAssinatura = false;
+
+async function checkMeuValePendente(){
+  const box = document.getElementById('valeConfirmaBox');
+  if (!box || !currentUser || currentUser.role === 'empregador') return;
+  try {
+    const sn = await getDocs(query(collection(db,'valePagamentos'), where('uid','==',currentUser.uid)));
+    const pendentes = sn.docs.map(d=>({id:d.id, ...d.data()})).filter(p=>!p.assinado).sort((a,b)=>a.mes.localeCompare(b.mes));
+    if (!pendentes.length) { box.innerHTML=''; valePendenteAtual=null; return; }
+    valePendenteAtual = pendentes[0];
+    box.innerHTML = `<div class="vt-confirma-card">
+      <div class="vt-confirma-title">Vale-transporte</div>
+      <div style="font-size:13px;color:var(--ink2)">Confirme o recebimento de ${labelMes(valePendenteAtual.mes)}</div>
+      <div class="vt-confirma-valor">${fmtBRL(valePendenteAtual.valor)}</div>
+      <button class="dash-close-btn" onclick="openValeAssinaturaModal()">Confirmar e assinar</button>
+    </div>`;
+  } catch(e){ console.error('checkMeuValePendente', e); }
+}
+function openValeAssinaturaModal(){
+  if (!valePendenteAtual) return;
+  document.getElementById('valeAssinaturaSub').textContent = `${labelMes(valePendenteAtual.mes)} — ${fmtBRL(valePendenteAtual.valor)}`;
+  document.getElementById('valeTermoTexto').textContent =
+    `Declaro ter recebido de ${valePendenteAtual.empregadorNome||'meu empregador(a)'} a quantia de ${fmtBRL(valePendenteAtual.valor)}, referente ao vale-transporte de ${labelMes(valePendenteAtual.mes)}.`;
+  valeForcarNovaAssinatura = false;
+  valeRefreshAssinaturaUI();
+  document.getElementById('valeAssinaturaModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('valeAssinaturaPadBox').style.display !== 'none') valeInitSigCanvas(); });
+  updateValeSalvarBtn();
+}
+function closeValeAssinaturaModal(){ document.getElementById('valeAssinaturaModal').classList.remove('open'); }
+function valeRefreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !valeForcarNovaAssinatura);
+  document.getElementById('valeAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('valeAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('valeAssinaturaPreview').src = salva;
+}
+function valeReassinar(){ valeForcarNovaAssinatura = true; valeRefreshAssinaturaUI(); valeInitSigCanvas(); }
+function valeAssinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !valeForcarNovaAssinatura) return true;
+  return valeSigHasStroke;
+}
+function updateValeSalvarBtn(){
+  document.getElementById('valeSalvarBtn').disabled = !valeAssinaturaOk();
+}
+function valeInitSigCanvas(){
+  const c = document.getElementById('valeSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  valeSigCtx = c.getContext('2d');
+  valeSigCtx.scale(dpr,dpr);
+  valeSigCtx.lineWidth = 2.3; valeSigCtx.lineCap='round'; valeSigCtx.lineJoin='round';
+  valeSigCtx.strokeStyle = '#1A1816';
+  valeSigHasStroke = false; valeSigDrawing = false;
+}
+function valeSigPos(e,c){ const rect=c.getBoundingClientRect(); return {x:e.clientX-rect.left, y:e.clientY-rect.top}; }
+function valeSigStart(e){ e.preventDefault(); valeSigDrawing=true; const p=valeSigPos(e,e.currentTarget); valeSigCtx.beginPath(); valeSigCtx.moveTo(p.x,p.y); }
+function valeSigMove(e){ if(!valeSigDrawing||!valeSigCtx) return; e.preventDefault(); const p=valeSigPos(e,e.currentTarget); valeSigCtx.lineTo(p.x,p.y); valeSigCtx.stroke(); if(!valeSigHasStroke){valeSigHasStroke=true; updateValeSalvarBtn();} }
+function valeSigEnd(){ valeSigDrawing=false; }
+function valeLimparAssinatura(){
+  const c = document.getElementById('valeSigCanvas');
+  if (!c || !valeSigCtx) return;
+  valeSigCtx.clearRect(0,0,c.width,c.height);
+  valeSigHasStroke = false; updateValeSalvarBtn();
+}
+async function confirmarValeAssinatura(){
+  if (!valePendenteAtual || !valeAssinaturaOk()) return;
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !valeForcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('valeSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
+  try {
+    await updateDoc(doc(db,'valePagamentos',valePendenteAtual.id), {
+      assinado: true, assinaturaImg, assinadoEm: new Date().toISOString()
+    });
+    closeValeAssinaturaModal();
+    showToast('Recebimento confirmado ✓');
+    checkMeuValePendente();
+  } catch(e){ console.error(e); showToast('Erro ao confirmar'); }
+}
+
 async function gerarReciboValeTransporte(uid, ym){
   if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
   const ct = (window._contractCache||{})[uid] || {};
@@ -2493,11 +2655,23 @@ async function gerarReciboValeTransporte(uid, ym){
   pdf.setFont('helvetica','bold'); pdf.text('Valor diário:', M, y); pdf.setFont('helvetica','normal'); pdf.text(fmtBRL(valor), M+140, y); y += 18;
   pdf.setFont('helvetica','bold'); pdf.text('Total antecipado:', M, y); pdf.setFont('helvetica','normal'); pdf.text(fmtBRL(total), M+140, y); y += 50;
 
+  const pag = valePagamentosCache[uid+'|'+ym];
   pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
-  pdf.text('Data: _____ / _____ / __________', M, y); y += 60;
-  pdf.line(M, y, M+220, y); pdf.text('Assinatura da funcionária', M, y+14);
-  pdf.line(W-M-220, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y+14);
-  y += 40;
+  if (pag && pag.assinado) {
+    const dt = new Date(pag.assinadoEm).toLocaleString('pt-BR');
+    pdf.text(`Assinado digitalmente por ${nomeF} em ${dt}.`, M, y); y += 22;
+    if (pag.assinaturaImg) {
+      try { pdf.addImage(pag.assinaturaImg, 'PNG', M, y, 160, 60); } catch(e){ console.error('addImage assinatura VT', e); }
+    }
+    y += 75;
+    pdf.line(W-M-220, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y+14);
+    y += 40;
+  } else {
+    pdf.text('Data: _____ / _____ / __________', M, y); y += 60;
+    pdf.line(M, y, M+220, y); pdf.text('Assinatura da funcionária', M, y+14);
+    pdf.line(W-M-220, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y+14);
+    y += 40;
+  }
   pdf.setFontSize(9); pdf.setTextColor(140);
   pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y);
 
@@ -2509,6 +2683,7 @@ async function ensureDadosGestao(){
   await loadFechamentos();
   if (!window._empCache || !window._empCache.length) await checkAlerts();
   await loadAtividades();
+  await loadValePagamentos();
 }
 async function openDashboard(){
   await ensureDadosGestao();
@@ -2884,8 +3059,8 @@ async function confirmRejeitar(){
 async function gerarTermoAjustesPDF(uid, ym){
   let correcoesAprovadas = [];
   try {
-    const sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',uid), where('status','==','aprovado')));
-    correcoesAprovadas = sn.docs.map(d=>d.data()).filter(c=>c.ts.slice(0,7)===ym);
+    const sn = await getDocs(query(collection(db,'correcoes'), where('houseCode','==',currentUser.houseCode), where('status','==','aprovado')));
+    correcoesAprovadas = sn.docs.map(d=>d.data()).filter(c=>c.uid===uid && c.ts.slice(0,7)===ym);
   } catch(e){ console.error(e); showToast('Erro ao buscar correções'); return; }
 
   // ajustes feitos manualmente pelo empregador (pelo lápis/+ em Fechamentos), sem passar pela autocorreção
