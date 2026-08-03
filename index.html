@@ -1001,7 +1001,7 @@ function subscribeRecords() {
     records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     records.sort((a,b) => new Date(a.ts) - new Date(b.ts));
     updateButtons();
-    if (currentUser.role !== 'empregador') { renderMinhasHoras(); scheduleReminders(); }
+    if (currentUser.role !== 'empregador') { renderMinhasHoras(); renderDiasParaRevisar(); scheduleReminders(); }
     else if (document.getElementById('screenDashboard').classList.contains('active')) { renderDashboard(); }
     else if (document.getElementById('screenFechamentos').classList.contains('active')) { renderFechamentos(); }
     checkAlerts();
@@ -1843,7 +1843,7 @@ function showScreen(name) {
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
   if(name==='Registro' && currentUser && currentUser.role!=='empregador') checkMeuValePendente();
-  if(name==='Historico') { renderMinhasHoras(); }
+  if(name==='Historico') { renderMinhasHoras(); renderMinhasCorrecoes(); }
   if(name==='Dashboard') openDashboard();
   if(name==='Fechamentos') openFechamentos();
   if(name==='Config' && currentUser && currentUser.role==='empregador') checkAlerts();
