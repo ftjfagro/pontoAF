@@ -54,8 +54,6 @@
     .header-right { display: flex; align-items: center; gap: 12px; }
     .header-time { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--ink2); }
     .btn-logout { font-size: 12px; color: var(--ink3); background: none; border: none; cursor: pointer; font-family: inherit; padding: 4px 8px; }
-    .user-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; background: var(--accent-light); color: var(--accent); }
-    .user-badge.employer { background: #EAE5FF; color: #5B3FD9; }
     .alerts-banner { padding: 0 16px 0; }
     .alert-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px; margin-top: 10px; font-size: 13px; font-weight: 500; }
     .alert-item.warn { background: var(--warn-light); color: var(--warn); border: 1px solid #F5C49A; }
@@ -64,36 +62,37 @@
     .alert-icon { font-size: 16px; flex-shrink: 0; }
     .screen { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
     .screen.active { display: flex; }
-    .clock-hero { background: var(--accent); color: white; padding: 28px 24px 24px; text-align: center; }
-    .clock-hero .greeting { font-size: 13px; opacity: 0.8; margin-bottom: 3px; }
-    .clock-hero .name { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
-    .clock-display { font-family: 'DM Mono', monospace; font-size: 46px; font-weight: 500; letter-spacing: 2px; line-height: 1; }
     .clock-date { font-size: 13px; opacity: 0.7; margin-top: 6px; }
-    .status-bar { display: flex; gap: 8px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
-    .status-pill { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 100px; font-size: 12px; font-weight: 500; background: var(--surface2); color: var(--ink2); }
-    .status-pill.active { background: var(--accent-light); color: var(--accent); }
-    .status-pill.warn { background: var(--warn-light); color: var(--warn); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
-    .action-btn { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 18px 14px; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 7px; }
-    .action-btn:active { transform: scale(0.97); }
-    .action-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
-    .action-btn.secondary { background: var(--warn-light); border-color: var(--warn); color: var(--warn); }
-    .action-btn.blue { background: #EAF4FF; border-color: #3498db; color: #2176b5; }
-    .action-btn.disabled { opacity: 0.35; pointer-events: none; }
-    .action-icon { font-size: 26px; line-height: 1; }
-    .action-label { font-size: 13px; font-weight: 600; }
-    .action-sub { font-size: 11px; opacity: 0.7; }
-    .summary-card { margin: 0 16px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-    .summary-header { background: var(--ink); color: white; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
-    .summary-header .label { font-size: 12px; opacity: 0.6; }
-    .summary-header .value { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
-    .summary-rows { padding: 4px 0; }
-    .summary-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
-    .summary-row:last-child { border-bottom: none; }
-    .summary-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .summary-row .key { font-size: 13px; color: var(--ink2); flex: 1; }
-    .summary-row .val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+    .greet-line { padding: 12px 16px 2px; font-size: 13px; color: var(--ink2); }
+    .greet-line b { color: var(--ink); font-weight: 600; }
+    .date-line { padding: 0 16px 12px; font-size: 11px; color: var(--ink3); }
+    .reg-body { padding: 0 16px 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .reg-hero { background: var(--accent); color: #fff; border-radius: 16px; padding: 18px; text-align: center; margin-bottom: 12px; cursor: pointer; transition: transform .1s; }
+    .reg-hero:active { transform: scale(0.98); }
+    .reg-hero.done { background: var(--surface); color: var(--ink); border: 1.5px solid var(--border); cursor: default; }
+    .reg-hero .k { font-size: 10.5px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .reg-hero.done .k { color: var(--ink3); opacity: 1; }
+    .reg-hero .lb { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
+    .reg-hero .sub2 { font-size: 11px; opacity: 0.8; }
+    .reg-hero.done .sub2 { color: var(--ink3); }
+    .reg-timeline { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 15px; margin-bottom: 12px; }
+    .reg-step { display: flex; align-items: center; gap: 10px; padding: 6px 0; position: relative; }
+    .reg-dot { width: 19px; height: 19px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; background: var(--surface2); color: var(--ink3); }
+    .reg-dot.done { background: var(--accent); color: #fff; }
+    .reg-dot.now { background: var(--accent-light); border: 2px solid var(--accent); color: var(--accent); }
+    .reg-line { position: absolute; left: 9px; top: 25px; width: 2px; height: 16px; background: var(--border); }
+    .reg-step-lb { font-size: 12px; color: var(--ink2); }
+    .reg-step.done .reg-step-lb { color: var(--ink3); text-decoration: line-through; }
+    .reg-step.now .reg-step-lb { color: var(--ink); font-weight: 600; }
+    .reg-step-val { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--ink3); }
+    .mes-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 13px 15px; flex: 1; display: flex; flex-direction: column; }
+    .mes-title { font-size: 10.5px; font-weight: 700; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+    .mes-metrics { display: flex; gap: 8px; margin-bottom: 12px; }
+    .mes-metric { flex: 1; background: var(--surface2); border-radius: 10px; padding: 9px 8px; text-align: center; }
+    .mes-metric .l { font-size: 9.5px; color: var(--ink3); text-transform: uppercase; font-weight: 600; }
+    .mes-metric .v { font-family: 'DM Mono', monospace; font-size: 15px; color: var(--ink); margin-top: 2px; }
+    .mes-bar { height: 8px; border-radius: 100px; background: #E3DED7; overflow: hidden; margin-bottom: 8px; }
+    .mes-foot { font-size: 11px; color: var(--ink2); margin-top: auto; }
     .section-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
     .section-title { font-size: 16px; font-weight: 600; }
     .section-sub { font-size: 12px; color: var(--ink3); }
@@ -402,44 +401,16 @@
     <div class="logo"><img class="logo-mark" src="header.png" alt="AF" />Ponto<span>Casa</span></div>
     <div class="header-right">
       <div class="header-time" id="headerTime">--:--:--</div>
-      <div class="user-badge" id="userBadge">--</div>
       <button class="btn-logout" onclick="doLogout()">Sair</button>
     </div>
   </header>
 
   <div class="screen active" id="screenRegistro">
     <div id="valeConfirmaBox"></div>
-    <div class="clock-hero">
-      <div class="greeting">Olá,</div>
-      <div class="name" id="heroName">Funcionária</div>
-      <div class="clock-display" id="clockDisplay">--:--</div>
-      <div class="clock-date" id="clockDate">carregando...</div>
-    </div>
-    <div class="status-bar">
-      <div class="status-pill" id="statusEntrada"><div class="status-dot"></div>Entrada</div>
-      <div class="status-pill" id="statusAlmoco"><div class="status-dot"></div>Almoço</div>
-      <div class="status-pill" id="statusSaida"><div class="status-dot"></div>Saída</div>
-    </div>
+    <div class="greet-line">Olá, <b id="heroName">Funcionária</b></div>
+    <div class="date-line" id="clockDate">carregando...</div>
     <div class="alerts-banner" id="alertsBanner"></div>
-    <div class="actions-grid">
-      <button class="action-btn primary" id="btnEntrada" onclick="openCamera('entrada')"><div class="action-icon">🟢</div><div class="action-label">Entrada</div><div class="action-sub">Início do turno</div></button>
-      <button class="action-btn disabled" id="btnSaida" onclick="openCamera('saida')"><div class="action-icon">🔴</div><div class="action-label">Saída</div><div class="action-sub">Fim do turno</div></button>
-      <button class="action-btn disabled" id="btnAlmocoSaida" onclick="openCamera('almoco-saida')"><div class="action-icon">🍽️</div><div class="action-label">Saída Almoço</div><div class="action-sub">Pausar turno</div></button>
-      <button class="action-btn disabled" id="btnAlmocoVolta" onclick="openCamera('almoco-volta')"><div class="action-icon">↩️</div><div class="action-label">Volta Almoço</div><div class="action-sub">Retomar turno</div></button>
-    </div>
-    <div class="section-header"><div class="section-title">Resumo de hoje</div></div>
-    <div class="summary-card">
-      <div class="summary-header">
-        <div><div class="label">Horas trabalhadas</div><div class="value" id="horasTrabalhadas">--:--</div></div>
-        <div style="text-align:right"><div class="label">Status</div><div class="value" id="statusAtual" style="font-size:14px">Aguardando</div></div>
-      </div>
-      <div class="summary-rows">
-        <div class="summary-row"><div class="dot" style="background:var(--accent)"></div><div class="key">Entrada</div><div class="val" id="sumEntrada">--:--</div></div>
-        <div class="summary-row"><div class="dot" style="background:var(--warn)"></div><div class="key">Saída almoço</div><div class="val" id="sumAlmocoSaida">--:--</div></div>
-        <div class="summary-row"><div class="dot" style="background:#3498db"></div><div class="key">Volta almoço</div><div class="val" id="sumAlmocoVolta">--:--</div></div>
-        <div class="summary-row"><div class="dot" style="background:var(--danger)"></div><div class="key">Saída</div><div class="val" id="sumSaida">--:--</div></div>
-      </div>
-    </div>
+    <div class="reg-body" id="registroBody"></div>
   </div>
 
   <div class="screen" id="screenFechamentos">
@@ -954,9 +925,6 @@ async function initApp() {
   config = cfgSnap.exists() ? { ...DEFAULT_CONFIG, ...cfgSnap.data() } : { ...DEFAULT_CONFIG };
 
   document.getElementById('heroName').textContent = currentUser.nome.split(' ')[0];
-  const badge = document.getElementById('userBadge');
-  badge.textContent = currentUser.role === 'empregador' ? '🏠 Empregador' : '👩 Funcionária';
-  badge.className = 'user-badge' + (currentUser.role === 'empregador' ? ' employer' : '');
 
   if (currentUser.role === 'empregador') {
     document.getElementById('navDashboard').style.display = 'flex';
@@ -976,6 +944,13 @@ async function initApp() {
     document.getElementById('navFechamentos').style.display = 'none';
     document.getElementById('navRegistro').style.display = 'flex';
     document.getElementById('navHistorico').style.display = 'flex';
+    document.getElementById('screenRegistro').style.display = '';
+    document.getElementById('employerCodeCard').style.display = 'none';
+    document.getElementById('cfgEmpregadorSecoes').style.display = 'none';
+    document.getElementById('configHorarios').style.display = 'block';
+    document.getElementById('invitesList').innerHTML = '';
+    document.getElementById('employeeList').innerHTML = '';
+    document.getElementById('correcoesPendentesBox').innerHTML = '';
     showScreen('Registro');
   }
 
@@ -1000,7 +975,7 @@ function subscribeRecords() {
   recordsUnsub = onSnapshot(q, (snap) => {
     records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     records.sort((a,b) => new Date(a.ts) - new Date(b.ts));
-    updateButtons();
+    renderRegistroHoje();
     if (currentUser.role !== 'empregador') { renderMinhasHoras(); renderDiasParaRevisar(); scheduleReminders(); }
     else if (document.getElementById('screenDashboard').classList.contains('active')) { renderDashboard(); }
     else if (document.getElementById('screenFechamentos').classList.contains('active')) { renderFechamentos(); }
@@ -1043,14 +1018,12 @@ async function toggleLoc() {
 // ════ CLOCK ════
 function updateClock() {
   const now = new Date(); const pad = n=>String(n).padStart(2,'0');
-  const cd=document.getElementById('clockDisplay');
-  if(cd) cd.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   document.getElementById('headerTime').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const days=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const dt=document.getElementById('clockDate');
   if(dt) dt.textContent = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}`;
-  updateSummary();
+  renderRegistroHoje();
 }
 
 // ════ HELPERS ════
@@ -1545,43 +1518,62 @@ async function deletePoint() {
 
 
 // ════ BOTÕES ════
-function updateButtons() {
-  if (!currentUser || currentUser.role==='empregador') return;
+const PASSO_INFO = {
+  entrada: { icon:'🟢', label:'Entrada' },
+  'almoco-saida': { icon:'🍽️', label:'Saída Almoço' },
+  'almoco-volta': { icon:'↩️', label:'Volta Almoço' },
+  saida: { icon:'🔴', label:'Saída' }
+};
+const ORDEM_PASSOS = ['entrada','almoco-saida','almoco-volta','saida'];
+function proximoPassoHoje(){
   const today = todayRecordsFor(currentUser.uid);
-  const has=t=>today.some(r=>r.type===t);
-  document.getElementById('btnEntrada').className = has('entrada')?'action-btn disabled':'action-btn primary';
-  document.getElementById('btnAlmocoSaida').className = (has('entrada')&&!has('almoco-saida'))?'action-btn secondary':'action-btn disabled';
-  document.getElementById('btnAlmocoVolta').className = (has('almoco-saida')&&!has('almoco-volta'))?'action-btn blue':'action-btn disabled';
-  // Saída SÓ é liberada com o almoço completo registrado (saída e volta)
-  const canSaida = has('entrada')&&!has('saida')&&has('almoco-saida')&&has('almoco-volta');
-  document.getElementById('btnSaida').className = canSaida?'action-btn':'action-btn disabled';
-  document.getElementById('statusEntrada').className = 'status-pill '+(has('entrada')?'active':'');
-  document.getElementById('statusAlmoco').className = 'status-pill '+(has('almoco-saida')?(has('almoco-volta')?'active':'warn'):'');
-  document.getElementById('statusSaida').className = 'status-pill '+(has('saida')?'active':'');
+  const has = t => today.some(r=>r.type===t);
+  if (!has('entrada')) return 'entrada';
+  if (!has('almoco-saida')) return 'almoco-saida';
+  if (!has('almoco-volta')) return 'almoco-volta';
+  if (!has('saida')) return 'saida';
+  return null;
 }
-function updateSummary() {
+function renderRegistroHoje(){
   if (!currentUser || currentUser.role==='empregador') return;
+  const body = document.getElementById('registroBody');
+  if (!body) return;
   const today = todayRecordsFor(currentUser.uid);
-  const get=t=>today.find(r=>r.type===t);
-  const fmt=ts=>ts?new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'--:--';
-  const se=document.getElementById('sumEntrada'); if(!se) return;
-  se.textContent=fmt(get('entrada')?.ts);
-  document.getElementById('sumAlmocoSaida').textContent=fmt(get('almoco-saida')?.ts);
-  document.getElementById('sumAlmocoVolta').textContent=fmt(get('almoco-volta')?.ts);
-  document.getElementById('sumSaida').textContent=fmt(get('saida')?.ts);
-  const entrada=get('entrada'),saida=get('saida'); let status='Aguardando entrada',horas='--:--';
-  if (entrada){
-    const base=saida?new Date(saida.ts):new Date();
-    let work=base-new Date(entrada.ts);
-    const as=get('almoco-saida'),av=get('almoco-volta');
-    if(as&&av)work-=(new Date(av.ts)-new Date(as.ts));
-    else if(as&&!av)work-=(Date.now()-new Date(as.ts));
-    const min=Math.max(0,Math.floor(work/60000));
-    horas=`${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
-    status=saida?'Turno encerrado':(as&&!av?'Em almoço':'Trabalhando');
-  }
-  document.getElementById('horasTrabalhadas').textContent=horas;
-  document.getElementById('statusAtual').textContent=status;
+  const get = t => today.find(r=>r.type===t);
+  const fmt = ts => ts ? new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+  const proximo = proximoPassoHoje();
+
+  const heroHtml = !proximo
+    ? `<div class="reg-hero done"><div class="k">Dia completo</div><div class="lb">✓ Tudo registrado hoje</div><div class="sub2">Bom descanso!</div></div>`
+    : `<div class="reg-hero" onclick="openCamera('${proximo}')"><div class="k">Próximo passo</div><div class="lb">${PASSO_INFO[proximo].icon} ${PASSO_INFO[proximo].label}</div><div class="sub2">Toque pra registrar agora</div></div>`;
+
+  const stepsHtml = ORDEM_PASSOS.map((tipo,i)=>{
+    const rec = get(tipo);
+    const done = !!rec;
+    const isNow = tipo === proximo;
+    const cls = done ? 'done' : (isNow ? 'now' : '');
+    const dot = done ? '✓' : (isNow ? '●' : '○');
+    const val = done ? fmt(rec.ts) : (isNow ? 'agora' : '--:--');
+    const linha = i < ORDEM_PASSOS.length-1 ? '<div class="reg-line"></div>' : '';
+    return `<div class="reg-step ${cls}"><div class="reg-dot ${cls}">${dot}</div>${linha}<div class="reg-step-lb">${PASSO_INFO[tipo].label}</div><div class="reg-step-val">${val}</div></div>`;
+  }).join('');
+
+  const vigente = ymdOf(new Date()).slice(0,7);
+  const ag = agregarMes(currentUser.uid, vigente);
+  const du = diasUteisMes(vigente);
+  const pctDias = du.total ? Math.min(100, Math.round(ag.dias.length/du.total*100)) : 0;
+  const mesHtml = `<div class="mes-card">
+    <div class="mes-title">${labelMes(vigente)} · este mês</div>
+    <div class="mes-metrics">
+      <div class="mes-metric"><div class="l">Jornada</div><div class="v">${fmtHM(ag.jornada)}</div></div>
+      <div class="mes-metric"><div class="l">Banco</div><div class="v">${fmtHM(ag.pote)}</div></div>
+      <div class="mes-metric"><div class="l">Extra</div><div class="v">${fmtHM(ag.extra)}</div></div>
+    </div>
+    <div class="mes-bar"><div style="background:var(--accent);width:${pctDias}%;height:100%"></div></div>
+    <div class="mes-foot">${ag.dias.length} de ${du.total} dias úteis já trabalhados</div>
+  </div>`;
+
+  body.innerHTML = heroHtml + `<div class="reg-timeline">${stepsHtml}</div>` + mesHtml;
 }
 
 // ════ CÂMERA ════
