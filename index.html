@@ -136,6 +136,8 @@
     .settings-row .text .key { font-size: 14px; font-weight: 500; }
     .settings-row .text .desc { font-size: 12px; color: var(--ink3); margin-top: 1px; }
     .settings-input { border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: 'DM Mono', monospace; font-size: 14px; color: var(--ink); background: var(--surface2); width: 80px; text-align: center; }
+    .hora-input { text-align: center !important; font-family: 'DM Mono', monospace !important; letter-spacing: 2px; font-weight: 500; }
+    .field .hora-input, .frow .hora-input { width: 130px !important; font-size: 20px !important; }
     .settings-input:focus { outline: none; border-color: var(--accent); }
     .toggle { width: 42px; height: 24px; background: var(--border); border-radius: 100px; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
     .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white; transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
@@ -480,10 +482,10 @@
         <div class="settings-row"><div class="icon">🔔</div><div class="text"><div class="key">Ativar lembretes</div><div class="desc">Só avisa se você ainda não bateu aquele ponto</div></div><button class="toggle on" id="toggleNotif" onclick="toggleNotif()"></button></div>
       </div>
       <div class="settings-group">
-        <div class="settings-row"><div class="icon">🕗</div><div class="text"><div class="key">Entrada</div><div class="desc">Lembrete de ponto</div></div><input class="settings-input" id="cfgEntrada" type="time" value="07:00" onchange="saveConfig()" /></div>
-        <div class="settings-row"><div class="icon">🍽️</div><div class="text"><div class="key">Saída para almoço</div><div class="desc">Horário de almoço</div></div><input class="settings-input" id="cfgAlmoco" type="time" value="12:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🕗</div><div class="text"><div class="key">Entrada</div><div class="desc">Lembrete de ponto</div></div><input class="settings-input hora-input" id="cfgEntrada" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" value="07:00" oninput="maskHora(this)" onblur="validaHora(this)" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🍽️</div><div class="text"><div class="key">Saída para almoço</div><div class="desc">Horário de almoço</div></div><input class="settings-input hora-input" id="cfgAlmoco" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" value="12:00" oninput="maskHora(this)" onblur="validaHora(this)" onchange="saveConfig()" /></div>
         <div class="settings-row"><div class="icon">↩️</div><div class="text"><div class="key">Avisar volta do almoço</div><div class="desc">Minutos depois da saída real pro almoço</div></div><input class="settings-input" id="cfgVoltaAlmocoMin" type="number" value="60" min="10" max="180" style="width:70px" onchange="saveConfig()" /></div>
-        <div class="settings-row"><div class="icon">🕔</div><div class="text"><div class="key">Saída</div><div class="desc">Fim do turno</div></div><input class="settings-input" id="cfgSaida" type="time" value="17:00" onchange="saveConfig()" /></div>
+        <div class="settings-row"><div class="icon">🕔</div><div class="text"><div class="key">Saída</div><div class="desc">Fim do turno</div></div><input class="settings-input hora-input" id="cfgSaida" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" value="17:00" oninput="maskHora(this)" onblur="validaHora(this)" onchange="saveConfig()" /></div>
         <div class="settings-row"><div class="icon">⏱️</div><div class="text"><div class="key">Tolerância (min)</div><div class="desc">Margem antes do alerta</div></div><input class="settings-input" id="cfgTolerancia" type="number" value="15" min="0" max="60" onchange="saveConfig()" /></div>
       </div>
     </div>
@@ -590,7 +592,7 @@
       </div>
       <div class="frow">
         <label>Horário</label>
-        <input type="time" id="pHora" />
+        <input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="pHora" oninput="maskHora(this)" onblur="validaHora(this)" />
       </div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closePointModal()">Cancelar</button>
@@ -633,7 +635,7 @@
       </div>
       <div class="field"><label>Data</label><input type="date" id="corData" onchange="atualizarCorContexto()" /></div>
       <div id="corContexto"></div>
-      <div class="field"><label>Horário</label><input type="time" id="corHora" /></div>
+      <div class="field"><label>Horário</label><input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="corHora" oninput="maskHora(this)" onblur="validaHora(this)" /></div>
       <div class="field"><label>O que aconteceu?</label><textarea id="corJustificativa" placeholder="Ex: esqueci"></textarea></div>
       <div class="termo-box" id="corTermoTexto"></div>
       <label class="termo-check"><input type="checkbox" id="corAceite" onchange="updateCorSalvarBtn()" /><span>Estou de acordo com o termo acima e confirmo que as informações que inseri são verdadeiras.</span></label>
@@ -745,7 +747,7 @@ const DEFAULT_CONFIG = { entrada:'07:00', almoco:'12:00', voltaAlmocoMin:60, sai
 Object.assign(window, {
   selectRole, showRegister, showLogin, doLogin, doLogout,
   showScreen, openCamera, closeCamera, snapPhoto, retryPhoto, saveRecord,
-  saveConfig, toggleNotif, toggleLoc, toggleEmpRecords,
+  saveConfig, toggleNotif, toggleLoc, toggleEmpRecords, maskHora, validaHora,
   openContractModal, closeContractModal, saveContract,
   openPointModal, closePointModal, savePoint, deletePoint,
   openInviteModal, closeInviteModal, saveInvite, deleteInvite,
@@ -984,6 +986,19 @@ function subscribeRecords() {
 }
 
 // ════ CONFIG ════
+// ════ MÁSCARA DE HORÁRIO (digita os 4 dígitos, separa sozinho — sem relógio nativo) ════
+function maskHora(el){
+  let v = el.value.replace(/\D/g,'').slice(0,4);
+  if (v.length >= 3) v = v.slice(0,2) + ':' + v.slice(2);
+  el.value = v;
+}
+function validaHora(el){
+  const m = el.value.match(/^(\d{1,2}):?(\d{1,2})?$/);
+  if (!m || !m[2]) return;
+  const h = Math.min(23, parseInt(m[1],10));
+  const mi = Math.min(59, parseInt(m[2],10));
+  el.value = String(h).padStart(2,'0') + ':' + String(mi).padStart(2,'0');
+}
 function loadConfigUI() {
   document.getElementById('cfgEntrada').value = config.entrada;
   document.getElementById('cfgAlmoco').value = config.almoco;
