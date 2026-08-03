@@ -352,8 +352,8 @@
     .falta-card.aprovado .falta-icon { background:var(--accent-light); }
     .falta-title { font-size:13px; font-weight:600; color:var(--ink); }
     .falta-sub { font-size:11px; color:var(--ink3); margin-top:1px; }
-    .revisar-vazio-choice { display:flex; gap:6px; margin-top:2px; }
-    .revisar-vazio-choice button { flex:1; padding:7px; border:1.5px solid var(--border); border-radius:7px; font-size:11px; font-weight:600; background:var(--surface); color:var(--ink2); font-family:inherit; cursor:pointer; }
+    .revisar-vazio-choice { display:flex; gap:5px; margin-top:6px; }
+    .revisar-vazio-choice button { flex:1; padding:5px 6px; border:1.5px solid var(--border); border-radius:7px; font-size:10.5px; font-weight:600; background:var(--surface); color:var(--ink2); font-family:inherit; cursor:pointer; }
     .revisar-vazio-choice button.primary { background:var(--warn); border-color:var(--warn); color:#fff; }
     .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
     .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
@@ -368,15 +368,16 @@
     .pend-approve { background:var(--accent); color:white; }
     .pend-reject { background:var(--danger-light); color:var(--danger); }
     .cor-report-btn { background:none; border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; color:var(--ink2); cursor:pointer; font-family:inherit; margin-top:10px; }
-    .revisar-box { background:var(--warn-light); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 12px; padding:11px 13px; }
-    .revisar-titulo { font-size:11px; font-weight:700; color:var(--warn); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; }
-    .revisar-item { background:var(--surface); border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .revisar-box { background:var(--warn-light); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 12px; padding:10px 12px; }
+    .revisar-titulo { font-size:11px; font-weight:700; color:var(--warn); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+    .revisar-item { background:var(--surface); border-radius:9px; padding:7px 10px; margin-bottom:5px; }
     .revisar-item:last-child { margin-bottom:0; }
-    .revisar-date { font-size:13.5px; font-weight:600; color:var(--ink); }
-    .revisar-date .dow { font-weight:400; color:var(--ink3); font-size:12px; }
-    .revisar-falta { font-size:12px; color:var(--ink2); margin-top:2px; }
+    .revisar-item-linha { display:flex; align-items:center; gap:7px; }
+    .revisar-date { font-size:12px; font-weight:600; color:var(--ink); white-space:nowrap; flex-shrink:0; }
+    .revisar-date .dow { font-weight:400; color:var(--ink3); font-size:11px; }
+    .revisar-falta { font-size:10.5px; color:var(--ink2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .revisar-falta b { font-weight:600; color:var(--danger); }
-    .revisar-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; flex-shrink:0; }
+    .revisar-btn { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; font-family:inherit; cursor:pointer; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -1879,11 +1880,14 @@ async function gerarMeuRelatorioPDF(ym, modo){
   pdf.text(`${currentUser.nome} · Referência: ${labelMes(ym)}`, M, y); y += 30;
   pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y += 24;
 
+  const diasComPonto = ag.dias.filter(d=>!d.falta);
+  const diasFalta = ag.dias.filter(d=>d.falta);
+
   pdf.setFontSize(12);
   pdf.text(`Jornada normal: ${fmtHM(ag.jornada)}`, M, y); y += 18;
   pdf.text(`Banco de horas: ${fmtHM(ag.pote)}`, M, y); y += 18;
   pdf.text(`Horas extras: ${fmtHM(ag.extra)}`, M, y); y += 18;
-  pdf.text(`Dias com registro: ${ag.dias.length}`, M, y); y += 30;
+  pdf.text(`Dias com registro: ${diasComPonto.length}${diasFalta.length ? ` · Faltas: ${diasFalta.length}` : ''}`, M, y); y += 30;
 
   pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
   pdf.text('Data', M, y); pdf.text('Entrada', M+90, y); pdf.text('Alm. saída', M+170, y); pdf.text('Alm. volta', M+260, y); pdf.text('Saída', M+350, y);
@@ -1893,12 +1897,66 @@ async function gerarMeuRelatorioPDF(ym, modo){
     if (y > 760) { pdf.addPage(); y = 50; }
     const [Y,Mo,D] = d.ds.split('-').map(Number);
     pdf.text(`${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}`, M, y);
-    pdf.text(d.horarios.entrada || '—', M+90, y);
-    pdf.text(d.horarios.almocoSaida || '—', M+170, y);
-    pdf.text(d.horarios.almocoVolta || '—', M+260, y);
-    pdf.text(d.horarios.saida || '—', M+350, y);
+    if (d.falta) {
+      pdf.setTextColor(180,120,20);
+      pdf.text(d.justificada ? `Falta justificada${d.motivoLabel?' — '+d.motivoLabel:''}` : 'Falta não justificada', M+90, y);
+      pdf.setTextColor(0);
+    } else {
+      pdf.text(d.horarios.entrada || '—', M+90, y);
+      pdf.text(d.horarios.almocoSaida || '—', M+170, y);
+      pdf.text(d.horarios.almocoVolta || '—', M+260, y);
+      pdf.text(d.horarios.saida || '—', M+350, y);
+    }
     y += 15;
   });
+
+  // ── Faltas do mês: detalhe + comprovante anexado ──
+  if (diasFalta.length) {
+    y += 15;
+    if (y > 700) { pdf.addPage(); y = 60; }
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
+    pdf.text('Faltas do mês', M, y); y += 18;
+    for (const d of diasFalta) {
+      if (y > 720) { pdf.addPage(); y = 60; }
+      const [Y,Mo,D] = d.ds.split('-').map(Number);
+      const dtStr = `${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}`;
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(10.5);
+      pdf.text(`${dtStr} — ${d.justificada ? 'Justificada' : 'Não justificada'}${d.motivoLabel ? ' · '+d.motivoLabel : ''}`, M, y);
+      y += 15;
+      pdf.setFont('helvetica','normal');
+      if (d.anexoUrl) {
+        try {
+          const resp = await fetch(d.anexoUrl);
+          const blob = await resp.blob();
+          if (blob.type.startsWith('image/')) {
+            const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+            const imgH = 90;
+            if (y + imgH > 770) { pdf.addPage(); y = 60; }
+            const fmt = blob.type.includes('png') ? 'PNG' : 'JPEG';
+            pdf.addImage(dataUrl, fmt, M, y, 130, imgH);
+            y += imgH + 10;
+          } else {
+            pdf.setTextColor(46,117,182);
+            pdf.textWithLink('📎 Ver comprovante anexado', M, y, { url: d.anexoUrl });
+            pdf.setTextColor(0);
+            y += 18;
+          }
+        } catch(e){
+          console.error('anexo no pdf', e);
+          pdf.setTextColor(46,117,182);
+          pdf.textWithLink('📎 Ver comprovante anexado', M, y, { url: d.anexoUrl });
+          pdf.setTextColor(0);
+          y += 18;
+        }
+      } else {
+        pdf.setTextColor(140);
+        pdf.text('Sem comprovante anexado.', M, y);
+        pdf.setTextColor(0);
+        y += 18;
+      }
+      y += 6;
+    }
+  }
 
   y += 20;
   pdf.setFontSize(9); pdf.setTextColor(140);
@@ -3191,19 +3249,23 @@ function renderDiasParaRevisar(){
       const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
       if (d.vazio) {
         return `<div class="revisar-item">
-          <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
-          <div class="revisar-falta">Nenhum ponto batido</div>
+          <div class="revisar-item-linha">
+            <span class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></span>
+            <span class="revisar-falta">nenhum ponto batido</span>
+          </div>
           <div class="revisar-vazio-choice">
             <button onclick='abrirCorrecaoParaDiaVazio(${JSON.stringify(d.ds)})'>Esqueci de bater</button>
             <button class="primary" onclick='abrirFaltaParaDia(${JSON.stringify(d.ds)})'>Foi falta</button>
-          </div></div>
+          </div>
         </div>`;
       }
-      const faltStr = d.faltando.map(t=>`<b>${typeLabel(t)}</b>`).join(', ');
+      const faltStr = d.faltando.map(t=>typeLabel(t)).join(', ');
       return `<div class="revisar-item">
-        <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
-        <div class="revisar-falta">Faltou: ${faltStr}</div></div>
-        <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
+        <div class="revisar-item-linha">
+          <span class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></span>
+          <span class="revisar-falta">faltou ${faltStr}</span>
+          <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
+        </div>
       </div>`;
     }).join('') : '';
   box.innerHTML = `<div class="revisar-box">
