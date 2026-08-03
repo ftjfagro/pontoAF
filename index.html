@@ -264,12 +264,13 @@
     .dayrow-date .dow { color:var(--ink3); font-weight:400; font-size:12px; margin-left:5px; }
     .dayrow-total { font-family:'DM Mono',monospace; font-size:13px; color:var(--ink2); }
     .dayrow-nums { display:flex; flex-wrap:wrap; gap:10px; margin-top:9px; }
-    .horarios-row { display:flex; gap:11px; margin:8px 0; }
-    .horario-item { display:flex; align-items:baseline; gap:3px; font-size:11px; white-space:nowrap; }
+    .horarios-row { display:flex; gap:8px; margin:8px 0; overflow-x:auto; }
+    .horario-item { display:flex; align-items:baseline; gap:2px; font-size:11px; white-space:nowrap; flex-shrink:0; }
     .horario-item span { color:var(--ink3); font-weight:600; }
     .horario-item b { font-family:'DM Mono',monospace; font-weight:500; color:var(--ink); }
     .horario-item.falta { opacity:0.4; }
     .horario-item.falta b { color:var(--ink3); }
+    .src-tag { font-size:9px; margin-left:1px; }
     .dayrow-num { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--ink2); }
     .dayrow-num b { font-family:'DM Mono',monospace; font-size:12.5px; color:var(--ink); font-weight:500; }
     .dayrow.incomplete { border-style:dashed; border-color:#F5C49A; }
@@ -331,6 +332,28 @@
     .cor-contexto-row b { font-family:'DM Mono',monospace; font-weight:500; margin-left:auto; }
     .cor-contexto-vazio { font-size:12px; color:var(--ink2); }
     .termo-check { display:flex; align-items:flex-start; gap:10px; margin:12px 0; cursor:pointer; }
+    .opt-btn { display:block; width:100%; margin-bottom:10px; padding:15px; border:1.5px solid var(--border); border-radius:12px; background:var(--surface); text-align:left; font-size:13.5px; font-weight:600; color:var(--ink); cursor:pointer; font-family:inherit; }
+    .opt-btn .d { font-size:11.5px; font-weight:400; color:var(--ink3); margin-top:3px; }
+    .opt-btn.j { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
+    .opt-btn.j .d { color:#4a8a6f; }
+    .opt-btn.nj { border-color:var(--danger); background:var(--danger-light); color:var(--danger); }
+    .opt-btn.nj .d { color:#c96a62; }
+    .motivo-grid { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+    .motivo-chip { padding:8px 12px; border:1.5px solid var(--border); border-radius:100px; font-size:12px; background:var(--surface); color:var(--ink2); cursor:pointer; font-family:inherit; }
+    .motivo-chip.on { background:var(--accent-light); border-color:var(--accent); color:var(--accent); font-weight:600; }
+    .attach-box { border:1.5px dashed var(--border); border-radius:10px; padding:14px; text-align:center; color:var(--ink2); font-size:12.5px; font-weight:600; cursor:pointer; margin-bottom:12px; }
+    .attach-box .d2 { font-size:10.5px; color:var(--ink3); font-weight:400; margin-top:3px; }
+    .attach-box.tem-arquivo { border-style:solid; border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
+    .warn-box { background:var(--danger-light); border:1px solid #F5B3AC; border-radius:10px; padding:12px 14px; font-size:12px; color:var(--danger); line-height:1.5; margin-bottom:12px; }
+    .falta-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:8px 16px; padding:12px 14px; display:flex; align-items:center; gap:10px; }
+    .falta-card.pendente { border-color:#F5C49A; }
+    .falta-icon { width:34px; height:34px; border-radius:8px; background:var(--warn-light); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .falta-card.aprovado .falta-icon { background:var(--accent-light); }
+    .falta-title { font-size:13px; font-weight:600; color:var(--ink); }
+    .falta-sub { font-size:11px; color:var(--ink3); margin-top:1px; }
+    .revisar-vazio-choice { display:flex; gap:6px; margin-top:2px; }
+    .revisar-vazio-choice button { flex:1; padding:7px; border:1.5px solid var(--border); border-radius:7px; font-size:11px; font-weight:600; background:var(--surface); color:var(--ink2); font-family:inherit; cursor:pointer; }
+    .revisar-vazio-choice button.primary { background:var(--warn); border-color:var(--warn); color:#fff; }
     .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
     .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
     textarea.settings-input, textarea.field-input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; resize:vertical; min-height:70px; }
@@ -411,6 +434,9 @@
     <div id="valeConfirmaBox"></div>
     <div class="greet-line">Olá, <b id="heroName">Funcionária</b></div>
     <div class="date-line" id="clockDate">carregando...</div>
+    <div class="correct-link" style="padding:0 16px 10px">
+      <a href="#" onclick="openEscolhaModal();return false;" style="color:var(--accent);font-weight:600;font-size:12px;text-decoration:none">✏️ Corrigir ponto ou apontar falta</a>
+    </div>
     <div class="alerts-banner" id="alertsBanner"></div>
     <div class="reg-body" id="registroBody"></div>
   </div>
@@ -446,9 +472,10 @@
     <div class="section-header"><div><div class="section-title">Minhas Horas</div><div class="section-sub" id="histCount">Carregando...</div></div></div>
     <div id="diasParaRevisarBox"></div>
     <div class="hist-correction-bar" id="histCorrectionBar" style="display:none">
-      <button class="btn-correction" onclick="openCorrecaoModal()">✏️ Corrigir ponto esquecido</button>
+      <button class="btn-correction" onclick="openEscolhaModal()">✏️ Corrigir ponto ou apontar falta</button>
     </div>
     <div id="minhasCorrecoes"></div>
+    <div class="dash-sec-label">Este mês</div>
     <div id="meuMesAtual"></div>
     <div class="dash-sec-label" id="mesesAnterioresLabel" style="display:none">Meses anteriores</div>
     <div id="meusMesesAnteriores"></div>
@@ -693,6 +720,76 @@
     </div>
   </div>
 
+  <div class="form-modal" id="escolhaModal">
+    <div class="form-sheet">
+      <h3>O que você precisa registrar?</h3>
+      <button class="opt-btn" onclick="closeEscolhaModal(); openCorrecaoModal();">✏️ Corrigir ponto esquecido<div class="d">Bati o ponto errado ou esqueci um horário</div></button>
+      <button class="opt-btn" onclick="closeEscolhaModal(); openFaltaEscolhaJustificada();">📋 Apontar falta<div class="d">Não vou / não fui trabalhar num dia</div></button>
+      <div class="form-actions"><button class="btn-form-cancel" onclick="closeEscolhaModal()" style="width:100%">Cancelar</button></div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="faltaEscolhaModal">
+    <div class="form-sheet">
+      <h3>Essa falta é justificada?</h3>
+      <div class="sub">Você pode escolher a data no próximo passo</div>
+      <button class="opt-btn j" onclick="openFaltaModal(true)">✅ Falta justificada<div class="d">Atestado, fórum, advogado, doação de sangue, óbito...</div></button>
+      <button class="opt-btn nj" onclick="openFaltaModal(false)">⚠️ Falta não justificada<div class="d">Sem motivo legal — desconta o dia e o DSR da semana</div></button>
+      <div class="form-actions"><button class="btn-form-cancel" onclick="closeFaltaEscolhaModal()" style="width:100%">Cancelar</button></div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="faltaModal">
+    <div class="form-sheet">
+      <h3 id="faltaModalTitulo">Falta justificada</h3>
+      <div class="field"><label>Data da falta</label><input type="date" id="faltaData" /></div>
+
+      <div id="faltaJustificadaBox">
+        <div class="field">
+          <label>Motivo</label>
+          <div class="motivo-grid" id="faltaMotivoGrid">
+            <div class="motivo-chip" data-v="atestado" onclick="setFaltaMotivo('atestado')">🏥 Atestado médico</div>
+            <div class="motivo-chip" data-v="forum" onclick="setFaltaMotivo('forum')">⚖️ Fórum/audiência</div>
+            <div class="motivo-chip" data-v="advogado" onclick="setFaltaMotivo('advogado')">👨‍⚖️ Advogado</div>
+            <div class="motivo-chip" data-v="sangue" onclick="setFaltaMotivo('sangue')">🩸 Doação de sangue</div>
+            <div class="motivo-chip" data-v="obito" onclick="setFaltaMotivo('obito')">⚰️ Óbito na família</div>
+            <div class="motivo-chip" data-v="outro" onclick="setFaltaMotivo('outro')">📝 Outro motivo</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Comprovante (opcional, conforme o motivo)</label>
+          <div class="attach-box" id="faltaAttachBox" onclick="document.getElementById('faltaAnexoInput').click()">📷 Anexar foto ou PDF<div class="d2">Se não tiver documento, o motivo + detalhes já bastam</div></div>
+          <input type="file" id="faltaAnexoInput" accept="image/*,application/pdf" capture="environment" style="display:none" onchange="onFaltaAnexoSelecionado(event)" />
+        </div>
+      </div>
+
+      <div id="faltaNaoJustificadaBox" style="display:none">
+        <div class="warn-box">⚠️ Sem motivo legal informado. Isso normalmente resulta em desconto do dia e perda do DSR (descanso remunerado) da semana, conforme a lei.</div>
+      </div>
+
+      <div class="field"><label>Detalhes <span style="font-weight:400;color:var(--ink3);font-size:11px">(opcional)</span></label><textarea id="faltaDetalhes" placeholder="Ex: consulta médica"></textarea></div>
+      <div class="termo-box" id="faltaTermoTexto"></div>
+      <label class="termo-check"><input type="checkbox" id="faltaAceite" onchange="updateFaltaSalvarBtn()" /><span>Estou de acordo com o termo acima e confirmo que as informações que inseri são verdadeiras.</span></label>
+
+      <div class="field" id="faltaAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="faltaAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="faltaReassinar()">Assinar novamente</button>
+      </div>
+      <div class="field" id="faltaAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="faltaSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="faltaSigStart(event)" onpointermove="faltaSigMove(event)" onpointerup="faltaSigEnd(event)" onpointerleave="faltaSigEnd(event)" onpointercancel="faltaSigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="faltaLimparAssinatura()">Limpar</button>
+      </div>
+      <div class="field"><label>Assinando como</label><div id="faltaNomeDisplay" style="font-size:14.5px;font-weight:600;color:var(--ink);padding:11px 14px;background:var(--surface2);border-radius:10px">—</div></div>
+
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeFaltaModal()">Cancelar</button>
+        <button class="btn-form-save" id="faltaSalvarBtn" disabled onclick="saveFalta()">Enviar para aprovação</button>
+      </div>
+    </div>
+  </div>
+
   <nav id="appNav">
     <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
     <button class="nav-btn" id="navDashboard" style="display:none" onclick="showScreen('Dashboard')"><div class="nav-icon">📊</div><div class="nav-label">Dashboard</div></button>
@@ -756,9 +853,13 @@ Object.assign(window, {
   abrirDetalheFuncionaria, fecharDetalheFuncionaria, setFechEmp, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia, abrirPontoParaMes,
   marcarValePago, openValeAssinaturaModal, closeValeAssinaturaModal, valeReassinar, valeLimparAssinatura,
   valeSigStart, valeSigMove, valeSigEnd, confirmarValeAssinatura,
-  setMinhasHorasView, toggleMesAnterior, gerarMeuRelatorioPDF, toggleDiaExpandido,
+  setMinhasHorasView, toggleMinhasHorasMes, gerarMeuRelatorioPDF, toggleDiaExpandido,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
   openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento, enviarParaPlanilha,
+  openEscolhaModal, closeEscolhaModal, openFaltaEscolhaJustificada, closeFaltaEscolhaModal,
+  openFaltaModal, closeFaltaModal, setFaltaMotivo, onFaltaAnexoSelecionado, updateFaltaSalvarBtn,
+  faltaSigStart, faltaSigMove, faltaSigEnd, faltaLimparAssinatura, faltaReassinar, saveFalta,
+  abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1682,70 +1783,69 @@ async function saveRecord() {
 const typeNames={entrada:'Entrada',saida:'Saída','almoco-saida':'Saída Almoço','almoco-volta':'Volta Almoço'};
 const badgeClass={entrada:'badge-entrada',saida:'badge-saida','almoco-saida':'badge-almoco-saida','almoco-volta':'badge-almoco-volta'};
 let minhasHorasView = 'dia';
-let mesAnteriorExpandido = null;
+let minhasHorasMesExpandido = null;
 function setMinhasHorasView(v){ minhasHorasView = v; renderMinhasHoras(); }
-function toggleMesAnterior(ym){ mesAnteriorExpandido = (mesAnteriorExpandido===ym) ? null : ym; renderMinhasHoras(); }
 
+function renderMesCardUnificado(uid, ym, isVigente){
+  const a = agregarMes(uid, ym);
+  const fechado = statusMes(uid, ym, false) === 'fechado';
+  const aberto = minhasHorasMesExpandido === ym;
+  const pillClass = isVigente ? 'vigente' : (fechado ? 'fechado' : 'revisar');
+  const pillTxt = isVigente ? 'Vigente' : (fechado ? 'Fechado' : 'Revisar');
+
+  let html = `<div class="dash-card${isVigente?' hl':''}" style="${isVigente?'':'padding:12px 16px'}">
+    <div class="dash-card-head" style="cursor:pointer;margin-bottom:${aberto?'10px':'0'}" onclick="toggleMinhasHorasMes('${ym}')">
+      <div><div class="dash-card-title" style="font-size:14px">${labelMes(ym)}</div>
+        <div class="dash-card-sub">jornada ${fmtHM(a.jornada)} · banco ${fmtHM(a.pote)} · extra ${fmtHM(a.extra)}${a.incompletos?` · ${a.incompletos} incompleto(s)`:''}</div></div>
+      <span class="dash-pill ${pillClass}">${pillTxt}<span class="chev">${aberto?' ▴':' ▾'}</span></span>
+    </div>`;
+
+  if (aberto) {
+    html += `<div class="dash-toggle" style="margin:0 0 8px">
+      <button class="${minhasHorasView==='dia'?'on':''}" onclick="setMinhasHorasView('dia')">Dia</button>
+      <button class="${minhasHorasView==='semana'?'on':''}" onclick="setMinhasHorasView('semana')">Semana</button>
+    </div>`;
+    if (!a.dias.length) {
+      html += '<div class="empty-state" style="padding:20px"><div class="empty-sub">Nenhum registro neste mês ainda.</div></div>';
+    } else if (minhasHorasView === 'dia') {
+      html += a.dias.slice().reverse().map(d=>linhaDia(d,uid)).join('');
+    } else {
+      html += semanasDe(a.dias).map(w=>`<div class="weekrow${dashWeekOpen[w.k]?' open':''}" id="wk_${w.k}">
+        <div class="weekrow-head" onclick="toggleWeek('${w.k}')">
+          <div class="dayrow-top"><div class="dayrow-date">Semana ${w.rot}<span class="chev"> ▾</span></div><div class="dayrow-total">${fmtHM(w.ag.trab)}</div></div>
+          ${segbar(w.ag, Math.max(1, w.dias.filter(d=>d.esperado>0).length*JORNADA_MIN), true)}
+        </div>
+        <div class="weekrow-body">${w.dias.map(d=>linhaDia(d,uid)).join('')}</div>
+      </div>`).join('');
+    }
+    if (fechado) {
+      html += `<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="cor-report-btn" style="flex:1;margin-top:0" onclick="gerarMeuRelatorioPDF('${ym}','baixar')">📄 Baixar PDF</button>
+        <button class="cor-report-btn" style="flex:1;margin-top:0" onclick="gerarMeuRelatorioPDF('${ym}','compartilhar')">📤 Compartilhar</button>
+      </div>`;
+    }
+  }
+  html += `</div>`;
+  return html;
+}
+function toggleMinhasHorasMes(ym){
+  minhasHorasMesExpandido = (minhasHorasMesExpandido === ym) ? null : ym;
+  renderMinhasHoras();
+}
 function renderMinhasHoras(){
   if (!currentUser || currentUser.role === 'empregador') return;
   const uid = currentUser.uid;
   const vigente = ymdOf(new Date()).slice(0,7);
   document.getElementById('histCount').textContent = `${records.length} registro(s)`;
 
-  const ag = agregarMes(uid, vigente);
-  let mesHtml = `<div class="dash-card hl">
-    <div class="dash-card-sub" style="margin-bottom:8px">${labelMes(vigente)} · este mês</div>
-    <div class="dash-metrics">
-      <div class="dash-metric"><div class="lbl">Jornada</div><div class="v">${fmtHM(ag.jornada)}</div></div>
-      <div class="dash-metric"><div class="lbl">Banco</div><div class="v">${fmtHM(ag.pote)}</div></div>
-      <div class="dash-metric"><div class="lbl">Extra</div><div class="v">${fmtHM(ag.extra)}</div></div>
-    </div>
-  </div>
-  <div class="dash-toggle">
-    <button class="${minhasHorasView==='dia'?'on':''}" onclick="setMinhasHorasView('dia')">Resumo</button>
-    <button class="${minhasHorasView==='semana'?'on':''}" onclick="setMinhasHorasView('semana')">Semana</button>
-  </div>`;
-
-  if (!ag.dias.length) {
-    mesHtml += '<div class="empty-state" style="padding:24px 20px"><div class="empty-sub">Nenhum registro neste mês ainda.</div></div>';
-  } else if (minhasHorasView === 'dia') {
-    mesHtml += ag.dias.slice().reverse().map(d=>linhaDia(d,uid)).join('');
-  } else {
-    mesHtml += semanasDe(ag.dias).map(w=>`<div class="weekrow${dashWeekOpen[w.k]?' open':''}" id="wk_${w.k}">
-      <div class="weekrow-head" onclick="toggleWeek('${w.k}')">
-        <div class="dayrow-top"><div class="dayrow-date">Semana ${w.rot}<span class="chev"> ▾</span></div><div class="dayrow-total">${fmtHM(w.ag.trab)}</div></div>
-        ${segbar(w.ag, Math.max(1, w.dias.filter(d=>d.esperado>0).length*JORNADA_MIN), true)}
-      </div>
-      <div class="weekrow-body">${w.dias.map(d=>linhaDia(d,uid)).join('')}</div>
-    </div>`).join('');
-  }
-  document.getElementById('meuMesAtual').innerHTML = mesHtml;
+  document.getElementById('meuMesAtual').innerHTML = renderMesCardUnificado(uid, vigente, true);
 
   const passados = mesesComRegistro(uid).filter(ym=>ym !== vigente);
   const labelEl = document.getElementById('mesesAnterioresLabel');
   const boxEl = document.getElementById('meusMesesAnteriores');
   if (!passados.length) { labelEl.style.display='none'; boxEl.innerHTML=''; return; }
   labelEl.style.display = 'block';
-  boxEl.innerHTML = passados.map(ym=>{
-    const a = agregarMes(uid, ym);
-    const fechado = statusMes(uid, ym, false) === 'fechado';
-    const aberto = mesAnteriorExpandido === ym;
-    let card = `<div class="dash-card" style="padding:12px 16px">
-      <div class="dash-card-head" style="cursor:pointer;margin-bottom:0" onclick="toggleMesAnterior('${ym}')">
-        <div><div class="dash-card-title" style="font-size:14px">${labelMes(ym)}</div>
-          <div class="dash-card-sub">jornada ${fmtHM(a.jornada)} · banco ${fmtHM(a.pote)} · extra ${fmtHM(a.extra)}</div></div>
-        <span class="dash-pill ${fechado?'fechado':'revisar'}">${fechado?'Fechado':'Revisar'}</span>
-      </div>
-      ${aberto ? a.dias.slice().reverse().map(d=>linhaDia(d,uid)).join('') : ''}`;
-    if (fechado) {
-      card += `<div style="display:flex;gap:8px;margin-top:10px">
-        <button class="cor-report-btn" style="flex:1;margin-top:0" onclick="gerarMeuRelatorioPDF('${ym}','baixar')">📄 Baixar PDF</button>
-        <button class="cor-report-btn" style="flex:1;margin-top:0" onclick="gerarMeuRelatorioPDF('${ym}','compartilhar')">📤 Compartilhar</button>
-      </div>`;
-    }
-    card += `</div>`;
-    return card;
-  }).join('');
+  boxEl.innerHTML = passados.map(ym => renderMesCardUnificado(uid, ym, false)).join('');
 }
 
 async function gerarMeuRelatorioPDF(ym, modo){
@@ -1970,11 +2070,12 @@ function dividirDia(trab, ds){
 function horariosDoDia(recs){
   const get = t => recs.find(r=>r.type===t);
   const fmt = r => r ? new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : null;
+  const fonte = r => !r ? null : (r.photoUrl ? 'foto' : 'manual');
   return {
-    entrada: fmt(get('entrada')),
-    almocoSaida: fmt(get('almoco-saida')),
-    almocoVolta: fmt(get('almoco-volta')),
-    saida: fmt(get('saida'))
+    entrada: fmt(get('entrada')), entradaFonte: fonte(get('entrada')),
+    almocoSaida: fmt(get('almoco-saida')), almocoSaidaFonte: fonte(get('almoco-saida')),
+    almocoVolta: fmt(get('almoco-volta')), almocoVoltaFonte: fonte(get('almoco-volta')),
+    saida: fmt(get('saida')), saidaFonte: fonte(get('saida'))
   };
 }
 function diasDoMes(uid, ym){
@@ -1984,19 +2085,29 @@ function diasDoMes(uid, ym){
     if (ds.slice(0,7) !== ym) return;
     (porDia[ds] = porDia[ds] || []).push(r);
   });
-  return Object.keys(porDia).sort().map(ds=>{
+  const dias = Object.keys(porDia).sort().map(ds=>{
     const recs = porDia[ds];
     const horarios = horariosDoDia(recs);
     const trab = minutosDoDia(recs);
     if (trab === null) return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
     return { ds, incompleto:false, horarios, ...dividirDia(trab, ds) };
   });
+  // injeta faltas aprovadas (dias sem nenhum ponto, mas com falta declarada e aprovada)
+  if (currentUser && uid === currentUser.uid) {
+    const dsComRegistro = new Set(dias.map(d=>d.ds));
+    minhasFaltasRaw.filter(f=>f.status==='aprovado' && f.ds.slice(0,7)===ym && !dsComRegistro.has(f.ds)).forEach(f=>{
+      dias.push({ ds:f.ds, incompleto:false, falta:true, justificada:f.justificada, motivoLabel:f.motivoLabel, anexoUrl:f.anexoUrl, jornada:0, banco:0, extra:0, trab:0, esperado:0, horarios:null });
+    });
+  }
+  dias.sort((a,b)=>a.ds.localeCompare(b.ds));
+  return dias;
 }
 function agregarMes(uid, ym){
   const dias = diasDoMes(uid, ym);
   const ag = { dias, jornada:0, banco:0, bancoPos:0, extra:0, trab:0, incompletos:0 };
   dias.forEach(d=>{
     if (d.incompleto) { ag.incompletos++; return; }
+    if (d.falta) { return; }
     ag.jornada += d.jornada; ag.banco += d.banco; ag.extra += d.extra; ag.trab += d.trab;
     if (d.banco > 0) ag.bancoPos += d.banco;
   });
@@ -2064,13 +2175,13 @@ function legenda(ag){
 function horariosRow(h){
   if (!h) return '';
   const itens = [
-    ['E',h.entrada],
-    ['A',h.almocoSaida],
-    ['V',h.almocoVolta],
-    ['S',h.saida]
+    ['E',h.entrada,h.entradaFonte],
+    ['A',h.almocoSaida,h.almocoSaidaFonte],
+    ['V',h.almocoVolta,h.almocoVoltaFonte],
+    ['S',h.saida,h.saidaFonte]
   ];
-  return `<div class="horarios-row">` + itens.map(([label,val])=>
-    `<div class="horario-item${val?'':' falta'}"><span>${label}</span><b>${val||'--:--'}</b></div>`
+  return `<div class="horarios-row">` + itens.map(([label,val,fonte])=>
+    `<div class="horario-item${val?'':' falta'}"><span>${label}</span><b>${val||'--:--'}</b>${fonte?`<span class="src-tag">${fonte==='foto'?'📷':'✏️'}</span>`:''}</div>`
   ).join('') + `</div>`;
 }
 function entriesDoDia(uid, ds){
@@ -2091,6 +2202,17 @@ function renderEntradasExpandidas(uid, ds){
 function linhaDia(d, uid){
   const [Y,M,D] = d.ds.split('-').map(Number);
   const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+  if (d.falta) {
+    const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
+    return `<div class="falta-card aprovado">
+      <div class="falta-icon">📋</div>
+      <div style="flex:1">
+        <div class="falta-title">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
+        <div class="falta-sub">${rotulo}</div>
+      </div>
+      ${d.anexoUrl ? `<a href="${d.anexoUrl}" target="_blank" style="font-size:11px;color:var(--accent);font-weight:600;text-decoration:none;flex-shrink:0">Ver anexo</a>` : ''}
+    </div>`;
+  }
   const key = uid+'|'+d.ds;
   const aberto = diaExpandidoKey === key;
   const expandBtn = `<span style="color:var(--ink3);font-size:11px;margin-left:6px">${aberto?'▲':'▾'}</span>`;
@@ -2800,7 +2922,9 @@ async function saveFeriados(){
 const TERMO_TEXTO = uid => 'Declaro que esqueci de bater o ponto no horário informado acima e solicito a inclusão manual deste registro. Estou de acordo com o horário informado e confirmo que as informações prestadas são verdadeiras, para os devidos fins de registro de jornada.';
 let corTipoSel = null;
 let correcoesPendentesCache = [];
+let faltasPendentesCache = [];
 let rejeitarAlvoId = null;
+let rejeitarAlvoTipo = 'correcao';
 let forcarNovaAssinatura = false;
 let sigCtx = null, sigDrawing = false, sigHasStroke = false;
 
@@ -2966,6 +3090,17 @@ async function saveCorrecao(){
 // ── funcionária: dias com batida parcial (esqueceu de bater outro ponto do mesmo dia) ──
 let minhasCorrecoesRaw = [];
 let meusFechamentos = {};
+let minhasFaltasRaw = [];
+let faltaDataPreenchida = null;
+let faltaJustificadaAtual = true;
+let faltaMotivoSel = null;
+let faltaAnexoDataUrl = null;
+let faltaSigCtx = null, faltaSigDrawing = false, faltaSigHasStroke = false;
+let faltaForcarNovaAssinatura = false;
+function openEscolhaModal(){ document.getElementById('escolhaModal').classList.add('open'); }
+function closeEscolhaModal(){ document.getElementById('escolhaModal').classList.remove('open'); }
+function openFaltaEscolhaJustificada(){ document.getElementById('faltaEscolhaModal').classList.add('open'); }
+function closeFaltaEscolhaModal(){ document.getElementById('faltaEscolhaModal').classList.remove('open'); }
 async function loadMeusFechamentos(){
   try {
     const sn = await getDocs(query(collection(db,'fechamentos'), where('uid','==',currentUser.uid)));
@@ -2986,6 +3121,9 @@ function computeDiasParaRevisar(){
   const pendentes = new Set(
     minhasCorrecoesRaw.filter(c=>c.status!=='rejeitado').map(c=> ymdOf(new Date(c.ts))+'|'+c.tipo)
   );
+  const faltasDatas = new Set(
+    minhasFaltasRaw.filter(f=>f.status!=='rejeitado').map(f=>f.ds)
+  );
   const out = [];
   Object.keys(porDia).sort().forEach(ds=>{
     if (meusFechamentos[ds.slice(0,7)] === 'fechado') return;
@@ -2997,8 +3135,19 @@ function computeDiasParaRevisar(){
     if (has('almoco-saida') && !has('almoco-volta')) faltando.push('almoco-volta');
     if (has('almoco-volta') && !has('almoco-saida')) faltando.push('almoco-saida');
     faltando = faltando.filter(t => !pendentes.has(ds+'|'+t));
-    if (faltando.length) out.push({ ds, faltando });
+    if (faltando.length) out.push({ ds, faltando, vazio:false });
   });
+  // dias úteis com ZERO pontos batidos (nem um) — pergunta o que houve
+  const anoAtual = new Date().getFullYear();
+  for (let d = new Date(limite); ymdOf(d) < hoje; d.setDate(d.getDate()+1)) {
+    const ds = ymdOf(d);
+    if (porDia[ds]) continue; // já tem algum ponto, tratado acima
+    if (meusFechamentos[ds.slice(0,7)] === 'fechado') continue;
+    if (!isDiaUtil(ds)) continue;
+    if (faltasDatas.has(ds)) continue; // já declarou falta pra esse dia
+    out.push({ ds, faltando:[], vazio:true });
+  }
+  out.sort((a,b)=>a.ds.localeCompare(b.ds));
   return out;
 }
 function renderDiasParaRevisar(){
@@ -3010,6 +3159,16 @@ function renderDiasParaRevisar(){
     lista.map(d=>{
       const [Y,M,D] = d.ds.split('-').map(Number);
       const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+      if (d.vazio) {
+        return `<div class="revisar-item">
+          <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
+          <div class="revisar-falta">Nenhum ponto batido</div>
+          <div class="revisar-vazio-choice">
+            <button onclick='abrirCorrecaoParaDiaVazio(${JSON.stringify(d.ds)})'>Esqueci de bater</button>
+            <button class="primary" onclick='abrirFaltaParaDia(${JSON.stringify(d.ds)})'>Foi falta</button>
+          </div></div>
+        </div>`;
+      }
       const faltStr = d.faltando.map(t=>`<b>${typeLabel(t)}</b>`).join(', ');
       return `<div class="revisar-item">
         <div><div class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
@@ -3017,6 +3176,140 @@ function renderDiasParaRevisar(){
         <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
       </div>`;
     }).join('') + '</div>';
+}
+function abrirCorrecaoParaDiaVazio(ds){ openCorrecaoModal(ds); }
+function abrirFaltaParaDia(ds){ faltaDataPreenchida = ds; document.getElementById('faltaEscolhaModal').classList.add('open'); }
+
+// ════ FALTA (justificada ou não) — declaração de dia inteiro, vai pra aprovação ════
+const FALTA_MOTIVO_LABEL = { atestado:'Atestado médico', forum:'Fórum/audiência', advogado:'Reunião com advogado', sangue:'Doação de sangue', obito:'Óbito na família', outro:'Outro motivo' };
+function faltaTermoTexto(){
+  return faltaJustificadaAtual
+    ? 'Declaro que não compareci ao trabalho neste dia pelo motivo indicado, e solicito o registro desta falta como justificada.'
+    : 'Declaro que não compareci ao trabalho neste dia sem justificativa legal, ciente do desconto correspondente e da possível perda do DSR (descanso remunerado) da semana.';
+}
+function openFaltaModal(justificada){
+  faltaJustificadaAtual = justificada;
+  faltaMotivoSel = null;
+  faltaAnexoDataUrl = null;
+  document.getElementById('faltaModalTitulo').textContent = justificada ? 'Falta justificada' : 'Falta não justificada';
+  document.getElementById('faltaJustificadaBox').style.display = justificada ? 'block' : 'none';
+  document.getElementById('faltaNaoJustificadaBox').style.display = justificada ? 'none' : 'block';
+  document.querySelectorAll('#faltaMotivoGrid .motivo-chip').forEach(el=>el.classList.remove('on'));
+  document.getElementById('faltaAttachBox').className = 'attach-box';
+  document.getElementById('faltaAttachBox').innerHTML = '📷 Anexar foto ou PDF<div class="d2">Se não tiver documento, o motivo + detalhes já bastam</div>';
+  document.getElementById('faltaAnexoInput').value = '';
+  const hoje = ymdOf(new Date());
+  const dataInput = document.getElementById('faltaData');
+  dataInput.value = faltaDataPreenchida || hoje;
+  dataInput.max = hoje;
+  faltaDataPreenchida = null;
+  document.getElementById('faltaDetalhes').value = '';
+  document.getElementById('faltaAceite').checked = false;
+  document.getElementById('faltaTermoTexto').textContent = faltaTermoTexto();
+  document.getElementById('faltaSalvarBtn').textContent = justificada ? 'Enviar para aprovação' : 'Confirmar falta';
+  faltaForcarNovaAssinatura = false;
+  faltaRefreshAssinaturaUI();
+  document.getElementById('faltaModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('faltaAssinaturaPadBox').style.display !== 'none') faltaInitSigCanvas(); });
+  updateFaltaSalvarBtn();
+}
+function closeFaltaModal(){ document.getElementById('faltaModal').classList.remove('open'); }
+function setFaltaMotivo(m){
+  faltaMotivoSel = m;
+  document.querySelectorAll('#faltaMotivoGrid .motivo-chip').forEach(el=>el.classList.toggle('on', el.dataset.v===m));
+}
+function onFaltaAnexoSelecionado(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    faltaAnexoDataUrl = reader.result;
+    const box = document.getElementById('faltaAttachBox');
+    box.className = 'attach-box tem-arquivo';
+    box.innerHTML = `✓ ${file.name}<div class="d2">Toque pra trocar o arquivo</div>`;
+  };
+  reader.readAsDataURL(file);
+}
+function faltaRefreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !faltaForcarNovaAssinatura);
+  document.getElementById('faltaAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('faltaAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('faltaAssinaturaPreview').src = salva;
+  document.getElementById('faltaNomeDisplay').textContent = (currentUser && currentUser.nome) || '—';
+}
+function faltaReassinar(){ faltaForcarNovaAssinatura = true; faltaRefreshAssinaturaUI(); faltaInitSigCanvas(); }
+function faltaAssinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !faltaForcarNovaAssinatura) return true;
+  return faltaSigHasStroke;
+}
+function updateFaltaSalvarBtn(){
+  const aceite = document.getElementById('faltaAceite').checked;
+  document.getElementById('faltaSalvarBtn').disabled = !(aceite && faltaAssinaturaOk());
+}
+function faltaInitSigCanvas(){
+  const c = document.getElementById('faltaSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  faltaSigCtx = c.getContext('2d');
+  faltaSigCtx.scale(dpr,dpr);
+  faltaSigCtx.lineWidth = 2.3; faltaSigCtx.lineCap='round'; faltaSigCtx.lineJoin='round';
+  faltaSigCtx.strokeStyle = '#1A1816';
+  faltaSigHasStroke = false; faltaSigDrawing = false;
+}
+function faltaSigPos(e,c){ const rect=c.getBoundingClientRect(); return {x:e.clientX-rect.left, y:e.clientY-rect.top}; }
+function faltaSigStart(e){ e.preventDefault(); faltaSigDrawing=true; const p=faltaSigPos(e,e.currentTarget); faltaSigCtx.beginPath(); faltaSigCtx.moveTo(p.x,p.y); }
+function faltaSigMove(e){ if(!faltaSigDrawing||!faltaSigCtx) return; e.preventDefault(); const p=faltaSigPos(e,e.currentTarget); faltaSigCtx.lineTo(p.x,p.y); faltaSigCtx.stroke(); if(!faltaSigHasStroke){faltaSigHasStroke=true; updateFaltaSalvarBtn();} }
+function faltaSigEnd(){ faltaSigDrawing=false; }
+function faltaLimparAssinatura(){
+  const c = document.getElementById('faltaSigCanvas');
+  if (!c || !faltaSigCtx) return;
+  faltaSigCtx.clearRect(0,0,c.width,c.height);
+  faltaSigHasStroke = false; updateFaltaSalvarBtn();
+}
+async function saveFalta(){
+  const ds = document.getElementById('faltaData').value;
+  if (!ds) { showToast('Escolha a data'); return; }
+  const ym = ds.slice(0,7);
+  if (await mesEstaFechado(currentUser.uid, ym)) {
+    showToast('Este mês já foi fechado — peça ao empregador para reabrir antes');
+    return;
+  }
+  if (!faltaAssinaturaOk()) { showToast('Assine antes de enviar'); return; }
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !faltaForcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('faltaSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
+  const detalhes = document.getElementById('faltaDetalhes').value.trim();
+  try {
+    let anexoUrl = null;
+    if (faltaAnexoDataUrl) {
+      const anexoRef = ref(storage, `atestados/${currentUser.uid}/${Date.now()}`);
+      await uploadString(anexoRef, faltaAnexoDataUrl, 'data_url');
+      anexoUrl = await getDownloadURL(anexoRef);
+    }
+    await addDoc(collection(db,'faltas'), {
+      uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
+      ds, justificada: faltaJustificadaAtual,
+      motivo: faltaJustificadaAtual ? faltaMotivoSel : null,
+      motivoLabel: faltaJustificadaAtual ? (FALTA_MOTIVO_LABEL[faltaMotivoSel]||null) : null,
+      detalhes, anexoUrl,
+      termoTexto: faltaTermoTexto(), assinaturaImg,
+      status: 'pendente', criadoEm: new Date().toISOString()
+    });
+    closeFaltaModal();
+    showToast('Enviado para aprovação ✓');
+    renderMinhasCorrecoes();
+  } catch(e){ console.error(e); showToast('Erro ao enviar falta'); }
 }
 
 // ── funcionária: acompanha suas solicitações ──
@@ -3026,11 +3319,28 @@ async function renderMinhasCorrecoes(){
   try {
     const sn = await getDocs(query(collection(db,'correcoes'), where('uid','==',currentUser.uid)));
     minhasCorrecoesRaw = sn.docs.map(d=>({id:d.id, ...d.data()}));
+    const snF = await getDocs(query(collection(db,'faltas'), where('uid','==',currentUser.uid)));
+    minhasFaltasRaw = snF.docs.map(d=>({id:d.id, ...d.data()}));
     await loadMeusFechamentos();
     renderDiasParaRevisar();
-    const list = minhasCorrecoesRaw.slice().sort((a,b)=> new Date(b.criadoEm)-new Date(a.criadoEm)).slice(0,8);
+    const listCor = minhasCorrecoesRaw.map(c=>({...c, _tipo:'correcao', _dt:c.criadoEm}));
+    const listFal = minhasFaltasRaw.map(f=>({...f, _tipo:'falta', _dt:f.criadoEm}));
+    const list = [...listCor, ...listFal].sort((a,b)=> new Date(b._dt)-new Date(a._dt)).slice(0,8);
     const el = document.getElementById('minhasCorrecoes');
     el.innerHTML = list.map(c=>{
+      if (c._tipo === 'falta') {
+        const [Y,M,D] = c.ds.split('-').map(Number);
+        const dtStr = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
+        const rotulo = c.justificada ? `Falta justificada${c.motivoLabel?' · '+c.motivoLabel:''}` : 'Falta não justificada';
+        return `<div class="my-correction-card">
+          <div class="my-correction-top">
+            <div><div class="my-correction-type">📋 ${rotulo}</div><div class="my-correction-when">${dtStr}</div></div>
+            <span class="cor-status ${c.status}">${c.status}</span>
+          </div>
+          ${c.detalhes ? `<div class="my-correction-just">${c.detalhes}</div>` : ''}
+          ${c.status==='rejeitado' && c.motivoRejeicao ? `<div class="my-correction-motivo">Motivo: ${c.motivoRejeicao}</div>` : ''}
+        </div>`;
+      }
       const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
       return `<div class="my-correction-card">
         <div class="my-correction-top">
@@ -3044,36 +3354,54 @@ async function renderMinhasCorrecoes(){
   } catch(e){ console.error('minhasCorrecoes', e); }
 }
 
-// ── empregador: fila de aprovação ──
+// ── empregador: fila de aprovação (correções de ponto + faltas) ──
 async function loadCorrecoesPendentes(){
   try {
     const sn = await getDocs(query(collection(db,'correcoes'), where('houseCode','==',currentUser.houseCode), where('status','==','pendente')));
     correcoesPendentesCache = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> new Date(a.ts)-new Date(b.ts));
   } catch(e){ console.error('loadCorrecoesPendentes', e); correcoesPendentesCache = []; }
+  try {
+    const snF = await getDocs(query(collection(db,'faltas'), where('houseCode','==',currentUser.houseCode), where('status','==','pendente')));
+    faltasPendentesCache = snF.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> a.ds.localeCompare(b.ds));
+  } catch(e){ console.error('loadFaltasPendentes', e); faltasPendentesCache = []; }
   renderCorrecoesPendentes();
 }
 function renderCorrecoesPendentes(){
   const box = document.getElementById('correcoesPendentesBox');
   const badge = document.getElementById('navConfigBadge');
+  const total = correcoesPendentesCache.length + faltasPendentesCache.length;
   if (badge) {
-    const n = correcoesPendentesCache.length;
-    badge.style.display = n > 0 ? 'flex' : 'none';
-    badge.textContent = n > 9 ? '9+' : String(n);
+    badge.style.display = total > 0 ? 'flex' : 'none';
+    badge.textContent = total > 9 ? '9+' : String(total);
   }
   if (!box) return;
-  if (!correcoesPendentesCache.length) { box.innerHTML=''; return; }
-  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${correcoesPendentesCache.length})</div>` +
-    correcoesPendentesCache.map(c=>{
-      const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-      return `<div class="pend-card">
-        <div class="pend-top"><div class="pend-name">${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
-        <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
-        <div class="pend-btns">
-          <button class="pend-reject" onclick="openRejeitarModal('${c.id}')">Rejeitar</button>
-          <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
-        </div>
-      </div>`;
-    }).join('');
+  if (!total) { box.innerHTML=''; return; }
+  const correcoesHtml = correcoesPendentesCache.map(c=>{
+    const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="pend-card">
+      <div class="pend-top"><div class="pend-name">✏️ ${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
+      <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
+      <div class="pend-btns">
+        <button class="pend-reject" onclick="openRejeitarModal('${c.id}','correcao')">Rejeitar</button>
+        <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
+      </div>
+    </div>`;
+  }).join('');
+  const faltasHtml = faltasPendentesCache.map(f=>{
+    const [Y,M,D] = f.ds.split('-').map(Number);
+    const dtStr = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
+    const rotulo = f.justificada ? `Falta justificada${f.motivoLabel?' · '+f.motivoLabel:''}` : 'Falta não justificada';
+    return `<div class="pend-card">
+      <div class="pend-top"><div class="pend-name">📋 ${(f.nome||'').split(' ')[0]} · ${dtStr}</div><div class="pend-when">${rotulo}</div></div>
+      ${f.detalhes ? `<div class="pend-just">"${f.detalhes}"</div>` : ''}
+      ${f.anexoUrl ? `<a href="${f.anexoUrl}" target="_blank" style="display:block;font-size:11.5px;color:var(--accent);font-weight:600;margin-bottom:8px;text-decoration:none">📎 Ver comprovante anexado</a>` : ''}
+      <div class="pend-btns">
+        <button class="pend-reject" onclick="openRejeitarModal('${f.id}','falta')">Rejeitar</button>
+        <button class="pend-approve" onclick="aprovarFalta('${f.id}')">Aprovar</button>
+      </div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${total})</div>` + correcoesHtml + faltasHtml;
 }
 async function aprovarCorrecao(id){
   const c = correcoesPendentesCache.find(x=>x.id===id);
@@ -3092,14 +3420,25 @@ async function aprovarCorrecao(id){
     await loadCorrecoesPendentes();
   } catch(e){ console.error(e); showToast('Erro ao aprovar'); }
 }
-function openRejeitarModal(id){ rejeitarAlvoId = id; document.getElementById('rejMotivo').value=''; document.getElementById('rejeitarModal').classList.add('open'); }
+async function aprovarFalta(id){
+  const f = faltasPendentesCache.find(x=>x.id===id);
+  if (!f) return;
+  if (await mesEstaFechado(f.uid, f.ds.slice(0,7))) { showToast('Este mês já está fechado — reabra antes de aprovar'); return; }
+  try {
+    await updateDoc(doc(db,'faltas',id), { status:'aprovado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+    showToast('Falta aprovada ✓');
+    await loadCorrecoesPendentes();
+  } catch(e){ console.error(e); showToast('Erro ao aprovar falta'); }
+}
+function openRejeitarModal(id, tipo){ rejeitarAlvoId = id; rejeitarAlvoTipo = tipo || 'correcao'; document.getElementById('rejMotivo').value=''; document.getElementById('rejeitarModal').classList.add('open'); }
 function closeRejeitarModal(){ document.getElementById('rejeitarModal').classList.remove('open'); rejeitarAlvoId = null; }
 async function confirmRejeitar(){
   if (!rejeitarAlvoId) return;
   const motivo = document.getElementById('rejMotivo').value.trim();
+  const colecao = rejeitarAlvoTipo === 'falta' ? 'faltas' : 'correcoes';
   try {
-    await updateDoc(doc(db,'correcoes',rejeitarAlvoId), { status:'rejeitado', motivoRejeicao: motivo || 'Sem motivo informado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
-    showToast('Correção rejeitada');
+    await updateDoc(doc(db,colecao,rejeitarAlvoId), { status:'rejeitado', motivoRejeicao: motivo || 'Sem motivo informado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+    showToast(rejeitarAlvoTipo === 'falta' ? 'Falta rejeitada' : 'Correção rejeitada');
     closeRejeitarModal();
     await loadCorrecoesPendentes();
   } catch(e){ console.error(e); showToast('Erro ao rejeitar'); }
