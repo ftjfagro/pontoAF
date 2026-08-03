@@ -1358,6 +1358,22 @@ function montarPayload(competencia, empUid) {
     if (r.justificativa) bucket[k].obs = r.justificativa;
   });
 
+  // Faltas aprovadas (dias sem nenhum ponto) — viram linha própria, com o
+  // tipoDia certo, pro Codigo.gs já zerar o previsto daquele dia sozinho.
+  faltasAprovadasPorCasa.forEach(f => {
+    if (f.ds.slice(0, 7) !== competencia) return;
+    const emp = emps.find(e => e.uid === f.uid);
+    if (!emp) return;
+    const k = emp.nome + '|' + f.ds;
+    if (bucket[k]) return; // já tem ponto batido nesse dia, não sobrescreve
+    bucket[k] = {
+      nome: emp.nome, data: f.ds, tipoDia: f.justificada ? 'ATESTADO' : 'FALTA',
+      entrada: null, almocoSaida: null, almocoVolta: null, saida: null,
+      manual: false, foraCerca: 0,
+      obs: f.justificada ? `${f.motivoLabel || 'Falta justificada'}${f.detalhes ? ' — ' + f.detalhes : ''}` : (f.detalhes || 'Falta não justificada')
+    };
+  });
+
   return { token: SHEETS_TOKEN, competencia, funcionarias, dias: Object.values(bucket) };
 }
 
@@ -1965,6 +1981,13 @@ function showScreen(name) {
 const JORNADA_MIN = 528, BANCO_CAP = 120;
 let ferByAno = {};
 let fechamentos = {};        // 'uid|YYYY-MM' -> { status, ... }
+let faltasAprovadasPorCasa = [];
+async function loadFaltasAprovadas(){
+  try {
+    const sn = await getDocs(query(collection(db,'faltas'), where('houseCode','==',currentUser.houseCode), where('status','==','aprovado')));
+    faltasAprovadasPorCasa = sn.docs.map(d=>({id:d.id, ...d.data()}));
+  } catch(e){ console.error('loadFaltasAprovadas', e); faltasAprovadasPorCasa = []; }
+}
 let dashView = 'dia';
 let diaExpandidoKey = null;
 let vtView = 'inicio';
@@ -2862,6 +2885,7 @@ async function ensureDadosGestao(){
   if (!window._empCache || !window._empCache.length) await checkAlerts();
   await loadAtividades();
   await loadValePagamentos();
+  await loadFaltasAprovadas();
 }
 async function openDashboard(){
   await ensureDadosGestao();
