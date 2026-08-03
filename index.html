@@ -226,6 +226,7 @@
     .dash-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
     .dash-card-title { font-size:15px; font-weight:600; }
     .dash-card-sub { font-size:12px; color:var(--ink3); margin-top:2px; }
+    .mes-resumo-linha { font-size:12px; color:var(--ink3); margin-top:2px; white-space:nowrap; overflow-x:auto; }
     .dash-pill { font-size:10px; font-weight:700; padding:4px 9px; border-radius:100px; letter-spacing:0.4px; text-transform:uppercase; flex-shrink:0; }
     .dash-pill.vigente { background:var(--accent-light); color:var(--accent); }
     .dash-pill.revisar { background:var(--warn-light); color:var(--warn); }
@@ -679,7 +680,7 @@
       <div class="field"><label>Assinando como</label><div id="corNomeDisplay" style="font-size:14.5px;font-weight:600;color:var(--ink);padding:11px 14px;background:var(--surface2);border-radius:10px">—</div></div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeCorrecaoModal()">Cancelar</button>
-        <button class="btn-form-save" id="corSalvarBtn" disabled onclick="saveCorrecao()">Enviar para aprovação</button>
+        <button class="btn-form-save" id="corSalvarBtn" onclick="saveCorrecao()">Enviar para aprovação</button>
       </div>
     </div>
   </div>
@@ -715,7 +716,7 @@
 
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeValeAssinaturaModal()">Cancelar</button>
-        <button class="btn-form-save" id="valeSalvarBtn" disabled onclick="confirmarValeAssinatura()">Confirmar recebimento</button>
+        <button class="btn-form-save" id="valeSalvarBtn" onclick="confirmarValeAssinatura()">Confirmar recebimento</button>
       </div>
     </div>
   </div>
@@ -785,7 +786,7 @@
 
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeFaltaModal()">Cancelar</button>
-        <button class="btn-form-save" id="faltaSalvarBtn" disabled onclick="saveFalta()">Enviar para aprovação</button>
+        <button class="btn-form-save" id="faltaSalvarBtn" onclick="saveFalta()">Enviar para aprovação</button>
       </div>
     </div>
   </div>
@@ -859,7 +860,7 @@ Object.assign(window, {
   openEscolhaModal, closeEscolhaModal, openFaltaEscolhaJustificada, closeFaltaEscolhaModal,
   openFaltaModal, closeFaltaModal, setFaltaMotivo, onFaltaAnexoSelecionado, updateFaltaSalvarBtn,
   faltaSigStart, faltaSigMove, faltaSigEnd, faltaLimparAssinatura, faltaReassinar, saveFalta,
-  abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta,
+  abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta, toggleRevisarBox,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1796,7 +1797,7 @@ function renderMesCardUnificado(uid, ym, isVigente){
   let html = `<div class="dash-card${isVigente?' hl':''}" style="${isVigente?'':'padding:12px 16px'}">
     <div class="dash-card-head" style="cursor:pointer;margin-bottom:${aberto?'10px':'0'}" onclick="toggleMinhasHorasMes('${ym}')">
       <div><div class="dash-card-title" style="font-size:14px">${labelMes(ym)}</div>
-        <div class="dash-card-sub">jornada ${fmtHM(a.jornada)} · banco ${fmtHM(a.pote)} · extra ${fmtHM(a.extra)}${a.incompletos?` · ${a.incompletos} incompleto(s)`:''}</div></div>
+        <div class="mes-resumo-linha">jornada ${fmtHM(a.jornada)} · banco ${fmtHM(a.pote)} · extra ${fmtHM(a.extra)}${a.incompletos?` · ${a.incompletos} incompleto(s)`:''}</div></div>
       <span class="dash-pill ${pillClass}">${pillTxt}<span class="chev">${aberto?' ▴':' ▾'}</span></span>
     </div>`;
 
@@ -2701,7 +2702,11 @@ function renderVT(uid, vigente, agVigente){
   </div>`;
 }
 
-function toggleWeek(k){ dashWeekOpen[k] = !dashWeekOpen[k]; renderDashboard(); }
+function toggleWeek(k){
+  dashWeekOpen[k] = !dashWeekOpen[k];
+  if (document.getElementById('screenDashboard').classList.contains('active')) renderDashboard();
+  else if (document.getElementById('screenHistorico').classList.contains('active')) renderMinhasHoras();
+}
 
 // ── funcionária: confirma recebimento do vale-transporte com assinatura ──
 let valePendenteAtual = null;
@@ -2749,7 +2754,7 @@ function valeAssinaturaOk(){
   return valeSigHasStroke;
 }
 function updateValeSalvarBtn(){
-  document.getElementById('valeSalvarBtn').disabled = !valeAssinaturaOk();
+  // o botão fica sempre clicável — o aviso do que falta aparece ao tentar confirmar
 }
 function valeInitSigCanvas(){
   const c = document.getElementById('valeSigCanvas');
@@ -2775,7 +2780,8 @@ function valeLimparAssinatura(){
   valeSigHasStroke = false; updateValeSalvarBtn();
 }
 async function confirmarValeAssinatura(){
-  if (!valePendenteAtual || !valeAssinaturaOk()) return;
+  if (!valePendenteAtual) return;
+  if (!valeAssinaturaOk()) { showToast('Assine antes de confirmar'); return; }
   let assinaturaImg;
   if (currentUser.assinaturaImg && !valeForcarNovaAssinatura) {
     assinaturaImg = currentUser.assinaturaImg;
@@ -3045,8 +3051,7 @@ function setCorTipo(t){
   document.querySelectorAll('#corTipo .type-opt').forEach(el=>el.classList.toggle('on', el.dataset.v===t));
 }
 function updateCorSalvarBtn(){
-  const aceite = document.getElementById('corAceite').checked;
-  document.getElementById('corSalvarBtn').disabled = !(aceite && assinaturaOk());
+  // o botão fica sempre clicável — o aviso do que falta aparece ao tentar enviar
 }
 async function saveCorrecao(){
   const data = document.getElementById('corData').value;
@@ -3056,6 +3061,7 @@ async function saveCorrecao(){
   if (!corTipoSel) { showToast('Escolha o tipo de registro'); return; }
   if (!data || !hora) { showToast('Preencha data e horário'); return; }
   if (justificativa.length < 3) { showToast('Conte rapidamente o que houve'); return; }
+  if (!document.getElementById('corAceite').checked) { showToast('Marque que está de acordo com o termo'); return; }
   if (!assinaturaOk()) { showToast('Assine no campo antes de enviar'); return; }
   const ym = data.slice(0,7);
   if (await mesEstaFechado(currentUser.uid, ym)) {
@@ -3091,6 +3097,7 @@ async function saveCorrecao(){
 let minhasCorrecoesRaw = [];
 let meusFechamentos = {};
 let minhasFaltasRaw = [];
+let revisarBoxAberto = true;
 let faltaDataPreenchida = null;
 let faltaJustificadaAtual = true;
 let faltaMotivoSel = null;
@@ -3155,8 +3162,7 @@ function renderDiasParaRevisar(){
   if (!box) return;
   const lista = computeDiasParaRevisar();
   if (!lista.length) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="revisar-box"><div class="revisar-titulo">${lista.length} dia${lista.length>1?'s':''} para você revisar</div>` +
-    lista.map(d=>{
+  const itensHtml = revisarBoxAberto ? lista.map(d=>{
       const [Y,M,D] = d.ds.split('-').map(Number);
       const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
       if (d.vazio) {
@@ -3175,8 +3181,13 @@ function renderDiasParaRevisar(){
         <div class="revisar-falta">Faltou: ${faltStr}</div></div>
         <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
       </div>`;
-    }).join('') + '</div>';
+    }).join('') : '';
+  box.innerHTML = `<div class="revisar-box">
+    <div class="revisar-titulo" style="cursor:pointer" onclick="toggleRevisarBox()">${lista.length} dia${lista.length>1?'s':''} para você revisar<span class="chev">${revisarBoxAberto?' ▴':' ▾'}</span></div>
+    ${itensHtml}
+  </div>`;
 }
+function toggleRevisarBox(){ revisarBoxAberto = !revisarBoxAberto; renderDiasParaRevisar(); }
 function abrirCorrecaoParaDiaVazio(ds){ openCorrecaoModal(ds); }
 function abrirFaltaParaDia(ds){ faltaDataPreenchida = ds; document.getElementById('faltaEscolhaModal').classList.add('open'); }
 
@@ -3244,8 +3255,7 @@ function faltaAssinaturaOk(){
   return faltaSigHasStroke;
 }
 function updateFaltaSalvarBtn(){
-  const aceite = document.getElementById('faltaAceite').checked;
-  document.getElementById('faltaSalvarBtn').disabled = !(aceite && faltaAssinaturaOk());
+  // o botão fica sempre clicável — o aviso do que falta aparece ao tentar enviar
 }
 function faltaInitSigCanvas(){
   const c = document.getElementById('faltaSigCanvas');
@@ -3278,6 +3288,7 @@ async function saveFalta(){
     showToast('Este mês já foi fechado — peça ao empregador para reabrir antes');
     return;
   }
+  if (!document.getElementById('faltaAceite').checked) { showToast('Marque que está de acordo com o termo'); return; }
   if (!faltaAssinaturaOk()) { showToast('Assine antes de enviar'); return; }
   let assinaturaImg;
   if (currentUser.assinaturaImg && !faltaForcarNovaAssinatura) {
