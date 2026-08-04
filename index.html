@@ -367,7 +367,12 @@
     .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
     .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
     textarea.settings-input, textarea.field-input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; resize:vertical; min-height:70px; }
-    .pend-card { background:var(--surface); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 10px; padding:13px 14px; }
+    .pend-card { background:var(--surface); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 10px; padding:13px 14px; display:flex; gap:10px; align-items:flex-start; }
+    .pend-check { margin-top:3px; width:17px; height:17px; flex-shrink:0; cursor:pointer; }
+    .pend-selecionar-todas { display:flex; align-items:center; gap:8px; padding:0 16px 8px; font-size:12px; color:var(--ink2); cursor:pointer; }
+    .pend-selecionar-todas input { width:16px; height:16px; }
+    .pend-bulk-bar { position:sticky; bottom:0; margin:0 16px 10px; background:var(--accent); color:#fff; border-radius:10px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 14px rgba(0,0,0,.15); }
+    .pend-bulk-bar button { background:#fff; color:var(--accent); border:none; border-radius:7px; padding:7px 13px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
     .pend-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
     .pend-name { font-size:13.5px; font-weight:600; }
     .pend-when { font-family:'DM Mono',monospace; font-size:12px; color:var(--ink2); }
@@ -892,6 +897,7 @@ Object.assign(window, {
   faltaSigStart, faltaSigMove, faltaSigEnd, faltaLimparAssinatura, faltaReassinar, saveFalta,
   abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta, toggleRevisarBox,
   abrirAvisoModal, closeAvisoModal, enviarAviso, marcarAvisoLido,
+  toggleSelecaoPendente, toggleSelecionarTodas, aprovarSelecionadas,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -3534,6 +3540,7 @@ async function renderMinhasCorrecoes(){
 }
 
 // ── empregador: fila de aprovação (correções de ponto + faltas) ──
+let selecionadosPendentes = new Set();
 async function loadCorrecoesPendentes(){
   try {
     const sn = await getDocs(query(collection(db,'correcoes'), where('houseCode','==',currentUser.houseCode), where('status','==','pendente')));
@@ -3543,6 +3550,26 @@ async function loadCorrecoesPendentes(){
     const snF = await getDocs(query(collection(db,'faltas'), where('houseCode','==',currentUser.houseCode), where('status','==','pendente')));
     faltasPendentesCache = snF.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> a.ds.localeCompare(b.ds));
   } catch(e){ console.error('loadFaltasPendentes', e); faltasPendentesCache = []; }
+  const idsAtuais = new Set([...correcoesPendentesCache.map(c=>'correcao:'+c.id), ...faltasPendentesCache.map(f=>'falta:'+f.id)]);
+  selecionadosPendentes.forEach(k=>{ if (!idsAtuais.has(k)) selecionadosPendentes.delete(k); });
+  renderCorrecoesPendentes();
+}
+function toggleSelecaoPendente(tipo, id){
+  const key = tipo+':'+id;
+  if (selecionadosPendentes.has(key)) selecionadosPendentes.delete(key);
+  else selecionadosPendentes.add(key);
+  renderCorrecoesPendentes();
+}
+function toggleSelecionarTodas(){
+  const total = correcoesPendentesCache.length + faltasPendentesCache.length;
+  if (selecionadosPendentes.size === total) {
+    selecionadosPendentes.clear();
+  } else {
+    selecionadosPendentes = new Set([
+      ...correcoesPendentesCache.map(c=>'correcao:'+c.id),
+      ...faltasPendentesCache.map(f=>'falta:'+f.id)
+    ]);
+  }
   renderCorrecoesPendentes();
 }
 function renderCorrecoesPendentes(){
@@ -3557,12 +3584,16 @@ function renderCorrecoesPendentes(){
   if (!total) { box.innerHTML=''; return; }
   const correcoesHtml = correcoesPendentesCache.map(c=>{
     const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const marcado = selecionadosPendentes.has('correcao:'+c.id);
     return `<div class="pend-card">
-      <div class="pend-top"><div class="pend-name">✏️ ${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
-      <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
-      <div class="pend-btns">
-        <button class="pend-reject" onclick="openRejeitarModal('${c.id}','correcao')">Rejeitar</button>
-        <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
+      <input type="checkbox" class="pend-check" ${marcado?'checked':''} onchange="toggleSelecaoPendente('correcao','${c.id}')">
+      <div style="flex:1;min-width:0">
+        <div class="pend-top"><div class="pend-name">✏️ ${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
+        <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
+        <div class="pend-btns">
+          <button class="pend-reject" onclick="openRejeitarModal('${c.id}','correcao')">Rejeitar</button>
+          <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -3570,23 +3601,33 @@ function renderCorrecoesPendentes(){
     const [Y,M,D] = f.ds.split('-').map(Number);
     const dtStr = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
     const rotulo = f.justificada ? `Falta justificada${f.motivoLabel?' · '+f.motivoLabel:''}` : 'Falta não justificada';
+    const marcado = selecionadosPendentes.has('falta:'+f.id);
     return `<div class="pend-card">
-      <div class="pend-top"><div class="pend-name">📋 ${(f.nome||'').split(' ')[0]} · ${dtStr}</div><div class="pend-when">${rotulo}</div></div>
-      ${f.detalhes ? `<div class="pend-just">"${f.detalhes}"</div>` : ''}
-      ${f.anexoUrl ? `<a href="${f.anexoUrl}" target="_blank" style="display:block;font-size:11.5px;color:var(--accent);font-weight:600;margin-bottom:8px;text-decoration:none">📎 Ver comprovante anexado</a>` : ''}
-      <div class="pend-btns">
-        <button class="pend-reject" onclick="openRejeitarModal('${f.id}','falta')">Rejeitar</button>
-        <button class="pend-approve" onclick="aprovarFalta('${f.id}')">Aprovar</button>
+      <input type="checkbox" class="pend-check" ${marcado?'checked':''} onchange="toggleSelecaoPendente('falta','${f.id}')">
+      <div style="flex:1;min-width:0">
+        <div class="pend-top"><div class="pend-name">📋 ${(f.nome||'').split(' ')[0]} · ${dtStr}</div><div class="pend-when">${rotulo}</div></div>
+        ${f.detalhes ? `<div class="pend-just">"${f.detalhes}"</div>` : ''}
+        ${f.anexoUrl ? `<a href="${f.anexoUrl}" target="_blank" style="display:block;font-size:11.5px;color:var(--accent);font-weight:600;margin-bottom:8px;text-decoration:none">📎 Ver comprovante anexado</a>` : ''}
+        <div class="pend-btns">
+          <button class="pend-reject" onclick="openRejeitarModal('${f.id}','falta')">Rejeitar</button>
+          <button class="pend-approve" onclick="aprovarFalta('${f.id}')">Aprovar</button>
+        </div>
       </div>
     </div>`;
   }).join('');
-  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${total})</div>` + correcoesHtml + faltasHtml;
+  const todasMarcadas = selecionadosPendentes.size === total;
+  const bulkBar = selecionadosPendentes.size > 0
+    ? `<div class="pend-bulk-bar"><span>${selecionadosPendentes.size} selecionada(s)</span><button onclick="aprovarSelecionadas()">Aprovar selecionadas</button></div>`
+    : '';
+  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${total})</div>
+    <label class="pend-selecionar-todas"><input type="checkbox" ${todasMarcadas?'checked':''} onchange="toggleSelecionarTodas()"> Selecionar todas</label>
+    ${correcoesHtml}${faltasHtml}${bulkBar}`;
 }
-async function aprovarCorrecao(id){
+async function aprovarCorrecaoSilenciosa(id){
   const c = correcoesPendentesCache.find(x=>x.id===id);
-  if (!c) return;
+  if (!c) return { ok:false };
   const ym = c.ts.slice(0,7);
-  if (await mesEstaFechado(c.uid, ym)) { showToast('Este mês já está fechado — reabra antes de aprovar'); return; }
+  if (await mesEstaFechado(c.uid, ym)) return { ok:false, motivo:'fechado' };
   try {
     await addDoc(collection(db,'records'), {
       userId: c.uid, userName: c.nome, houseCode: c.houseCode,
@@ -3595,19 +3636,43 @@ async function aprovarCorrecao(id){
       adjustedBy: currentUser.uid, adjustedAt: new Date().toISOString()
     });
     await updateDoc(doc(db,'correcoes',id), { status:'aprovado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
-    showToast('Correção aprovada ✓');
-    await loadCorrecoesPendentes();
-  } catch(e){ console.error(e); showToast('Erro ao aprovar'); }
+    return { ok:true };
+  } catch(e){ console.error(e); return { ok:false, motivo:'erro' }; }
 }
-async function aprovarFalta(id){
+async function aprovarFaltaSilenciosa(id){
   const f = faltasPendentesCache.find(x=>x.id===id);
-  if (!f) return;
-  if (await mesEstaFechado(f.uid, f.ds.slice(0,7))) { showToast('Este mês já está fechado — reabra antes de aprovar'); return; }
+  if (!f) return { ok:false };
+  if (await mesEstaFechado(f.uid, f.ds.slice(0,7))) return { ok:false, motivo:'fechado' };
   try {
     await updateDoc(doc(db,'faltas',id), { status:'aprovado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
-    showToast('Falta aprovada ✓');
-    await loadCorrecoesPendentes();
-  } catch(e){ console.error(e); showToast('Erro ao aprovar falta'); }
+    return { ok:true };
+  } catch(e){ console.error(e); return { ok:false, motivo:'erro' }; }
+}
+async function aprovarCorrecao(id){
+  const r = await aprovarCorrecaoSilenciosa(id);
+  if (!r.ok) { showToast(r.motivo==='fechado' ? 'Este mês já está fechado — reabra antes de aprovar' : 'Erro ao aprovar'); return; }
+  showToast('Correção aprovada ✓');
+  await loadCorrecoesPendentes();
+}
+async function aprovarFalta(id){
+  const r = await aprovarFaltaSilenciosa(id);
+  if (!r.ok) { showToast(r.motivo==='fechado' ? 'Este mês já está fechado — reabra antes de aprovar' : 'Erro ao aprovar falta'); return; }
+  showToast('Falta aprovada ✓');
+  await loadCorrecoesPendentes();
+}
+async function aprovarSelecionadas(){
+  if (!selecionadosPendentes.size) return;
+  const qtd = selecionadosPendentes.size;
+  if (!confirm(`Aprovar ${qtd} item(ns) selecionado(s)?`)) return;
+  let ok = 0, falhas = 0;
+  for (const key of [...selecionadosPendentes]) {
+    const [tipo, id] = key.split(':');
+    const r = tipo === 'correcao' ? await aprovarCorrecaoSilenciosa(id) : await aprovarFaltaSilenciosa(id);
+    if (r.ok) ok++; else falhas++;
+  }
+  selecionadosPendentes.clear();
+  showToast(`${ok} aprovada(s)${falhas ? ` · ${falhas} não puderam ser aprovadas (confira meses fechados)` : ''}`);
+  await loadCorrecoesPendentes();
 }
 function openRejeitarModal(id, tipo){ rejeitarAlvoId = id; rejeitarAlvoTipo = tipo || 'correcao'; document.getElementById('rejMotivo').value=''; document.getElementById('rejeitarModal').classList.add('open'); }
 function closeRejeitarModal(){ document.getElementById('rejeitarModal').classList.remove('open'); rejeitarAlvoId = null; }
@@ -3744,6 +3809,7 @@ window.deletePoint = comCarregamento(deletePoint, 'Excluindo...');
 window.deleteInvite = comCarregamento(deleteInvite, 'Excluindo...');
 window.saveFeriados = comCarregamento(saveFeriados, 'Salvando...');
 window.enviarAviso = comCarregamento(enviarAviso, 'Enviando aviso...');
+window.aprovarSelecionadas = comCarregamento(aprovarSelecionadas, 'Aprovando selecionadas...');
 </script>
 </body>
 </html>
