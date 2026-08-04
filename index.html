@@ -175,6 +175,15 @@
     .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: white; padding: 11px 20px; border-radius: 100px; font-size: 13px; font-weight: 500; white-space: nowrap; opacity: 0; transition: all 0.3s; z-index: 500; pointer-events: none; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; gap: 16px; }
+    .acao-overlay { position:fixed; inset:0; background:rgba(26,24,22,0.45); display:flex; align-items:center; justify-content:center; z-index:2000; }
+    .acao-overlay-box { background:var(--surface); border-radius:14px; padding:18px 26px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
+    .acao-spinner { width:20px; height:20px; border:3px solid var(--surface2); border-top-color:var(--accent); border-radius:50%; animation:acaoSpin .7s linear infinite; flex-shrink:0; }
+    @keyframes acaoSpin { to { transform:rotate(360deg); } }
+    .acao-overlay-text { font-size:13.5px; font-weight:600; color:var(--ink); }
+    .aviso-card { background:#E5F1FB; border:1px solid #A9CDE8; border-radius:12px; margin:0 16px 10px; padding:11px 13px; }
+    .aviso-card-titulo { font-size:11px; font-weight:700; color:#2E75B6; text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+    .aviso-card-texto { font-size:13px; color:var(--ink); line-height:1.4; margin-bottom:8px; }
+    .aviso-card-btn { background:#2E75B6; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit; }
     .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .config-banner { background: var(--warn-light); color: var(--warn); padding: 12px 16px; font-size: 13px; text-align: center; border-bottom: 1px solid #F5C49A; }
@@ -387,6 +396,13 @@
   <div style="color:var(--ink3);font-size:13px">Carregando...</div>
 </div>
 
+<div class="acao-overlay" id="acaoOverlay" style="display:none">
+  <div class="acao-overlay-box">
+    <div class="acao-spinner"></div>
+    <div class="acao-overlay-text" id="acaoOverlayText">Processando...</div>
+  </div>
+</div>
+
 <!-- LOGIN -->
 <div id="loginWrap" style="display:none">
   <img class="login-emblem" src="login.png" alt="AF" />
@@ -434,6 +450,7 @@
 
   <div class="screen active" id="screenRegistro">
     <div id="valeConfirmaBox"></div>
+    <div id="avisosBox"></div>
     <div class="greet-line">Olá, <b id="heroName">Funcionária</b></div>
     <div class="date-line" id="clockDate">carregando...</div>
     <div class="correct-link" style="padding:0 16px 10px">
@@ -792,6 +809,18 @@
     </div>
   </div>
 
+  <div class="form-modal" id="avisoModal">
+    <div class="form-sheet">
+      <h3>Deixar um aviso</h3>
+      <div class="sub" id="avisoDestinatarioNome">—</div>
+      <div class="field"><textarea id="avisoTexto" placeholder="Ex: lembra de apontar o restante do mês pro fechamento da folha" rows="4"></textarea></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeAvisoModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="enviarAviso()">Enviar aviso</button>
+      </div>
+    </div>
+  </div>
+
   <nav id="appNav">
     <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
     <button class="nav-btn" id="navDashboard" style="display:none" onclick="showScreen('Dashboard')"><div class="nav-icon">📊</div><div class="nav-label">Dashboard</div></button>
@@ -862,6 +891,7 @@ Object.assign(window, {
   openFaltaModal, closeFaltaModal, setFaltaMotivo, onFaltaAnexoSelecionado, updateFaltaSalvarBtn,
   faltaSigStart, faltaSigMove, faltaSigEnd, faltaLimparAssinatura, faltaReassinar, saveFalta,
   abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta, toggleRevisarBox,
+  abrirAvisoModal, closeAvisoModal, enviarAviso, marcarAvisoLido,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1241,6 +1271,7 @@ function renderEmployeeList(ativas, inativas) {
           <div class="emp-status">${status}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="emp-edit-btn" onclick="abrirAvisoModal('${emp.uid}','${emp.nome.replace(/'/g,"\\'")}')" title="Deixar um aviso">💬</button>
           <button class="emp-edit-btn" onclick="openContractModal('${emp.uid}')">⚙️ Contrato</button>
           <button class="emp-danger-btn" onclick="inactivateEmployee('${emp.uid}')" title="Encerrar acesso">🚫</button>
         </div>
@@ -2024,7 +2055,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
-  if(name==='Registro' && currentUser && currentUser.role!=='empregador') checkMeuValePendente();
+  if(name==='Registro' && currentUser && currentUser.role!=='empregador') { checkMeuValePendente(); checkMeusAvisos(); }
   if(name==='Historico') { renderMinhasHoras(); renderMinhasCorrecoes(); }
   if(name==='Dashboard') openDashboard();
   if(name==='Fechamentos') openFechamentos();
@@ -2793,6 +2824,57 @@ function toggleWeek(k){
 let valePendenteAtual = null;
 let valeSigCtx = null, valeSigDrawing = false, valeSigHasStroke = false;
 let valeForcarNovaAssinatura = false;
+
+// ════ AVISOS: empregador deixa um recado direcionado pra uma funcionária ════
+let avisoDestinatarioAtual = null;
+let meusAvisosNaoLidos = [];
+function abrirAvisoModal(uid, nome){
+  avisoDestinatarioAtual = uid;
+  document.getElementById('avisoDestinatarioNome').textContent = `Pra ${nome}`;
+  document.getElementById('avisoTexto').value = '';
+  document.getElementById('avisoModal').classList.add('open');
+}
+function closeAvisoModal(){ document.getElementById('avisoModal').classList.remove('open'); avisoDestinatarioAtual = null; }
+async function enviarAviso(){
+  const texto = document.getElementById('avisoTexto').value.trim();
+  if (!texto) { showToast('Escreva o aviso antes de enviar'); return; }
+  if (!avisoDestinatarioAtual) return;
+  try {
+    await addDoc(collection(db,'avisos'), {
+      destinatarioUid: avisoDestinatarioAtual, houseCode: currentUser.houseCode,
+      texto, criadoPor: currentUser.uid, criadoEm: new Date().toISOString(),
+      lido: false, lidoEm: null
+    });
+    closeAvisoModal();
+    showToast('Aviso enviado ✓');
+  } catch(e){ console.error(e); showToast('Erro ao enviar aviso'); }
+}
+async function checkMeusAvisos(){
+  const box = document.getElementById('avisosBox');
+  if (!box || !currentUser || currentUser.role === 'empregador') return;
+  try {
+    const sn = await getDocs(query(collection(db,'avisos'), where('destinatarioUid','==',currentUser.uid)));
+    meusAvisosNaoLidos = sn.docs.map(d=>({id:d.id, ...d.data()})).filter(a=>!a.lido).sort((a,b)=> new Date(a.criadoEm)-new Date(b.criadoEm));
+    renderAvisosBox();
+  } catch(e){ console.error('checkMeusAvisos', e); }
+}
+function renderAvisosBox(){
+  const box = document.getElementById('avisosBox');
+  if (!box) return;
+  if (!meusAvisosNaoLidos.length) { box.innerHTML=''; return; }
+  box.innerHTML = meusAvisosNaoLidos.map(a=>`<div class="aviso-card">
+    <div class="aviso-card-titulo">💬 Aviso</div>
+    <div class="aviso-card-texto">${a.texto}</div>
+    <button class="aviso-card-btn" onclick="marcarAvisoLido('${a.id}')">OK, entendi</button>
+  </div>`).join('');
+}
+async function marcarAvisoLido(id){
+  try {
+    await updateDoc(doc(db,'avisos',id), { lido:true, lidoEm: new Date().toISOString() });
+    meusAvisosNaoLidos = meusAvisosNaoLidos.filter(a=>a.id!==id);
+    renderAvisosBox();
+  } catch(e){ console.error(e); showToast('Erro ao dispensar aviso'); }
+}
 
 async function checkMeuValePendente(){
   const box = document.getElementById('valeConfirmaBox');
@@ -3621,6 +3703,47 @@ async function gerarTermoAjustesPDF(uid, ym){
 
 // ════ TOAST ════
 function showToast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200); }
+function mostrarCarregando(msg){
+  document.getElementById('acaoOverlayText').textContent = msg || 'Processando...';
+  document.getElementById('acaoOverlay').style.display = 'flex';
+}
+function esconderCarregando(){
+  document.getElementById('acaoOverlay').style.display = 'none';
+}
+
+// ════ envolve as ações que demoram (rede/upload/PDF) com o indicador visual ════
+// impede a sensação de "travou" e a pessoa sair da tela no meio da ação
+function comCarregamento(fn, msg){
+  return async function(...args){
+    mostrarCarregando(msg);
+    try { return await fn.apply(this, args); }
+    finally { esconderCarregando(); }
+  };
+}
+window.saveRecord = comCarregamento(saveRecord, 'Registrando ponto...');
+window.saveFalta = comCarregamento(saveFalta, 'Enviando falta...');
+window.saveCorrecao = comCarregamento(saveCorrecao, 'Enviando correção...');
+window.confirmarValeAssinatura = comCarregamento(confirmarValeAssinatura, 'Confirmando...');
+window.savePoint = comCarregamento(savePoint, 'Salvando ponto...');
+window.aprovarCorrecao = comCarregamento(aprovarCorrecao, 'Aprovando...');
+window.aprovarFalta = comCarregamento(aprovarFalta, 'Aprovando...');
+window.confirmRejeitar = comCarregamento(confirmRejeitar, 'Enviando...');
+window.gerarMeuRelatorioPDF = comCarregamento(gerarMeuRelatorioPDF, 'Gerando PDF...');
+window.gerarTermoAjustesPDF = comCarregamento(gerarTermoAjustesPDF, 'Gerando PDF...');
+window.gerarReciboValeTransporte = comCarregamento(gerarReciboValeTransporte, 'Gerando PDF...');
+window.enviarParaPlanilha = comCarregamento(enviarParaPlanilha, 'Enviando para a planilha...');
+window.abrirFechamento = comCarregamento(abrirFechamento, 'Enviando para a planilha...');
+window.consolidarMes = comCarregamento(consolidarMes, 'Consolidando...');
+window.reabrirMes = comCarregamento(reabrirMes, 'Reabrindo...');
+window.marcarValePago = comCarregamento(marcarValePago, 'Salvando...');
+window.saveContract = comCarregamento(saveContract, 'Salvando...');
+window.saveInvite = comCarregamento(saveInvite, 'Enviando convite...');
+window.inactivateEmployee = comCarregamento(inactivateEmployee, 'Atualizando...');
+window.reactivateEmployee = comCarregamento(reactivateEmployee, 'Atualizando...');
+window.deletePoint = comCarregamento(deletePoint, 'Excluindo...');
+window.deleteInvite = comCarregamento(deleteInvite, 'Excluindo...');
+window.saveFeriados = comCarregamento(saveFeriados, 'Salvando...');
+window.enviarAviso = comCarregamento(enviarAviso, 'Enviando aviso...');
 </script>
 </body>
 </html>
