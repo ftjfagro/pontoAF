@@ -483,7 +483,6 @@
   <div class="screen" id="screenFechamentos">
     <div class="section-header">
       <div><div class="section-title">Fechamentos</div><div class="section-sub">Períodos, vale-transporte e planilha</div></div>
-      <button onclick="abrirFechamento()" style="background:var(--folha);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📊 Enviar para cálculo da folha</button>
     </div>
     <div id="fechBody"></div>
   </div>
@@ -905,7 +904,7 @@ Object.assign(window, {
   valeSigStart, valeSigMove, valeSigEnd, confirmarValeAssinatura,
   setMinhasHorasView, toggleMinhasHorasMes, gerarMeuRelatorioPDF, toggleDiaExpandido,
   openFeriadosModal, closeFeriadosModal, addFeriado, removeFeriado, saveFeriados, seedFeriados,
-  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, abrirFechamento, enviarParaPlanilha,
+  openCorrecaoModal, closeCorrecaoModal, setCorTipo, updateCorSalvarBtn, saveCorrecao, atualizarCorContexto, enviarParaPlanilha,
   openEscolhaModal, closeEscolhaModal, openFaltaEscolhaJustificada, closeFaltaEscolhaModal,
   openFaltaModal, closeFaltaModal, setFaltaMotivo, onFaltaAnexoSelecionado, updateFaltaSalvarBtn,
   faltaSigStart, faltaSigMove, faltaSigEnd, faltaLimparAssinatura, faltaReassinar, saveFalta,
@@ -1462,43 +1461,6 @@ async function enviarPayloadParaPlanilha(payload){
     console.error(e);
     showToast('Falha no envio — verifique a URL do Apps Script');
   }
-}
-
-async function abrirFechamento() {
-  const emps = (window._empCache || []).filter(e => e.ativa !== false);
-  if (!emps.length) { showToast('Nenhuma funcionária ativa'); return; }
-
-  let escolhida;
-  if (emps.length === 1) {
-    escolhida = emps[0];
-  } else {
-    const lista = emps.map((e, i) => `${i + 1}) ${e.nome}`).join('\n');
-    const resp = prompt(`Fechar competência de qual funcionária?\n\n${lista}\n\nDigite o número:`, '1');
-    if (!resp) return;
-    const idx = parseInt(resp.trim(), 10) - 1;
-    if (isNaN(idx) || !emps[idx]) { showToast('Opção inválida'); return; }
-    escolhida = emps[idx];
-  }
-
-  const hoje = new Date();
-  const sug = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
-  const comp = prompt(`Fechar qual competência de ${escolhida.nome}? (AAAA-MM)`, sug);
-  if (!comp || !/^\d{4}-\d{2}$/.test(comp)) return;
-
-  const payload = montarPayload(comp, escolhida.uid);
-  if (!payload.dias.length) { showToast('Nenhum registro nessa competência'); return; }
-
-  const probs = validarFechamento(payload);
-  if (probs.length) {
-    const msg = `⚠️ ${probs.length} pendência(s):\n\n` + probs.slice(0, 12).join('\n') +
-      (probs.length > 12 ? `\n… e mais ${probs.length - 12}` : '') +
-      '\n\nEnviar mesmo assim?';
-    if (!confirm(msg)) return;
-  } else if (!confirm(`${escolhida.nome}: ${payload.dias.length} dias conferidos. Enviar ${comp} para a planilha?`)) {
-    return;
-  }
-
-  await enviarPayloadParaPlanilha(payload);
 }
 
 /** Envio direto de um mês já consolidado, sem prompts — uid/mês já conhecidos pelo card. */
@@ -3958,7 +3920,6 @@ window.gerarMeuRelatorioPDF = comCarregamento(gerarMeuRelatorioPDF, 'Gerando PDF
 window.gerarTermoAjustesPDF = comCarregamento(gerarTermoAjustesPDF, 'Gerando PDF...');
 window.gerarReciboValeTransporte = comCarregamento(gerarReciboValeTransporte, 'Gerando PDF...');
 window.enviarParaPlanilha = comCarregamento(enviarParaPlanilha, 'Enviando para a planilha...');
-window.abrirFechamento = comCarregamento(abrirFechamento, 'Enviando para a planilha...');
 window.consolidarMes = comCarregamento(consolidarMes, 'Consolidando...');
 window.reabrirMes = comCarregamento(reabrirMes, 'Reabrindo...');
 window.marcarValePago = comCarregamento(marcarValePago, 'Salvando...');
