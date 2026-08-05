@@ -227,9 +227,9 @@
     .btn-form-delete { background: var(--danger-light); color: var(--danger); flex: 1; }
     canvas { display: none; }
     /* ═══ DASHBOARD ═══ */
-    .dash-emp-tabs { display:flex; gap:8px; padding: 0 16px 4px; }
-    .dash-emp-tab { flex:1; padding:9px 8px; border:1.5px solid var(--border); border-radius:10px; background:var(--surface); color:var(--ink2); font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; }
-    .dash-emp-tab.on { background:var(--accent-light); border-color:var(--accent); color:var(--accent); }
+    .fech-grupo { margin:0 16px 10px; }
+    .fech-grupo-head { display:flex; align-items:center; justify-content:space-between; background:var(--surface2); border-radius:10px; padding:11px 14px; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer; margin-top:10px; }
+    .fech-grupo-body { padding-top:8px; }
     .dash-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin:12px 16px; padding:16px; }
     .dash-card.hl { border-color:var(--accent); }
     .dash-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
@@ -355,32 +355,47 @@
     .attach-box .d2 { font-size:10.5px; color:var(--ink3); font-weight:400; margin-top:3px; }
     .attach-box.tem-arquivo { border-style:solid; border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
     .warn-box { background:var(--danger-light); border:1px solid #F5B3AC; border-radius:10px; padding:12px 14px; font-size:12px; color:var(--danger); line-height:1.5; margin-bottom:12px; }
-    .falta-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:8px 16px; padding:12px 14px; display:flex; align-items:center; gap:10px; }
-    .falta-card.pendente { border-color:#F5C49A; }
-    .falta-icon { width:34px; height:34px; border-radius:8px; background:var(--warn-light); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-    .falta-card.aprovado .falta-icon { background:var(--accent-light); }
-    .falta-title { font-size:13px; font-weight:600; color:var(--ink); }
-    .falta-sub { font-size:11px; color:var(--ink3); margin-top:1px; }
+    .falta-mini { display:flex; align-items:center; gap:8px; background:var(--surface2); border-radius:8px; padding:7px 10px; margin:8px 16px; }
+    .falta-mini .ic { font-size:13px; flex-shrink:0; }
+    .falta-mini .txt { font-size:11.5px; color:var(--ink2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .falta-mini .txt b { color:var(--ink); font-weight:600; }
+    .falta-mini .anexo-link { font-size:10.5px; color:var(--accent); font-weight:600; text-decoration:none; flex-shrink:0; }
     .revisar-vazio-choice { display:flex; gap:5px; margin-top:6px; }
     .revisar-vazio-choice button { flex:1; padding:5px 6px; border:1.5px solid var(--border); border-radius:7px; font-size:10.5px; font-weight:600; background:var(--surface); color:var(--ink2); font-family:inherit; cursor:pointer; }
     .revisar-vazio-choice button.primary { background:var(--warn); border-color:var(--warn); color:#fff; }
     .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
     .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
     textarea.settings-input, textarea.field-input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; resize:vertical; min-height:70px; }
-    .pend-card { background:var(--surface); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 10px; padding:13px 14px; display:flex; gap:10px; align-items:flex-start; }
-    .pend-check { margin-top:3px; width:17px; height:17px; flex-shrink:0; cursor:pointer; }
-    .pend-selecionar-todas { display:flex; align-items:center; gap:8px; padding:0 16px 8px; font-size:12px; color:var(--ink2); cursor:pointer; }
+    .pend-topo-fixo { position:sticky; top:0; z-index:10; background:var(--bg); padding:8px 16px 10px; margin:0 0 4px; border-bottom:1px solid var(--border); }
+    .pend-selecionar-todas { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink2); cursor:pointer; padding-bottom:7px; }
     .pend-selecionar-todas input { width:16px; height:16px; }
-    .pend-bulk-bar { position:sticky; bottom:0; margin:0 16px 10px; background:var(--accent); color:#fff; border-radius:10px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 14px rgba(0,0,0,.15); }
-    .pend-bulk-bar button { background:#fff; color:var(--accent); border:none; border-radius:7px; padding:7px 13px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
-    .pend-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-    .pend-name { font-size:13.5px; font-weight:600; }
-    .pend-when { font-family:'DM Mono',monospace; font-size:12px; color:var(--ink2); }
-    .pend-just { font-size:12.5px; color:var(--ink2); margin:8px 0; line-height:1.4; background:var(--surface2); border-radius:8px; padding:9px 11px; }
-    .pend-btns { display:flex; gap:8px; margin-top:4px; }
-    .pend-btns button { flex:1; padding:9px; border:none; border-radius:8px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .pend-bulk-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--surface2); border-radius:9px; padding:7px 10px; }
+    .pend-bulk-bar span { font-size:11.5px; font-weight:600; color:var(--ink2); }
+    .pend-bulk-bar-btns { display:flex; gap:6px; }
+    .pend-bulk-bar-btns button { border:none; border-radius:7px; padding:6px 11px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .btn-aprovar-bloco { background:var(--accent); color:#fff; }
+    .btn-rejeitar-bloco { background:var(--danger-light); color:var(--danger); }
+    .pend-grupo { margin:0 16px 10px; }
+    .pend-grupo-head { display:flex; align-items:center; justify-content:space-between; background:var(--surface2); border-radius:10px; padding:10px 13px; font-size:13.5px; font-weight:600; color:var(--ink); cursor:pointer; margin-top:10px; }
+    .pend-grupo-head .qtd { font-weight:400; color:var(--ink3); font-size:11px; }
+    .pend-card { background:var(--surface); border:1px solid #F5C49A; border-radius:10px; margin-top:6px; padding:9px 11px; display:flex; align-items:flex-start; gap:9px; }
+    .pend-check { width:15px; height:15px; flex-shrink:0; margin-top:3px; cursor:pointer; }
+    .pend-body { flex:1; min-width:0; }
+    .pend-linha1 { display:flex; align-items:baseline; gap:7px; cursor:pointer; }
+    .pend-data-fixa { font-family:'DM Mono',monospace; font-size:11.5px; color:var(--ink3); white-space:nowrap; flex-shrink:0; }
+    .pend-data-fixa .dow { color:var(--ink3); }
+    .pend-tipo { font-size:12.5px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pend-linha2 { display:flex; align-items:baseline; gap:6px; margin-top:3px; }
+    .pend-hora { font-family:'DM Mono',monospace; font-size:12px; font-weight:600; color:var(--accent); flex-shrink:0; }
+    .pend-just-linha2 { font-size:11px; color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pend-btns-col { display:flex; flex-direction:column; gap:4px; flex-shrink:0; }
+    .pend-btns-col button { border:none; border-radius:6px; padding:5px 10px; font-size:10.5px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; }
     .pend-approve { background:var(--accent); color:white; }
     .pend-reject { background:var(--danger-light); color:var(--danger); }
+    .pend-expand { margin-top:8px; padding-top:8px; border-top:1px solid var(--surface2); }
+    .pend-expand-texto { font-size:11.5px; color:var(--ink2); line-height:1.4; margin-bottom:8px; }
+    .pend-expand-img { width:150px; border-radius:8px; border:1px solid var(--border); display:block; }
+    .chev-mini { color:var(--ink3); font-size:10px; }
     .cor-report-btn { background:none; border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; color:var(--ink2); cursor:pointer; font-family:inherit; margin-top:10px; }
     .revisar-box { background:var(--warn-light); border:1px solid #F5C49A; border-radius:12px; margin:0 16px 12px; padding:10px 12px; }
     .revisar-titulo { font-size:11px; font-weight:700; color:var(--warn); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
@@ -470,7 +485,6 @@
       <div><div class="section-title">Fechamentos</div><div class="section-sub">Períodos, vale-transporte e planilha</div></div>
       <button onclick="abrirFechamento()" style="background:var(--folha);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📊 Enviar para cálculo da folha</button>
     </div>
-    <div class="dash-emp-tabs" id="fechEmpTabs"></div>
     <div id="fechBody"></div>
   </div>
 
@@ -710,7 +724,7 @@
 
   <div class="form-modal" id="rejeitarModal">
     <div class="form-sheet">
-      <h3>Rejeitar correção</h3>
+      <h3 id="rejeitarModalTitulo">Rejeitar correção</h3>
       <div class="sub">Explique o motivo — a funcionária vai ver essa mensagem</div>
       <div class="field"><textarea id="rejMotivo" placeholder="Ex: horário não confere com o esperado, confirme comigo antes"></textarea></div>
       <div class="form-actions">
@@ -886,7 +900,7 @@ Object.assign(window, {
   openInviteModal, closeInviteModal, saveInvite, deleteInvite,
   inactivateEmployee, reactivateEmployee, toggleInactiveGroup,
   setDashView, toggleWeek, consolidarMes, reabrirMes, setVtView, gerarReciboValeTransporte,
-  abrirDetalheFuncionaria, fecharDetalheFuncionaria, setFechEmp, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia, abrirPontoParaMes,
+  abrirDetalheFuncionaria, fecharDetalheFuncionaria, toggleFechGrupo, mudaMesDetalhe, toggleFechMes, abrirPontoParaDia, abrirPontoParaMes,
   marcarValePago, openValeAssinaturaModal, closeValeAssinaturaModal, valeReassinar, valeLimparAssinatura,
   valeSigStart, valeSigMove, valeSigEnd, confirmarValeAssinatura,
   setMinhasHorasView, toggleMinhasHorasMes, gerarMeuRelatorioPDF, toggleDiaExpandido,
@@ -898,6 +912,7 @@ Object.assign(window, {
   abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta, toggleRevisarBox,
   abrirAvisoModal, closeAvisoModal, enviarAviso, marcarAvisoLido,
   toggleSelecaoPendente, toggleSelecionarTodas, aprovarSelecionadas,
+  toggleGrupoPendente, toggleExpandirFalta, openRejeitarLoteModal,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
 });
@@ -1652,6 +1667,13 @@ async function savePoint() {
   const hora = document.getElementById('pHora').value;
   if (!tipoEl) { showToast('Escolha o tipo de registro'); return; }
   if (!data || !hora) { showToast('Preencha data e horário'); return; }
+  if (!isDiaUtil(data)) {
+    const diasLongos = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    const [Y,M,D] = data.split('-').map(Number);
+    const nomeDia = diasLongos[new Date(Y,M-1,D).getDay()];
+    const dataFmt = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
+    if (!confirm(`${dataFmt} é ${nomeDia} — fora do dia útil normal (fim de semana ou feriado). Confirma o registro mesmo assim?`)) return;
+  }
   const tipo = tipoEl.dataset.t;
   const ts = new Date(`${data}T${hora}:00`).toISOString();
   const emp = (window._empCache||[]).find(e=>e.uid===editingPoint.empUid);
@@ -1803,6 +1825,15 @@ function retryPhoto() {
   document.getElementById('photoConfirm').classList.remove('open');
 }
 async function saveRecord() {
+  if (currentType === 'entrada') {
+    const hoje = ymdOf(new Date());
+    if (!isDiaUtil(hoje)) {
+      const diasLongos = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+      const [Y,M,D] = hoje.split('-').map(Number);
+      const nomeDia = diasLongos[new Date(Y,M-1,D).getDay()];
+      if (!confirm(`Hoje é ${nomeDia} — fora do seu dia útil normal (fim de semana ou feriado). Confirma que quer registrar o ponto mesmo assim?`)) { closeCamera(); return; }
+    }
+  }
   // Defesa extra: volta do almoço antes de 1h não é gravada
   if (currentType === 'almoco-volta') {
     const as = todayRecordsFor(currentUser.uid).find(r=>r.type==='almoco-saida');
@@ -2211,13 +2242,16 @@ function diasDoMes(uid, ym){
     if (trab === null) return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
     return { ds, incompleto:false, horarios, ...dividirDia(trab, ds) };
   });
-  // injeta faltas aprovadas (dias sem nenhum ponto, mas com falta declarada e aprovada)
-  if (currentUser && uid === currentUser.uid) {
-    const dsComRegistro = new Set(dias.map(d=>d.ds));
-    minhasFaltasRaw.filter(f=>f.status==='aprovado' && f.ds.slice(0,7)===ym && !dsComRegistro.has(f.ds)).forEach(f=>{
+  // injeta faltas aprovadas (dias sem nenhum ponto, mas com falta declarada e aprovada) —
+  // funciona tanto quando ela vê os próprios dias quanto quando o empregador vê os dela
+  const dsComRegistro = new Set(dias.map(d=>d.ds));
+  const ehEuMesma = currentUser && uid === currentUser.uid;
+  const fonteFaltas = ehEuMesma ? minhasFaltasRaw : faltasAprovadasPorCasa;
+  fonteFaltas
+    .filter(f => (ehEuMesma || f.uid === uid) && f.status === 'aprovado' && f.ds.slice(0,7) === ym && !dsComRegistro.has(f.ds))
+    .forEach(f => {
       dias.push({ ds:f.ds, incompleto:false, falta:true, justificada:f.justificada, motivoLabel:f.motivoLabel, anexoUrl:f.anexoUrl, jornada:0, banco:0, extra:0, trab:0, esperado:0, horarios:null });
     });
-  }
   dias.sort((a,b)=>a.ds.localeCompare(b.ds));
   return dias;
 }
@@ -2323,13 +2357,10 @@ function linhaDia(d, uid){
   const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
   if (d.falta) {
     const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
-    return `<div class="falta-card aprovado">
-      <div class="falta-icon">📋</div>
-      <div style="flex:1">
-        <div class="falta-title">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></div>
-        <div class="falta-sub">${rotulo}</div>
-      </div>
-      ${d.anexoUrl ? `<a href="${d.anexoUrl}" target="_blank" style="font-size:11px;color:var(--accent);font-weight:600;text-decoration:none;flex-shrink:0">Ver anexo</a>` : ''}
+    return `<div class="falta-mini">
+      <span class="ic">📋</span>
+      <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — ${rotulo}</span>
+      ${d.anexoUrl ? `<a href="${d.anexoUrl}" target="_blank" class="anexo-link">Ver anexo</a>` : ''}
     </div>`;
   }
   const key = uid+'|'+d.ds;
@@ -2621,10 +2652,10 @@ function renderDashboardDetalhe(emps){
 function setDashView(v){ dashView = v; renderDashboard(); }
 
 // ════ FECHAMENTOS (tela própria: períodos, vale-transporte, planilha) ════
-let fechEmpUid = null;
-let fechMesExpandido = null;
-function setFechEmp(uid){ fechEmpUid = uid; fechMesExpandido = null; renderFechamentos(); }
-function toggleFechMes(ym){ fechMesExpandido = (fechMesExpandido===ym) ? null : ym; renderFechamentos(); }
+let fechGrupoAberto = {};
+let fechMesExpandido = null; // agora guarda 'uid|ym', não só 'ym'
+function toggleFechGrupo(uid){ fechGrupoAberto[uid] = !(fechGrupoAberto[uid] !== false); renderFechamentos(); }
+function toggleFechMes(uid, ym){ const k = uid+'|'+ym; fechMesExpandido = (fechMesExpandido===k) ? null : k; renderFechamentos(); }
 function abrirPontoParaDia(uid, ds){
   openPointModal(uid);
   document.getElementById('pData').value = ds;
@@ -2644,6 +2675,14 @@ function renderDiasFechamento(uid, ym, ag, editable){
   return ag.dias.slice().reverse().map(d=>{
     const [Y,M,D] = d.ds.split('-').map(Number);
     const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+    if (d.falta) {
+      const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
+      return `<div class="falta-mini">
+        <span class="ic">📋</span>
+        <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — ${rotulo}</span>
+        ${d.anexoUrl ? `<a href="${d.anexoUrl}" target="_blank" class="anexo-link">Ver anexo</a>` : ''}
+      </div>`;
+    }
     const ents = entriesDoDia(uid, d.ds);
     return `<div style="border-top:1px solid var(--surface2);padding:10px 0">
       <div class="dayrow-top" style="margin-bottom:6px">
@@ -2661,18 +2700,7 @@ function renderDiasFechamento(uid, ym, ag, editable){
     </div>`;
   }).join('') + botaoGeral;
 }
-function renderFechamentos(){
-  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
-  const tabs = document.getElementById('fechEmpTabs');
-  if (!emps.length) {
-    tabs.innerHTML = '';
-    document.getElementById('fechBody').innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-title">Sem funcionárias para exibir</div></div>';
-    return;
-  }
-  if (!fechEmpUid || !emps.some(e=>e.uid===fechEmpUid)) fechEmpUid = emps[0].uid;
-  tabs.innerHTML = emps.length > 1 ? emps.map(e=>`<button class="dash-emp-tab${e.uid===fechEmpUid?' on':''}" onclick="setFechEmp('${e.uid}')">${e.nome.split(' ')[0]}${e.ativa===false?' 🗄️':''}</button>`).join('') : '';
-
-  const uid = fechEmpUid;
+function renderConteudoFechamentoFuncionaria(uid){
   const vigente = ymdOf(new Date()).slice(0,7);
   const meses = mesesComRegistro(uid);
   const emRevisar = meses.filter(ym => ym !== vigente && statusMes(uid, ym, false) === 'revisar');
@@ -2698,6 +2726,7 @@ function renderFechamentos(){
     const a = agregarMes(uid, ym);
     const duM = diasUteisMes(ym);
     const f = fechamentos[uid+'|'+ym];
+    const mesKey = uid+'|'+ym;
     if (st === 'revisar') {
       html += `<div class="dash-card">
         <div class="dash-card-head">
@@ -2713,8 +2742,8 @@ function renderFechamentos(){
         </div>
         <button class="dash-close-btn" onclick="consolidarMes('${uid}','${ym}')">Consolidar ${labelMes(ym)}</button>
         <button class="cor-report-btn" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
-        <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver e ajustar os dias'}</div>
-        ${fechMesExpandido===ym ? renderDiasFechamento(uid, ym, a, true) : ''}
+        <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${uid}','${ym}')">${fechMesExpandido===mesKey?'▴ Ocultar dias':'▾ Ver e ajustar os dias'}</div>
+        ${fechMesExpandido===mesKey ? renderDiasFechamento(uid, ym, a, true) : ''}
       </div>`;
     } else {
       const statusPlanilha = f && f.enviadoPlanilhaEm
@@ -2731,12 +2760,30 @@ function renderFechamentos(){
           <button class="cor-report-btn" style="margin-top:0" onclick="gerarTermoAjustesPDF('${uid}','${ym}')">🖨️ Termo de ajustes (PDF)</button>
         </div>
         ${statusPlanilha}
-        <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${ym}')">${fechMesExpandido===ym?'▴ Ocultar dias':'▾ Ver os dias'}</div>
-        ${fechMesExpandido===ym ? renderDiasFechamento(uid, ym, a, false) : ''}
+        <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600" onclick="toggleFechMes('${uid}','${ym}')">${fechMesExpandido===mesKey?'▴ Ocultar dias':'▾ Ver os dias'}</div>
+        ${fechMesExpandido===mesKey ? renderDiasFechamento(uid, ym, a, false) : ''}
       </div>`;
     }
   });
-  document.getElementById('fechBody').innerHTML = html;
+  return html;
+}
+function renderFechamentos(){
+  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const box = document.getElementById('fechBody');
+  if (!emps.length) {
+    box.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-title">Sem funcionárias para exibir</div></div>';
+    return;
+  }
+  box.innerHTML = emps.map(e=>{
+    const aberto = fechGrupoAberto[e.uid] !== false;
+    return `<div class="fech-grupo">
+      <div class="fech-grupo-head" onclick="toggleFechGrupo('${e.uid}')">
+        <span>${e.nome.split(' ')[0]}${e.ativa===false?' 🗄️':''}</span>
+        <span>${aberto?'▴':'▾'}</span>
+      </div>
+      ${aberto ? `<div class="fech-grupo-body">${renderConteudoFechamentoFuncionaria(e.uid)}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 function setVtView(v){ vtView = v; renderFechamentos(); }
 // ════ VALE-TRANSPORTE: confirmação digital assinada pela funcionária ════
@@ -3572,6 +3619,78 @@ function toggleSelecionarTodas(){
   }
   renderCorrecoesPendentes();
 }
+let pendentesGrupoAberto = {};
+let pendentesFaltaExpandida = {};
+let rejeitarLoteAtivo = false;
+function toggleGrupoPendente(uid){
+  pendentesGrupoAberto[uid] = !(pendentesGrupoAberto[uid] !== false);
+  renderCorrecoesPendentes();
+}
+function toggleExpandirFalta(id){
+  pendentesFaltaExpandida[id] = !pendentesFaltaExpandida[id];
+  renderCorrecoesPendentes();
+}
+function renderCorrecaoCardHtml(c){
+  const dt = new Date(c.ts);
+  const dow = DOW_CURTOS[dt.getDay()];
+  const dataFmt = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+  const hora = dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const marcado = selecionadosPendentes.has('correcao:'+c.id);
+  return `<div class="pend-card">
+    <input type="checkbox" class="pend-check" ${marcado?'checked':''} onchange="toggleSelecaoPendente('correcao','${c.id}')">
+    <div class="pend-body">
+      <div class="pend-linha1">
+        <span class="pend-data-fixa">${dataFmt} <span class="dow">${dow}</span></span>
+        <span class="pend-tipo">✏️ ${typeLabel(c.tipo)}</span>
+      </div>
+      <div class="pend-linha2">
+        <span class="pend-hora">${hora}</span>
+        <span class="pend-just-linha2">"${c.justificativa}"</span>
+      </div>
+    </div>
+    <div class="pend-btns-col">
+      <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
+      <button class="pend-reject" onclick="openRejeitarModal('${c.id}','correcao')">Rejeitar</button>
+    </div>
+  </div>`;
+}
+function renderFaltaCardHtml(f){
+  const [Y,M,D] = f.ds.split('-').map(Number);
+  const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+  const dataFmt = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
+  const rotulo = f.justificada ? `Falta justificada${f.motivoLabel?' · '+f.motivoLabel:''}` : 'Falta não justificada';
+  const marcado = selecionadosPendentes.has('falta:'+f.id);
+  const aberto = !!pendentesFaltaExpandida[f.id];
+  let expandHtml = '';
+  if (aberto) {
+    const ehPdf = f.anexoUrl && /\.pdf(\?|$)/i.test(f.anexoUrl);
+    expandHtml = `<div class="pend-expand">
+      <div class="pend-expand-texto">${f.detalhes ? `"${f.detalhes}"` : 'Sem detalhes adicionais.'}</div>
+      ${f.anexoUrl
+        ? (ehPdf
+            ? `<a href="${f.anexoUrl}" target="_blank" style="font-size:11.5px;color:var(--accent);font-weight:600;text-decoration:none">📄 Abrir PDF anexado</a>`
+            : `<img class="pend-expand-img" src="${f.anexoUrl}">`)
+        : ''}
+    </div>`;
+  }
+  return `<div class="pend-card">
+    <input type="checkbox" class="pend-check" ${marcado?'checked':''} onchange="toggleSelecaoPendente('falta','${f.id}')">
+    <div class="pend-body">
+      <div class="pend-linha1" onclick="toggleExpandirFalta('${f.id}')">
+        <span class="pend-data-fixa">${dataFmt} <span class="dow">${dow}</span></span>
+        <span class="pend-tipo">📋 ${rotulo}</span>
+      </div>
+      <div class="pend-linha2">
+        <span class="pend-just-linha2">Toque pra ver detalhes<span class="chev-mini"> ${aberto?'▴':'▾'}</span></span>
+      </div>
+      ${expandHtml}
+    </div>
+    <div class="pend-btns-col">
+      <button class="pend-approve" onclick="aprovarFalta('${f.id}')">Aprovar</button>
+      <button class="pend-reject" onclick="openRejeitarModal('${f.id}','falta')">Rejeitar</button>
+    </div>
+  </div>`;
+}
 function renderCorrecoesPendentes(){
   const box = document.getElementById('correcoesPendentesBox');
   const badge = document.getElementById('navConfigBadge');
@@ -3582,46 +3701,41 @@ function renderCorrecoesPendentes(){
   }
   if (!box) return;
   if (!total) { box.innerHTML=''; return; }
-  const correcoesHtml = correcoesPendentesCache.map(c=>{
-    const dt = new Date(c.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const marcado = selecionadosPendentes.has('correcao:'+c.id);
-    return `<div class="pend-card">
-      <input type="checkbox" class="pend-check" ${marcado?'checked':''} onchange="toggleSelecaoPendente('correcao','${c.id}')">
-      <div style="flex:1;min-width:0">
-        <div class="pend-top"><div class="pend-name">✏️ ${(c.nome||'').split(' ')[0]} · ${typeLabel(c.tipo)}</div><div class="pend-when">${dt}</div></div>
-        <div class="pend-just">"${c.justificativa}" — assinado como ${c.assinadoComo}</div>
-        <div class="pend-btns">
-          <button class="pend-reject" onclick="openRejeitarModal('${c.id}','correcao')">Rejeitar</button>
-          <button class="pend-approve" onclick="aprovarCorrecao('${c.id}')">Aprovar</button>
-        </div>
+
+  const porFuncionaria = {};
+  correcoesPendentesCache.forEach(c=>{
+    (porFuncionaria[c.uid] = porFuncionaria[c.uid] || { nome:c.nome, itens:[] }).itens.push(renderCorrecaoCardHtml(c));
+  });
+  faltasPendentesCache.forEach(f=>{
+    (porFuncionaria[f.uid] = porFuncionaria[f.uid] || { nome:f.nome, itens:[] }).itens.push(renderFaltaCardHtml(f));
+  });
+
+  const gruposHtml = Object.entries(porFuncionaria).map(([uid, grupo])=>{
+    const aberto = pendentesGrupoAberto[uid] !== false;
+    return `<div class="pend-grupo">
+      <div class="pend-grupo-head" onclick="toggleGrupoPendente('${uid}')">
+        <span>${grupo.nome.split(' ')[0]} <span class="qtd">${grupo.itens.length} pendência${grupo.itens.length>1?'s':''}</span></span>
+        <span>${aberto?'▴':'▾'}</span>
       </div>
+      ${aberto ? grupo.itens.join('') : ''}
     </div>`;
   }).join('');
-  const faltasHtml = faltasPendentesCache.map(f=>{
-    const [Y,M,D] = f.ds.split('-').map(Number);
-    const dtStr = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
-    const rotulo = f.justificada ? `Falta justificada${f.motivoLabel?' · '+f.motivoLabel:''}` : 'Falta não justificada';
-    const marcado = selecionadosPendentes.has('falta:'+f.id);
-    return `<div class="pend-card">
-      <input type="checkbox" class="pend-check" ${marcado?'checked':''} onchange="toggleSelecaoPendente('falta','${f.id}')">
-      <div style="flex:1;min-width:0">
-        <div class="pend-top"><div class="pend-name">📋 ${(f.nome||'').split(' ')[0]} · ${dtStr}</div><div class="pend-when">${rotulo}</div></div>
-        ${f.detalhes ? `<div class="pend-just">"${f.detalhes}"</div>` : ''}
-        ${f.anexoUrl ? `<a href="${f.anexoUrl}" target="_blank" style="display:block;font-size:11.5px;color:var(--accent);font-weight:600;margin-bottom:8px;text-decoration:none">📎 Ver comprovante anexado</a>` : ''}
-        <div class="pend-btns">
-          <button class="pend-reject" onclick="openRejeitarModal('${f.id}','falta')">Rejeitar</button>
-          <button class="pend-approve" onclick="aprovarFalta('${f.id}')">Aprovar</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-  const todasMarcadas = selecionadosPendentes.size === total;
+
+  const todasMarcadas = total > 0 && selecionadosPendentes.size === total;
   const bulkBar = selecionadosPendentes.size > 0
-    ? `<div class="pend-bulk-bar"><span>${selecionadosPendentes.size} selecionada(s)</span><button onclick="aprovarSelecionadas()">Aprovar selecionadas</button></div>`
+    ? `<div class="pend-bulk-bar"><span>${selecionadosPendentes.size} selecionada(s)</span>
+        <div class="pend-bulk-bar-btns">
+          <button class="btn-rejeitar-bloco" onclick="openRejeitarLoteModal()">Rejeitar</button>
+          <button class="btn-aprovar-bloco" onclick="aprovarSelecionadas()">Aprovar</button>
+        </div>
+      </div>`
     : '';
-  box.innerHTML = `<div class="dash-sec-label">Correções pendentes (${total})</div>
-    <label class="pend-selecionar-todas"><input type="checkbox" ${todasMarcadas?'checked':''} onchange="toggleSelecionarTodas()"> Selecionar todas</label>
-    ${correcoesHtml}${faltasHtml}${bulkBar}`;
+
+  box.innerHTML = `<div class="pend-topo-fixo">
+      <label class="pend-selecionar-todas"><input type="checkbox" ${todasMarcadas?'checked':''} onchange="toggleSelecionarTodas()"> Selecionar todas (${total})</label>
+      ${bulkBar}
+    </div>
+    ${gruposHtml}`;
 }
 async function aprovarCorrecaoSilenciosa(id){
   const c = correcoesPendentesCache.find(x=>x.id===id);
@@ -3674,11 +3788,42 @@ async function aprovarSelecionadas(){
   showToast(`${ok} aprovada(s)${falhas ? ` · ${falhas} não puderam ser aprovadas (confira meses fechados)` : ''}`);
   await loadCorrecoesPendentes();
 }
-function openRejeitarModal(id, tipo){ rejeitarAlvoId = id; rejeitarAlvoTipo = tipo || 'correcao'; document.getElementById('rejMotivo').value=''; document.getElementById('rejeitarModal').classList.add('open'); }
-function closeRejeitarModal(){ document.getElementById('rejeitarModal').classList.remove('open'); rejeitarAlvoId = null; }
+function openRejeitarModal(id, tipo){
+  rejeitarLoteAtivo = false;
+  rejeitarAlvoId = id; rejeitarAlvoTipo = tipo || 'correcao';
+  document.getElementById('rejeitarModalTitulo').textContent = 'Rejeitar ' + (rejeitarAlvoTipo==='falta' ? 'falta' : 'correção');
+  document.getElementById('rejMotivo').value='';
+  document.getElementById('rejeitarModal').classList.add('open');
+}
+function openRejeitarLoteModal(){
+  if (!selecionadosPendentes.size) return;
+  rejeitarLoteAtivo = true;
+  rejeitarAlvoId = null;
+  document.getElementById('rejeitarModalTitulo').textContent = `Rejeitar ${selecionadosPendentes.size} selecionada(s)`;
+  document.getElementById('rejMotivo').value = '';
+  document.getElementById('rejeitarModal').classList.add('open');
+}
+function closeRejeitarModal(){ document.getElementById('rejeitarModal').classList.remove('open'); rejeitarAlvoId = null; rejeitarLoteAtivo = false; }
 async function confirmRejeitar(){
-  if (!rejeitarAlvoId) return;
   const motivo = document.getElementById('rejMotivo').value.trim();
+  if (rejeitarLoteAtivo) {
+    if (!selecionadosPendentes.size) { closeRejeitarModal(); return; }
+    let ok = 0;
+    for (const key of [...selecionadosPendentes]) {
+      const [tipo, id] = key.split(':');
+      const colecao = tipo === 'falta' ? 'faltas' : 'correcoes';
+      try {
+        await updateDoc(doc(db,colecao,id), { status:'rejeitado', motivoRejeicao: motivo || 'Sem motivo informado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
+        ok++;
+      } catch(e){ console.error(e); }
+    }
+    selecionadosPendentes.clear();
+    showToast(`${ok} rejeitada(s)`);
+    closeRejeitarModal();
+    await loadCorrecoesPendentes();
+    return;
+  }
+  if (!rejeitarAlvoId) return;
   const colecao = rejeitarAlvoTipo === 'falta' ? 'faltas' : 'correcoes';
   try {
     await updateDoc(doc(db,colecao,rejeitarAlvoId), { status:'rejeitado', motivoRejeicao: motivo || 'Sem motivo informado', revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString() });
