@@ -1456,10 +1456,16 @@ async function enviarPayloadParaPlanilha(payload){
       redirect: 'follow'
     });
     const out = await res.json();
-    showToast(out.ok ? `✓ ${out.linhas} dias na planilha` : 'Erro: ' + out.erro);
+    if (out.ok) {
+      showToast(`✓ ${out.linhas} dias na planilha`);
+      return true;
+    }
+    showToast('Erro: ' + out.erro);
+    return false;
   } catch (e) {
     console.error(e);
     showToast('Falha no envio — verifique a URL do Apps Script');
+    return false;
   }
 }
 
@@ -1479,7 +1485,8 @@ async function enviarParaPlanilha(uid, ym){
     return;
   }
 
-  await enviarPayloadParaPlanilha(payload);
+  const ok = await enviarPayloadParaPlanilha(payload);
+  if (!ok) return;
   try {
     await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { enviadoPlanilhaEm: new Date().toISOString() });
     await loadFechamentos();
@@ -2267,7 +2274,7 @@ async function reabrirMes(uid, ym){
   try {
     await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { status:'revisar', reabertoEm:new Date().toISOString(), enviadoPlanilhaEm: null });
     showToast('Mês reaberto — lembre de reconsolidar e reenviar pra planilha depois do ajuste');
-    await loadFechamentos(); renderDashboard();
+    await loadFechamentos(); renderFechamentos();
   } catch(e){ console.error(e); showToast('Erro ao reabrir'); }
 }
 
