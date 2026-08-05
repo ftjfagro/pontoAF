@@ -165,7 +165,7 @@
     .btn-retry { flex: 1; background: rgba(255,255,255,0.15); border: none; color: white; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .btn-save { flex: 2; background: var(--accent); border: none; color: white; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-save:disabled { opacity: 0.6; cursor: wait; }
-    nav { background: var(--surface); border-top: 1px solid var(--border); display: flex; position: sticky; bottom: 0; z-index: 100; }
+    nav { background: var(--accent-light); border-top: 1px solid var(--border); display: flex; position: sticky; bottom: 0; z-index: 100; }
     .nav-btn { flex: 1; border: none; background: none; padding: 11px 8px 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--ink3); transition: color 0.15s; }
     .nav-btn.active { color: var(--accent); }
     .nav-btn { position: relative; }
@@ -842,9 +842,9 @@
 
   <nav id="appNav">
     <button class="nav-btn active" id="navRegistro" onclick="showScreen('Registro')"><div class="nav-icon">⏱️</div><div class="nav-label">Registro</div></button>
-    <button class="nav-btn" id="navDashboard" style="display:none" onclick="showScreen('Dashboard')"><div class="nav-icon">📊</div><div class="nav-label">Dashboard</div></button>
+    <button class="nav-btn" id="navDashboard" style="display:none" onclick="showScreen('Dashboard')"><div class="nav-icon">📈</div><div class="nav-label">Dashboard</div></button>
     <button class="nav-btn" id="navFechamentos" style="display:none" onclick="showScreen('Fechamentos')"><div class="nav-icon">🗂️</div><div class="nav-label">Fechamentos</div></button>
-    <button class="nav-btn" id="navHistorico" onclick="showScreen('Historico')"><div class="nav-icon">📊</div><div class="nav-label">Minhas Horas</div></button>
+    <button class="nav-btn" id="navHistorico" onclick="showScreen('Historico')"><div class="nav-icon">🗓️</div><div class="nav-label">Minhas Horas</div></button>
     <button class="nav-btn" id="navConfig" onclick="showScreen('Config')"><div class="nav-icon">⚙️</div><div class="nav-label">Config</div><div class="nav-badge" id="navConfigBadge" style="display:none">0</div></button>
   </nav>
 </div>
@@ -2303,8 +2303,8 @@ async function consolidarMes(uid, ym){
 async function reabrirMes(uid, ym){
   if (!confirm(`Reabrir ${labelMes(ym)} para ajustes?`)) return;
   try {
-    await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { status:'revisar', reabertoEm:new Date().toISOString() });
-    showToast('Mês reaberto');
+    await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { status:'revisar', reabertoEm:new Date().toISOString(), enviadoPlanilhaEm: null });
+    showToast('Mês reaberto — lembre de reconsolidar e reenviar pra planilha depois do ajuste');
     await loadFechamentos(); renderDashboard();
   } catch(e){ console.error(e); showToast('Erro ao reabrir'); }
 }
@@ -3762,15 +3762,31 @@ async function aprovarFaltaSilenciosa(id){
     return { ok:true };
   } catch(e){ console.error(e); return { ok:false, motivo:'erro' }; }
 }
+async function reabrirParaAprovar(uid, ym){
+  if (!confirm(`O mês de ${labelMes(ym)} já está fechado. Reabrir agora e aprovar em seguida?\n\nLembre de reconsolidar e reenviar pra planilha depois do ajuste.`)) return false;
+  try {
+    await updateDoc(doc(db,'fechamentos', uid+'_'+ym), { status:'revisar', reabertoEm:new Date().toISOString(), enviadoPlanilhaEm: null });
+    await loadFechamentos();
+    return true;
+  } catch(e){ console.error(e); showToast('Erro ao reabrir o mês'); return false; }
+}
 async function aprovarCorrecao(id){
-  const r = await aprovarCorrecaoSilenciosa(id);
-  if (!r.ok) { showToast(r.motivo==='fechado' ? 'Este mês já está fechado — reabra antes de aprovar' : 'Erro ao aprovar'); return; }
+  let r = await aprovarCorrecaoSilenciosa(id);
+  if (!r.ok && r.motivo === 'fechado') {
+    const c = correcoesPendentesCache.find(x=>x.id===id);
+    if (c && await reabrirParaAprovar(c.uid, c.ts.slice(0,7))) r = await aprovarCorrecaoSilenciosa(id);
+  }
+  if (!r.ok) { showToast(r.motivo==='fechado' ? 'Este mês continua fechado' : 'Erro ao aprovar'); return; }
   showToast('Correção aprovada ✓');
   await loadCorrecoesPendentes();
 }
 async function aprovarFalta(id){
-  const r = await aprovarFaltaSilenciosa(id);
-  if (!r.ok) { showToast(r.motivo==='fechado' ? 'Este mês já está fechado — reabra antes de aprovar' : 'Erro ao aprovar falta'); return; }
+  let r = await aprovarFaltaSilenciosa(id);
+  if (!r.ok && r.motivo === 'fechado') {
+    const f = faltasPendentesCache.find(x=>x.id===id);
+    if (f && await reabrirParaAprovar(f.uid, f.ds.slice(0,7))) r = await aprovarFaltaSilenciosa(id);
+  }
+  if (!r.ok) { showToast(r.motivo==='fechado' ? 'Este mês continua fechado' : 'Erro ao aprovar falta'); return; }
   showToast('Falta aprovada ✓');
   await loadCorrecoesPendentes();
 }
