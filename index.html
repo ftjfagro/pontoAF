@@ -310,6 +310,19 @@
     .vt-confirma-title { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
     .vt-confirma-valor { font-size:19px; font-weight:600; color:var(--ink); font-family:'DM Mono',monospace; margin:2px 0 10px; }
     .vt-status-pago { font-size:12px; color:var(--ink2); margin-top:8px; }
+    .avulso-row { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-top:1px solid var(--surface2); }
+    .avulso-row:first-child { border-top:none; }
+    .avulso-data { font-size:12.5px; font-weight:600; color:var(--ink); }
+    .avulso-data .dow { color:var(--ink3); font-weight:400; font-size:11px; }
+    .avulso-valor { font-family:'DM Mono',monospace; font-size:12.5px; color:var(--folha); font-weight:600; }
+    .avulso-btns { display:flex; gap:6px; }
+    .avulso-btns button { border:none; background:none; font-size:12px; cursor:pointer; color:var(--ink3); }
+    .btn-lancar-avulso { background:var(--folha); color:#fff; border:none; border-radius:9px; padding:10px; font-size:12.5px; font-weight:600; width:100%; margin-top:8px; cursor:pointer; font-family:inherit; }
+    .calc-box { background:var(--folha-light); border-radius:10px; margin:0 0 12px; padding:11px 13px; }
+    .calc-linha { display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink2); padding:3px 0; }
+    .calc-linha b { font-family:'DM Mono',monospace; color:var(--ink); font-weight:600; }
+    .calc-total { display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:var(--folha); padding-top:6px; margin-top:4px; border-top:1px solid #BFDCF0; }
+    .calc-nota { font-size:9.5px; color:var(--ink3); margin-top:6px; line-height:1.4; }
     .vt-metrics { display:flex; gap:10px; margin:12px 0; }
     .vt-metrics .dash-metric { flex:1; }
     .fer-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
@@ -348,6 +361,8 @@
     .opt-btn.j .d { color:#4a8a6f; }
     .opt-btn.nj { border-color:var(--danger); background:var(--danger-light); color:var(--danger); }
     .opt-btn.nj .d { color:#c96a62; }
+    .opt-btn.folga { border-color:var(--folha); background:var(--folha-light); color:var(--folha); }
+    .opt-btn.folga .d { color:#5490bf; }
     .motivo-grid { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
     .motivo-chip { padding:8px 12px; border:1.5px solid var(--border); border-radius:100px; font-size:12px; background:var(--surface); color:var(--ink2); cursor:pointer; font-family:inherit; }
     .motivo-chip.on { background:var(--accent-light); border-color:var(--accent); color:var(--accent); font-weight:600; }
@@ -356,13 +371,15 @@
     .attach-box.tem-arquivo { border-style:solid; border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
     .warn-box { background:var(--danger-light); border:1px solid #F5B3AC; border-radius:10px; padding:12px 14px; font-size:12px; color:var(--danger); line-height:1.5; margin-bottom:12px; }
     .falta-mini { display:flex; align-items:center; gap:8px; background:var(--surface2); border-radius:8px; padding:7px 10px; margin:8px 16px; }
+    .falta-mini.folga { background:var(--folha-light); }
     .falta-mini .ic { font-size:13px; flex-shrink:0; }
     .falta-mini .txt { font-size:11.5px; color:var(--ink2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .falta-mini .txt b { color:var(--ink); font-weight:600; }
     .falta-mini .anexo-link { font-size:10.5px; color:var(--accent); font-weight:600; text-decoration:none; flex-shrink:0; }
-    .revisar-vazio-choice { display:flex; gap:5px; margin-top:6px; }
-    .revisar-vazio-choice button { flex:1; padding:5px 6px; border:1.5px solid var(--border); border-radius:7px; font-size:10.5px; font-weight:600; background:var(--surface); color:var(--ink2); font-family:inherit; cursor:pointer; }
+    .revisar-vazio-choice { display:flex; gap:4px; margin-top:6px; }
+    .revisar-vazio-choice button { flex:1; padding:5px 4px; border:1.5px solid var(--border); border-radius:7px; font-size:9.5px; font-weight:600; background:var(--surface); color:var(--ink2); font-family:inherit; cursor:pointer; }
     .revisar-vazio-choice button.primary { background:var(--warn); border-color:var(--warn); color:#fff; }
+    .revisar-vazio-choice button.folga { background:var(--folha); border-color:var(--folha); color:#fff; }
     .termo-check input { margin-top:3px; flex-shrink:0; width:17px; height:17px; }
     .termo-check span { font-size:12.5px; color:var(--ink2); line-height:1.45; }
     textarea.settings-input, textarea.field-input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; resize:vertical; min-height:70px; }
@@ -611,6 +628,10 @@
         <label>Vale-transporte diário (ida + volta, R$)</label>
         <input type="number" id="fValeTransporte" placeholder="Ex: 9.00" step="0.01" inputmode="decimal" />
       </div>
+      <div class="frow">
+        <label>Adicional por acúmulo de função — condução de veículo (R$, trabalho avulso)</label>
+        <input type="number" id="fAdicionalFuncao" placeholder="Ex: 30.00" step="0.01" inputmode="decimal" />
+      </div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeContractModal()">Cancelar</button>
         <button class="btn-form-save" onclick="saveContract()">Salvar</button>
@@ -762,6 +783,7 @@
       <h3>O que você precisa registrar?</h3>
       <button class="opt-btn" onclick="closeEscolhaModal(); openCorrecaoModal();">✏️ Corrigir ponto esquecido<div class="d">Bati o ponto errado ou esqueci um horário</div></button>
       <button class="opt-btn" onclick="closeEscolhaModal(); openFaltaEscolhaJustificada();">📋 Apontar falta<div class="d">Não vou / não fui trabalhar num dia</div></button>
+      <button class="opt-btn folga" onclick="closeEscolhaModal(); openFolgaModal();">🏖️ Registrar folga<div class="d">O empregador liberou pra abater do banco de horas</div></button>
       <div class="form-actions"><button class="btn-form-cancel" onclick="closeEscolhaModal()" style="width:100%">Cancelar</button></div>
     </div>
   </div>
@@ -823,6 +845,72 @@
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeFaltaModal()">Cancelar</button>
         <button class="btn-form-save" id="faltaSalvarBtn" onclick="saveFalta()">Enviar para aprovação</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="folgaModal">
+    <div class="form-sheet">
+      <h3>Registrar folga</h3>
+      <div class="sub">O empregador liberou este dia — vai ser abatido do seu banco de horas</div>
+      <div class="field"><label>Data da folga</label><input type="date" id="folgaData" /></div>
+      <div class="field"><label>Detalhes <span style="font-weight:400;color:var(--ink3);font-size:11px">(opcional)</span></label><textarea id="folgaDetalhes" placeholder="Ex: combinado na sexta-feira"></textarea></div>
+      <div class="termo-box" id="folgaTermoTexto">Declaro que o empregador me liberou neste dia, a ser abatido do meu banco de horas, e solicito o registro desta folga.</div>
+      <label class="termo-check"><input type="checkbox" id="folgaAceite" /><span>Estou de acordo com o termo acima.</span></label>
+
+      <div class="field" id="folgaAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="folgaAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="folgaReassinar()">Assinar novamente</button>
+      </div>
+      <div class="field" id="folgaAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="folgaSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="folgaSigStart(event)" onpointermove="folgaSigMove(event)" onpointerup="folgaSigEnd(event)" onpointerleave="folgaSigEnd(event)" onpointercancel="folgaSigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="folgaLimparAssinatura()">Limpar</button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeFolgaModal()">Cancelar</button>
+        <button class="btn-form-save" id="folgaSalvarBtn" onclick="saveFolga()">Enviar para aprovação</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="folgaEmpregadorModal">
+    <div class="form-sheet">
+      <h3>Marcar dia como folga</h3>
+      <div class="sub" id="folgaEmpNomeSub">—</div>
+      <div class="field"><label>Data</label><input type="date" id="folgaEmpData" /></div>
+      <div class="field"><label>Observação <span style="font-weight:400;color:var(--ink3);font-size:11px">(opcional)</span></label><textarea id="folgaEmpObs" placeholder="Ex: combinado na sexta-feira"></textarea></div>
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeFolgaEmpregadorModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="confirmarFolgaEmpregador()">Confirmar folga</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="avulsoModal">
+    <div class="form-sheet">
+      <h3>Lançar trabalho avulso</h3>
+      <div class="sub" id="avulsoNomeSub">—</div>
+      <div class="field"><label>Data</label><input type="date" id="avulsoData" onchange="recalcularAvulso()" /></div>
+      <div class="field" style="display:flex;gap:8px">
+        <div style="flex:1"><label>Início</label><input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="avulsoInicio" oninput="maskHora(this); recalcularAvulso();" onblur="validaHora(this); recalcularAvulso();" /></div>
+        <div style="flex:1"><label>Término</label><input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="avulsoTermino" oninput="maskHora(this); recalcularAvulso();" onblur="validaHora(this); recalcularAvulso();" /></div>
+      </div>
+
+      <label class="termo-check"><input type="checkbox" id="avulsoConducao" onchange="recalcularAvulso()" /><span>Envolve condução de veículo (acúmulo de função)</span></label>
+
+      <div class="calc-box" id="avulsoCalcBox">
+        <div class="calc-linha"><span>Escolha data e horários</span></div>
+      </div>
+
+      <div class="field"><label>Valor combinado (R$)</label><input type="text" inputmode="decimal" id="avulsoValorCombinado" placeholder="0,00" style="font-weight:600;color:var(--folha)" /></div>
+      <div class="sub" style="padding-top:0;color:var(--warn)" id="avulsoAvisoMinimo"></div>
+
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeAvulsoModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="salvarAvulso()">Salvar e gerar recibo</button>
       </div>
     </div>
   </div>
@@ -909,6 +997,10 @@ Object.assign(window, {
   openFaltaModal, closeFaltaModal, setFaltaMotivo, onFaltaAnexoSelecionado, updateFaltaSalvarBtn,
   faltaSigStart, faltaSigMove, faltaSigEnd, faltaLimparAssinatura, faltaReassinar, saveFalta,
   abrirCorrecaoParaDiaVazio, abrirFaltaParaDia, aprovarFalta, toggleRevisarBox,
+  openFolgaModal, closeFolgaModal, abrirFolgaParaDia, folgaReassinar, folgaLimparAssinatura,
+  folgaSigStart, folgaSigMove, folgaSigEnd, saveFolga,
+  abrirFolgaEmpregadorModal, closeFolgaEmpregadorModal, confirmarFolgaEmpregador,
+  abrirAvulsoModal, closeAvulsoModal, recalcularAvulso, salvarAvulso, excluirAvulso, gerarReciboAvulso,
   abrirAvisoModal, closeAvisoModal, enviarAviso, marcarAvisoLido,
   toggleSelecaoPendente, toggleSelecionarTodas, aprovarSelecionadas,
   toggleGrupoPendente, toggleExpandirFalta, openRejeitarLoteModal,
@@ -1419,10 +1511,13 @@ function montarPayload(competencia, empUid) {
     const k = emp.nome + '|' + f.ds;
     if (bucket[k]) return; // já tem ponto batido nesse dia, não sobrescreve
     bucket[k] = {
-      nome: emp.nome, data: f.ds, tipoDia: f.justificada ? 'ATESTADO' : 'FALTA',
+      nome: emp.nome, data: f.ds,
+      tipoDia: f.tipo === 'folga_banco' ? 'FOLGA_BANCO' : (f.justificada ? 'ATESTADO' : 'FALTA'),
       entrada: null, almocoSaida: null, almocoVolta: null, saida: null,
       manual: false, foraCerca: 0,
-      obs: f.justificada ? `${f.motivoLabel || 'Falta justificada'}${f.detalhes ? ' — ' + f.detalhes : ''}` : (f.detalhes || 'Falta não justificada')
+      obs: f.tipo === 'folga_banco'
+        ? (f.detalhes || 'Folga para abatimento do banco de horas')
+        : (f.justificada ? `${f.motivoLabel || 'Falta justificada'}${f.detalhes ? ' — ' + f.detalhes : ''}` : (f.detalhes || 'Falta não justificada'))
     };
   });
 
@@ -1437,7 +1532,7 @@ function validarFechamento(payload) {
   });
   payload.dias.forEach(d => {
     const faltando = ['entrada', 'saida'].filter(c => !d[c]);
-    if (faltando.length && !['FERIADO', 'FALTA', 'ATESTADO', 'DSR', 'FERIAS'].includes(d.tipoDia)) {
+    if (faltando.length && !['FERIADO', 'FALTA', 'ATESTADO', 'DSR', 'FERIAS', 'FOLGA_BANCO'].includes(d.tipoDia)) {
       p.push(`${d.nome} ${d.data.split('-').reverse().join('/')}: falta ${faltando.join(' e ')}`);
     }
   });
@@ -1472,6 +1567,11 @@ async function enviarPayloadParaPlanilha(payload){
 /** Envio direto de um mês já consolidado, sem prompts — uid/mês já conhecidos pelo card. */
 async function enviarParaPlanilha(uid, ym){
   const emp = (window._empCache || []).find(e => e.uid === uid);
+  const problemasCoerencia = diasComProblemasCoerencia(uid, ym);
+  if (problemasCoerencia.length) {
+    alert(`⚠️ Não é possível enviar — existem dias com apontamento incoerente:\n\n${mensagemProblemasCoerencia(problemasCoerencia)}\n\nAjuste esses pontos em "Ver e ajustar os dias" antes de enviar.`);
+    return;
+  }
   const payload = montarPayload(ym, uid);
   if (!payload.dias.length) { showToast('Nenhum registro nesse mês'); return; }
 
@@ -1507,6 +1607,7 @@ function openContractModal(uid) {
   document.getElementById('fJornada').value = ct.jornadaDiaria || '';
   document.getElementById('fAdmissao').value = ct.admissao || '';
   document.getElementById('fValeTransporte').value = ct.valeTransporteDiario != null ? ct.valeTransporteDiario : '';
+  document.getElementById('fAdicionalFuncao').value = ct.adicionalFuncaoValor != null ? ct.adicionalFuncaoValor : '';
   const dias = ct.diasTrabalho || [1,2,3,4,5];
   document.querySelectorAll('#fDias .day-chip').forEach(chip=>{
     const d = parseInt(chip.dataset.d);
@@ -1526,6 +1627,7 @@ async function saveContract() {
     diasTrabalho: dias.length ? dias : [1,2,3,4,5],
     admissao: document.getElementById('fAdmissao').value || null,
     valeTransporteDiario: parseFloat(document.getElementById('fValeTransporte').value) || null,
+    adicionalFuncaoValor: parseFloat(document.getElementById('fAdicionalFuncao').value) || null,
     houseCode: currentUser.houseCode,
   };
   try {
@@ -1936,7 +2038,8 @@ async function gerarMeuRelatorioPDF(ym, modo){
     pdf.text(`${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}`, M, y);
     if (d.falta) {
       pdf.setTextColor(180,120,20);
-      pdf.text(d.justificada ? `Falta justificada${d.motivoLabel?' — '+d.motivoLabel:''}` : 'Falta não justificada', M+90, y);
+      const rotulo = d.tipo === 'folga_banco' ? 'Folga (banco de horas)' : (d.justificada ? `Falta justificada${d.motivoLabel?' — '+d.motivoLabel:''}` : 'Falta não justificada');
+      pdf.text(rotulo, M+90, y);
       pdf.setTextColor(0);
     } else {
       pdf.text(d.horarios.entrada || '—', M+90, y);
@@ -1952,13 +2055,16 @@ async function gerarMeuRelatorioPDF(ym, modo){
     y += 15;
     if (y > 700) { pdf.addPage(); y = 60; }
     pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
-    pdf.text('Faltas do mês', M, y); y += 18;
+    pdf.text('Faltas e folgas do mês', M, y); y += 18;
     for (const d of diasFalta) {
       if (y > 720) { pdf.addPage(); y = 60; }
       const [Y,Mo,D] = d.ds.split('-').map(Number);
       const dtStr = `${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}`;
       pdf.setFont('helvetica','bold'); pdf.setFontSize(10.5);
-      pdf.text(`${dtStr} — ${d.justificada ? 'Justificada' : 'Não justificada'}${d.motivoLabel ? ' · '+d.motivoLabel : ''}`, M, y);
+      const linha = d.tipo === 'folga_banco'
+        ? `${dtStr} — Folga (banco de horas)`
+        : `${dtStr} — ${d.justificada ? 'Justificada' : 'Não justificada'}${d.motivoLabel ? ' · '+d.motivoLabel : ''}`;
+      pdf.text(linha, M, y);
       y += 15;
       pdf.setFont('helvetica','normal');
       if (d.anexoUrl) {
@@ -2219,7 +2325,7 @@ function diasDoMes(uid, ym){
   fonteFaltas
     .filter(f => (ehEuMesma || f.uid === uid) && f.status === 'aprovado' && f.ds.slice(0,7) === ym && !dsComRegistro.has(f.ds))
     .forEach(f => {
-      dias.push({ ds:f.ds, incompleto:false, falta:true, justificada:f.justificada, motivoLabel:f.motivoLabel, anexoUrl:f.anexoUrl, jornada:0, banco:0, extra:0, trab:0, esperado:0, horarios:null });
+      dias.push({ ds:f.ds, incompleto:false, falta:true, tipo: f.tipo || 'falta', justificada:f.justificada, motivoLabel:f.motivoLabel, anexoUrl:f.anexoUrl, jornada:0, banco:0, extra:0, trab:0, esperado:0, horarios:null });
     });
   dias.sort((a,b)=>a.ds.localeCompare(b.ds));
   return dias;
@@ -2256,7 +2362,55 @@ function statusMes(uid, ym, vigente){
   const f = fechamentos[uid+'|'+ym];
   return (f && f.status === 'fechado') ? 'fechado' : 'revisar';
 }
+/** Detecta apontamentos incoerentes num dia: tipos duplicados, volta sem saída de almoço, etc. */
+function problemasCoerenciaDia(recs){
+  const problemas = [];
+  const porTipo = {};
+  recs.forEach(r => { (porTipo[r.type] = porTipo[r.type] || []).push(r); });
+  const TIPOS = ['entrada','almoco-saida','almoco-volta','saida'];
+  TIPOS.forEach(t => {
+    if (porTipo[t] && porTipo[t].length > 1) problemas.push(`${typeLabel(t)} duplicado (${porTipo[t].length}x)`);
+  });
+  const tem = t => !!(porTipo[t] && porTipo[t].length);
+  if (tem('almoco-volta') && !tem('almoco-saida')) problemas.push('Volta do almoço sem saída pro almoço');
+  if (tem('almoco-saida') && !tem('entrada')) problemas.push('Saída pro almoço sem entrada');
+  if (tem('saida') && !tem('entrada')) problemas.push('Saída sem entrada');
+  // ordem cronológica só faz sentido comparar quando não há duplicado do mesmo tipo
+  const semDuplicados = TIPOS.every(t => !porTipo[t] || porTipo[t].length <= 1);
+  if (semDuplicados) {
+    const tsDe = t => (porTipo[t] && porTipo[t][0]) ? new Date(porTipo[t][0].ts).getTime() : null;
+    const seq = TIPOS.map(t => [t, tsDe(t)]).filter(([,v]) => v !== null);
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i][1] < seq[i-1][1]) problemas.push(`${typeLabel(seq[i][0])} antes de ${typeLabel(seq[i-1][0])} (fora de ordem)`);
+    }
+  }
+  return problemas;
+}
+/** Varre um mês inteiro de uma funcionária e retorna os dias com apontamento incoerente. */
+function diasComProblemasCoerencia(uid, ym){
+  const porDia = {};
+  records.filter(r=>r.userId===uid).forEach(r=>{
+    const ds = ymdOf(new Date(r.ts));
+    if (ds.slice(0,7) !== ym) return;
+    (porDia[ds] = porDia[ds] || []).push(r);
+  });
+  const out = [];
+  Object.keys(porDia).sort().forEach(ds=>{
+    const problemas = problemasCoerenciaDia(porDia[ds]);
+    if (problemas.length) out.push({ ds, problemas });
+  });
+  return out;
+}
+function mensagemProblemasCoerencia(lista){
+  return lista.map(p => `${p.ds.split('-').reverse().join('/')}: ${p.problemas.join('; ')}`).join('\n');
+}
+
 async function consolidarMes(uid, ym){
+  const problemasCoerencia = diasComProblemasCoerencia(uid, ym);
+  if (problemasCoerencia.length) {
+    alert(`⚠️ Não é possível consolidar — existem dias com apontamento incoerente:\n\n${mensagemProblemasCoerencia(problemasCoerencia)}\n\nAjuste esses pontos em "Ver e ajustar os dias" antes de consolidar.`);
+    return;
+  }
   const ag = agregarMes(uid, ym);
   if (!confirm(`Consolidar ${labelMes(ym)}?\n\nPote do mês: ${fmtHM(ag.pote)}\nHoras extras: ${fmtHM(ag.extra)}\nA pagar: ${fmtHM(ag.pagar)}\n\nO mês fica fechado e travado para ajustes. Você pode reabrir depois.`)) return;
   try {
@@ -2266,7 +2420,7 @@ async function consolidarMes(uid, ym){
       diasComRegistro: ag.dias.length, consolidadoEm: new Date().toISOString(), consolidadoPor: currentUser.uid
     });
     showToast('Mês consolidado ✓');
-    await loadFechamentos(); renderDashboard();
+    await loadFechamentos(); renderFechamentos();
   } catch(e){ console.error(e); showToast('Erro ao consolidar'); }
 }
 async function reabrirMes(uid, ym){
@@ -2324,6 +2478,12 @@ function renderEntradasExpandidas(uid, ds){
 function linhaDia(d, uid){
   const [Y,M,D] = d.ds.split('-').map(Number);
   const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+  if (d.falta && d.tipo === 'folga_banco') {
+    return `<div class="falta-mini folga">
+      <span class="ic">🏖️</span>
+      <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — Folga (banco de horas)</span>
+    </div>`;
+  }
   if (d.falta) {
     const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
     return `<div class="falta-mini">
@@ -2454,7 +2614,9 @@ function renderDashboard(){
   const sub = document.getElementById('dashSectionSub');
   if (!emps.length) {
     sub.textContent = 'Visão da casa';
-    document.getElementById('dashBody').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Sem funcionárias para exibir</div></div>';
+    document.getElementById('dashBody').innerHTML = window._empCache === undefined
+      ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><div class="empty-sub">Carregando...</div></div>'
+      : '<div class="empty-state"><div class="empty-sub">Nenhuma funcionária cadastrada ainda.</div></div>';
     return;
   }
   if (!dashEmpUid || !emps.some(e=>e.uid===dashEmpUid)) dashEmpUid = emps[0].uid;
@@ -2639,11 +2801,18 @@ function abrirPontoParaMes(uid, ym){
   pData.value = ym + '-01';
 }
 function renderDiasFechamento(uid, ym, ag, editable){
-  const botaoGeral = editable ? `<button class="cor-report-btn" style="margin-top:8px;width:100%" onclick="abrirPontoParaMes('${uid}','${ym}')">+ Adicionar ponto em outro dia deste mês</button>` : '';
+  const botaoGeral = editable ? `<button class="cor-report-btn" style="margin-top:8px;width:100%" onclick="abrirPontoParaMes('${uid}','${ym}')">+ Adicionar ponto em outro dia deste mês</button>
+    <button class="cor-report-btn" style="margin-top:6px;width:100%;border-color:var(--folha);color:var(--folha)" onclick="abrirFolgaEmpregadorModal('${uid}','${ym}')">🏖️ Marcar dia como folga (banco de horas)</button>` : '';
   if (!ag.dias.length) return `<div class="vt-empty" style="padding:10px 0 0">Nenhum registro neste mês.</div>${botaoGeral}`;
   return ag.dias.slice().reverse().map(d=>{
     const [Y,M,D] = d.ds.split('-').map(Number);
     const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+    if (d.falta && d.tipo === 'folga_banco') {
+      return `<div class="falta-mini folga">
+        <span class="ic">🏖️</span>
+        <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — Folga (banco de horas)</span>
+      </div>`;
+    }
     if (d.falta) {
       const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
       return `<div class="falta-mini">
@@ -2684,6 +2853,9 @@ function renderConteudoFechamentoFuncionaria(uid){
     <button class="${vtView==='fechamento'?'on':''}" onclick="setVtView('fechamento')">Fechamento</button>
   </div>`;
   html += renderVT(uid, vigente, agregarMes(uid, vigente));
+
+  html += '<div class="dash-sec-label">Trabalho avulso (fim de semana)</div>';
+  html += renderAvulsosDaFuncionaria(uid);
 
   const passados = meses.filter(ym=>ym !== vigente);
   html += '<div class="dash-sec-label">Aberto para fechamento / Consolidado</div>';
@@ -2740,7 +2912,9 @@ function renderFechamentos(){
   const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
   const box = document.getElementById('fechBody');
   if (!emps.length) {
-    box.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-title">Sem funcionárias para exibir</div></div>';
+    box.innerHTML = window._empCache === undefined
+      ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><div class="empty-sub">Carregando...</div></div>'
+      : '<div class="empty-state"><div class="empty-sub">Nenhuma funcionária cadastrada ainda.</div></div>';
     return;
   }
   box.innerHTML = emps.map(e=>{
@@ -2779,6 +2953,183 @@ async function marcarValePago(uid, ym, valor, diasUteis, valorDiario){
     await loadValePagamentos();
     renderFechamentos();
   } catch(e){ console.error(e); showToast('Erro ao marcar como pago'); }
+}
+// ════ TRABALHO AVULSO (fim de semana) — empregador lança, calcula piso legal de referência ════
+let avulsosCache = [];
+let avulsoUidAtual = null;
+async function loadAvulsos(){
+  try {
+    const sn = await getDocs(query(collection(db,'trabalhosAvulsos'), where('houseCode','==',currentUser.houseCode)));
+    avulsosCache = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> b.ds.localeCompare(a.ds));
+  } catch(e){ console.error('loadAvulsos', e); avulsosCache = []; }
+}
+function renderAvulsosDaFuncionaria(uid){
+  const meus = avulsosCache.filter(a=>a.uid===uid);
+  let html = '<div class="dash-card" style="padding:11px 13px">';
+  if (!meus.length) {
+    html += '<div class="vt-empty">Nenhum lançamento ainda.</div>';
+  } else {
+    html += meus.map(a=>{
+      const [Y,M,D] = a.ds.split('-').map(Number);
+      const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
+      return `<div class="avulso-row">
+        <div class="avulso-data">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span>${a.conducaoVeiculo ? ' 🚗' : ''}</div>
+        <div class="avulso-valor">${fmtBRL(a.valorCombinado)}</div>
+        <div class="avulso-btns"><button onclick="gerarReciboAvulso('${a.id}')" title="Gerar recibo">🖨️</button><button onclick="excluirAvulso('${a.id}')" title="Excluir">🗑️</button></div>
+      </div>`;
+    }).join('');
+  }
+  html += `<button class="btn-lancar-avulso" onclick="abrirAvulsoModal('${uid}')">+ Lançar trabalho avulso</button></div>`;
+  return html;
+}
+function calcularValorHoraContrato(uid){
+  const ct = (window._contractCache||{})[uid] || {};
+  const salario = Number(ct.salario) || 0;
+  const jornadaDiaria = Number(ct.jornadaDiaria) || 8.8;
+  const diasSemana = (ct.diasTrabalho && ct.diasTrabalho.length) ? ct.diasTrabalho.length : 5;
+  const horasMensais = jornadaDiaria * diasSemana * (52/12);
+  return horasMensais > 0 ? salario / horasMensais : 0;
+}
+function abrirAvulsoModal(uid){
+  avulsoUidAtual = uid;
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  document.getElementById('avulsoNomeSub').textContent = emp ? emp.nome : '—';
+  document.getElementById('avulsoData').value = ymdOf(new Date());
+  document.getElementById('avulsoInicio').value = '';
+  document.getElementById('avulsoTermino').value = '';
+  document.getElementById('avulsoValorCombinado').value = '';
+  document.getElementById('avulsoConducao').checked = false;
+  document.getElementById('avulsoAvisoMinimo').textContent = '';
+  document.getElementById('avulsoCalcBox').innerHTML = '<div class="calc-linha"><span>Escolha data e horários</span></div>';
+  document.getElementById('avulsoModal').classList.add('open');
+}
+function closeAvulsoModal(){ document.getElementById('avulsoModal').classList.remove('open'); avulsoUidAtual = null; }
+function minutosEntreHoras(inicio, termino){
+  const [h1,m1] = inicio.split(':').map(Number);
+  const [h2,m2] = termino.split(':').map(Number);
+  let min = (h2*60+m2) - (h1*60+m1);
+  if (min < 0) min += 24*60; // atravessou meia-noite
+  return min;
+}
+function recalcularAvulso(){
+  const ds = document.getElementById('avulsoData').value;
+  const inicio = document.getElementById('avulsoInicio').value;
+  const termino = document.getElementById('avulsoTermino').value;
+  const conducao = document.getElementById('avulsoConducao').checked;
+  const box = document.getElementById('avulsoCalcBox');
+  if (!ds || !/^\d{2}:\d{2}$/.test(inicio) || !/^\d{2}:\d{2}$/.test(termino)) {
+    box.innerHTML = '<div class="calc-linha"><span>Escolha data e horários</span></div>';
+    return null;
+  }
+  const min = minutosEntreHoras(inicio, termino);
+  if (min <= 0) { box.innerHTML = '<div class="calc-linha"><span>Horário inválido</span></div>'; return null; }
+  const [Y,M,D] = ds.split('-').map(Number);
+  const dow = new Date(Y,M-1,D).getDay();
+  const feriado = isFeriado(ds);
+  const nomeDia = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][dow];
+  const adicionalPct = (dow === 0 || feriado) ? 100 : 50;
+  const valorHora = calcularValorHoraContrato(avulsoUidAtual);
+  const horas = min / 60;
+  const pisoBase = valorHora * horas * (1 + adicionalPct/100);
+  const ct = (window._contractCache||{})[avulsoUidAtual] || {};
+  const adicionalFuncao = conducao ? (Number(ct.adicionalFuncaoValor) || 0) : 0;
+  const pisoTotal = pisoBase + adicionalFuncao;
+  box.innerHTML = `
+    <div class="calc-linha"><span>${feriado ? 'Feriado' : nomeDia.charAt(0).toUpperCase()+nomeDia.slice(1)} · ${fmtHM(min)} trabalhadas</span></div>
+    <div class="calc-linha"><span>Valor-hora contratual</span><b>${fmtBRL(valorHora)}</b></div>
+    <div class="calc-linha"><span>Adicional aplicado</span><b>+${adicionalPct}%</b></div>
+    <div class="calc-linha"><span>Trabalho avulso (base)</span><b>${fmtBRL(pisoBase)}</b></div>
+    ${conducao ? `<div class="calc-linha"><span>Adicional condução de veículo</span><b>${fmtBRL(adicionalFuncao)}</b></div>` : ''}
+    <div class="calc-total"><span>Piso legal total (referência)</span><span>${fmtBRL(pisoTotal)}</span></div>
+    <div class="calc-nota">${conducao && !adicionalFuncao ? '⚠️ Cadastre o valor do adicional de função em ⚙️ Contrato desta funcionária. ' : ''}Cálculo estimado a partir do salário contratual — confirme com seu contador antes de fechar valores.</div>`;
+  if (!document.getElementById('avulsoValorCombinado').value.trim()) {
+    document.getElementById('avulsoValorCombinado').value = pisoTotal.toFixed(2).replace('.',',');
+  }
+  return { min, dow, feriado, nomeDia, adicionalPct, valorHora, pisoBase, conducao, adicionalFuncao, pisoLegal: pisoTotal };
+}
+async function salvarAvulso(){
+  if (!avulsoUidAtual) return;
+  const ds = document.getElementById('avulsoData').value;
+  const inicio = document.getElementById('avulsoInicio').value;
+  const termino = document.getElementById('avulsoTermino').value;
+  const calc = recalcularAvulso();
+  if (!calc) { showToast('Preencha data e horários corretamente'); return; }
+  const valorStr = document.getElementById('avulsoValorCombinado').value.trim().replace(',','.').replace(/[^\d.]/g,'');
+  const valorCombinado = parseFloat(valorStr);
+  if (isNaN(valorCombinado) || valorCombinado <= 0) { showToast('Informe o valor combinado'); return; }
+  if (valorCombinado < calc.pisoLegal - 0.01) {
+    document.getElementById('avulsoAvisoMinimo').textContent = `⚠️ Valor abaixo do piso legal calculado (${fmtBRL(calc.pisoLegal)})`;
+    showToast('Valor combinado não pode ser menor que o piso legal');
+    return;
+  }
+  document.getElementById('avulsoAvisoMinimo').textContent = '';
+  const emp = (window._empCache||[]).find(e=>e.uid===avulsoUidAtual);
+  try {
+    await addDoc(collection(db,'trabalhosAvulsos'), {
+      uid: avulsoUidAtual, nome: emp ? emp.nome : '', houseCode: currentUser.houseCode,
+      ds, inicio, termino, minutosTrabalhados: calc.min,
+      diaSemana: calc.feriado ? 'feriado' : calc.nomeDia, adicionalPct: calc.adicionalPct,
+      valorHoraContratual: calc.valorHora, pisoBase: calc.pisoBase,
+      conducaoVeiculo: calc.conducao, adicionalFuncaoValor: calc.adicionalFuncao,
+      pisoLegal: calc.pisoLegal, valorCombinado,
+      criadoPor: currentUser.uid, criadoEm: new Date().toISOString()
+    });
+    closeAvulsoModal();
+    showToast('Trabalho avulso lançado ✓');
+    await loadAvulsos();
+    renderFechamentos();
+  } catch(e){ console.error(e); showToast('Erro ao lançar trabalho avulso'); }
+}
+async function excluirAvulso(id){
+  if (!confirm('Excluir este lançamento de trabalho avulso?')) return;
+  try {
+    await deleteDoc(doc(db,'trabalhosAvulsos', id));
+    showToast('Excluído');
+    await loadAvulsos();
+    renderFechamentos();
+  } catch(e){ console.error(e); showToast('Erro ao excluir'); }
+}
+async function gerarReciboAvulso(id){
+  const a = avulsosCache.find(x=>x.id===id);
+  if (!a) return;
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), M = 48;
+  const [Y,Mo,D] = a.ds.split('-').map(Number);
+  const dataFmt = `${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}/${Y}`;
+  const dowNome = a.diaSemana ? a.diaSemana.charAt(0).toUpperCase()+a.diaSemana.slice(1) : '';
+
+  function desenharVia(yBase, numeroVia){
+    let y = yBase;
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(14);
+    pdf.text('Recibo — Trabalho Avulso', M, y); y += 20;
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(10.5);
+    pdf.text(`Funcionária: ${a.nome}`, M, y); y += 15;
+    pdf.text(`Data: ${dataFmt} (${dowNome})`, M, y); y += 15;
+    pdf.text(`Horário: ${a.inicio} às ${a.termino} (${fmtHM(a.minutosTrabalhados)})`, M, y); y += 15;
+    pdf.setFont('helvetica','bold');
+    if (a.conducaoVeiculo && a.adicionalFuncaoValor) {
+      pdf.text(`Trabalho avulso: ${fmtBRL(a.pisoBase != null ? a.pisoBase : a.valorCombinado - a.adicionalFuncaoValor)}`, M, y); y += 14;
+      pdf.text(`Adicional condução de veículo: ${fmtBRL(a.adicionalFuncaoValor)}`, M, y); y += 14;
+      pdf.text(`Total: ${fmtBRL(a.valorCombinado)}`, M, y); y += 22;
+    } else {
+      pdf.text(`Valor: ${fmtBRL(a.valorCombinado)}`, M, y); y += 22;
+    }
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+    const declar = pdf.splitTextToSize('Declaro ter recebido o valor acima pelo trabalho realizado na data e horário indicados.', W-2*M);
+    pdf.text(declar, M, y); y += declar.length*12 + 30;
+    pdf.line(M, y, M+180, y); pdf.text('Assinatura da funcionária', M, y+13);
+    pdf.line(W-M-180, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-180, y+13);
+    y += 26;
+    pdf.setFontSize(9); pdf.setTextColor(140);
+    pdf.text(`— via ${numeroVia} de 2 —`, W/2 - 30, y);
+    pdf.setTextColor(0);
+  }
+  desenharVia(60, 1);
+  pdf.setDrawColor(200); pdf.setLineDashPattern([4,3], 0); pdf.line(M, H/2, W-M, H/2); pdf.setLineDashPattern([], 0);
+  desenharVia(H/2 + 50, 2);
+  pdf.save(`Recibo-Avulso-${a.nome.split(' ')[0]}-${a.ds}.pdf`);
 }
 function renderVT(uid, vigente, agVigente){
   const ct = (window._contractCache||{})[uid] || {};
@@ -3048,6 +3399,7 @@ async function ensureDadosGestao(){
   await loadAtividades();
   await loadValePagamentos();
   await loadFaltasAprovadas();
+  await loadAvulsos();
 }
 async function openDashboard(){
   await ensureDadosGestao();
@@ -3358,8 +3710,9 @@ function renderDiasParaRevisar(){
             <span class="revisar-falta">nenhum ponto batido</span>
           </div>
           <div class="revisar-vazio-choice">
-            <button onclick='abrirCorrecaoParaDiaVazio(${JSON.stringify(d.ds)})'>Esqueci de bater</button>
+            <button onclick='abrirCorrecaoParaDiaVazio(${JSON.stringify(d.ds)})'>Esqueci</button>
             <button class="primary" onclick='abrirFaltaParaDia(${JSON.stringify(d.ds)})'>Foi falta</button>
+            <button class="folga" onclick='abrirFolgaParaDia(${JSON.stringify(d.ds)})'>Foi folga</button>
           </div>
         </div>`;
       }
@@ -3500,7 +3853,7 @@ async function saveFalta(){
     }
     await addDoc(collection(db,'faltas'), {
       uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
-      ds, justificada: faltaJustificadaAtual,
+      ds, tipo: 'falta', justificada: faltaJustificadaAtual,
       motivo: faltaJustificadaAtual ? faltaMotivoSel : null,
       motivoLabel: faltaJustificadaAtual ? (FALTA_MOTIVO_LABEL[faltaMotivoSel]||null) : null,
       detalhes, anexoUrl,
@@ -3511,6 +3864,134 @@ async function saveFalta(){
     showToast('Enviado para aprovação ✓');
     renderMinhasCorrecoes();
   } catch(e){ console.error(e); showToast('Erro ao enviar falta'); }
+}
+
+// ════ FOLGA (banco de horas) — a funcionária pede, ou o empregador já classifica direto ════
+let folgaDataPreenchida = null;
+let folgaSigCtx = null, folgaSigDrawing = false, folgaSigHasStroke = false;
+let folgaForcarNovaAssinatura = false;
+function openFolgaModal(){
+  const hoje = ymdOf(new Date());
+  const dataInput = document.getElementById('folgaData');
+  dataInput.value = folgaDataPreenchida || hoje;
+  dataInput.max = hoje;
+  folgaDataPreenchida = null;
+  document.getElementById('folgaDetalhes').value = '';
+  document.getElementById('folgaAceite').checked = false;
+  folgaForcarNovaAssinatura = false;
+  folgaRefreshAssinaturaUI();
+  document.getElementById('folgaModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('folgaAssinaturaPadBox').style.display !== 'none') folgaInitSigCanvas(); });
+}
+function closeFolgaModal(){ document.getElementById('folgaModal').classList.remove('open'); }
+function abrirFolgaParaDia(ds){ folgaDataPreenchida = ds; openFolgaModal(); }
+function folgaRefreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !folgaForcarNovaAssinatura);
+  document.getElementById('folgaAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('folgaAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('folgaAssinaturaPreview').src = salva;
+}
+function folgaReassinar(){ folgaForcarNovaAssinatura = true; folgaRefreshAssinaturaUI(); folgaInitSigCanvas(); }
+function folgaAssinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !folgaForcarNovaAssinatura) return true;
+  return folgaSigHasStroke;
+}
+function folgaInitSigCanvas(){
+  const c = document.getElementById('folgaSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  folgaSigCtx = c.getContext('2d');
+  folgaSigCtx.scale(dpr,dpr);
+  folgaSigCtx.lineWidth = 2.3; folgaSigCtx.lineCap='round'; folgaSigCtx.lineJoin='round';
+  folgaSigCtx.strokeStyle = '#1A1816';
+  folgaSigHasStroke = false; folgaSigDrawing = false;
+}
+function folgaSigPos(e,c){ const rect=c.getBoundingClientRect(); return {x:e.clientX-rect.left, y:e.clientY-rect.top}; }
+function folgaSigStart(e){ e.preventDefault(); folgaSigDrawing=true; const p=folgaSigPos(e,e.currentTarget); folgaSigCtx.beginPath(); folgaSigCtx.moveTo(p.x,p.y); }
+function folgaSigMove(e){ if(!folgaSigDrawing||!folgaSigCtx) return; e.preventDefault(); const p=folgaSigPos(e,e.currentTarget); folgaSigCtx.lineTo(p.x,p.y); folgaSigCtx.stroke(); if(!folgaSigHasStroke){folgaSigHasStroke=true;} }
+function folgaSigEnd(){ folgaSigDrawing=false; }
+function folgaLimparAssinatura(){
+  const c = document.getElementById('folgaSigCanvas');
+  if (!c || !folgaSigCtx) return;
+  folgaSigCtx.clearRect(0,0,c.width,c.height);
+  folgaSigHasStroke = false;
+}
+async function saveFolga(){
+  const ds = document.getElementById('folgaData').value;
+  if (!ds) { showToast('Escolha a data'); return; }
+  const ym = ds.slice(0,7);
+  if (await mesEstaFechado(currentUser.uid, ym)) {
+    showToast('Este mês já foi fechado — peça ao empregador para reabrir antes');
+    return;
+  }
+  if (!document.getElementById('folgaAceite').checked) { showToast('Marque que está de acordo com o termo'); return; }
+  if (!folgaAssinaturaOk()) { showToast('Assine antes de enviar'); return; }
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !folgaForcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('folgaSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
+  const detalhes = document.getElementById('folgaDetalhes').value.trim();
+  try {
+    await addDoc(collection(db,'faltas'), {
+      uid: currentUser.uid, nome: currentUser.nome, houseCode: currentUser.houseCode,
+      ds, tipo: 'folga_banco', justificada: null, motivo: null, motivoLabel: null, anexoUrl: null,
+      detalhes,
+      termoTexto: document.getElementById('folgaTermoTexto').textContent, assinaturaImg,
+      status: 'pendente', criadoPor: currentUser.uid, criadoEm: new Date().toISOString()
+    });
+    closeFolgaModal();
+    showToast('Enviado para aprovação ✓');
+    renderMinhasCorrecoes();
+  } catch(e){ console.error(e); showToast('Erro ao enviar folga'); }
+}
+
+// ── empregador: classifica a folga direto, sem aprovação (ele já é a autoridade) ──
+let folgaEmpregadorUid = null;
+function abrirFolgaEmpregadorModal(uid, ym){
+  folgaEmpregadorUid = uid;
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  document.getElementById('folgaEmpNomeSub').textContent = emp ? `Pra ${emp.nome}` : '—';
+  const hoje = ymdOf(new Date());
+  const [y,m] = ym.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const dataInput = document.getElementById('folgaEmpData');
+  dataInput.min = ym + '-01';
+  dataInput.max = ym + '-' + pad2(lastDay);
+  dataInput.value = ym + '-01';
+  document.getElementById('folgaEmpObs').value = '';
+  document.getElementById('folgaEmpregadorModal').classList.add('open');
+}
+function closeFolgaEmpregadorModal(){ document.getElementById('folgaEmpregadorModal').classList.remove('open'); folgaEmpregadorUid = null; }
+async function confirmarFolgaEmpregador(){
+  if (!folgaEmpregadorUid) return;
+  const ds = document.getElementById('folgaEmpData').value;
+  if (!ds) { showToast('Escolha a data'); return; }
+  const emp = (window._empCache||[]).find(e=>e.uid===folgaEmpregadorUid);
+  const obs = document.getElementById('folgaEmpObs').value.trim();
+  try {
+    await addDoc(collection(db,'faltas'), {
+      uid: folgaEmpregadorUid, nome: emp ? emp.nome : '', houseCode: currentUser.houseCode,
+      ds, tipo: 'folga_banco', justificada: null, motivo: null, motivoLabel: null, anexoUrl: null,
+      detalhes: obs,
+      termoTexto: null, assinaturaImg: null,
+      status: 'aprovado', criadoPor: currentUser.uid, criadoEm: new Date().toISOString(),
+      revisadoPor: currentUser.uid, revisadoEm: new Date().toISOString()
+    });
+    closeFolgaEmpregadorModal();
+    showToast('Folga registrada ✓');
+    await loadFaltasAprovadas();
+    renderFechamentos();
+  } catch(e){ console.error(e); showToast('Erro ao registrar folga'); }
 }
 
 // ── funcionária: acompanha suas solicitações ──
@@ -3627,7 +4108,9 @@ function renderFaltaCardHtml(f){
   const [Y,M,D] = f.ds.split('-').map(Number);
   const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
   const dataFmt = `${String(D).padStart(2,'0')}/${String(M).padStart(2,'0')}`;
-  const rotulo = f.justificada ? `Falta justificada${f.motivoLabel?' · '+f.motivoLabel:''}` : 'Falta não justificada';
+  const ehFolga = f.tipo === 'folga_banco';
+  const icone = ehFolga ? '🏖️' : '📋';
+  const rotulo = ehFolga ? 'Folga (banco de horas)' : (f.justificada ? `Falta justificada${f.motivoLabel?' · '+f.motivoLabel:''}` : 'Falta não justificada');
   const marcado = selecionadosPendentes.has('falta:'+f.id);
   const aberto = !!pendentesFaltaExpandida[f.id];
   let expandHtml = '';
@@ -3647,7 +4130,7 @@ function renderFaltaCardHtml(f){
     <div class="pend-body">
       <div class="pend-linha1" onclick="toggleExpandirFalta('${f.id}')">
         <span class="pend-data-fixa">${dataFmt} <span class="dow">${dow}</span></span>
-        <span class="pend-tipo">📋 ${rotulo}</span>
+        <span class="pend-tipo">${icone} ${rotulo}</span>
       </div>
       <div class="pend-linha2">
         <span class="pend-just-linha2">Toque pra ver detalhes<span class="chev-mini"> ${aberto?'▴':'▾'}</span></span>
@@ -3939,6 +4422,11 @@ window.deleteInvite = comCarregamento(deleteInvite, 'Excluindo...');
 window.saveFeriados = comCarregamento(saveFeriados, 'Salvando...');
 window.enviarAviso = comCarregamento(enviarAviso, 'Enviando aviso...');
 window.aprovarSelecionadas = comCarregamento(aprovarSelecionadas, 'Aprovando selecionadas...');
+window.saveFolga = comCarregamento(saveFolga, 'Enviando folga...');
+window.confirmarFolgaEmpregador = comCarregamento(confirmarFolgaEmpregador, 'Registrando folga...');
+window.salvarAvulso = comCarregamento(salvarAvulso, 'Salvando trabalho avulso...');
+window.excluirAvulso = comCarregamento(excluirAvulso, 'Excluindo...');
+window.gerarReciboAvulso = comCarregamento(gerarReciboAvulso, 'Gerando recibo...');
 </script>
 </body>
 </html>
