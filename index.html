@@ -1753,7 +1753,7 @@ async function savePoint() {
     if (editingPoint.recordId) {
       await updateDoc(doc(db,'records',editingPoint.recordId), {
         type: tipo, ts, adjusted: true,
-        adjustedBy: currentUser.uid, adjustedAt: serverTimestamp()
+        adjustedBy: currentUser.uid, adjustedAt: new Date().toISOString()
       });
       showToast('Ponto corrigido ✓');
     } else {
@@ -1762,7 +1762,7 @@ async function savePoint() {
         userId: editingPoint.empUid, userName: emp?.nome || '',
         houseCode: currentUser.houseCode || null,
         adjusted: true, adjustedBy: currentUser.uid,
-        createdAt: serverTimestamp()
+        adjustedAt: new Date().toISOString(), createdAt: serverTimestamp()
       });
       showToast('Ponto adicionado ✓');
     }
@@ -2304,7 +2304,6 @@ function horariosDoDia(recs){
   };
 }
 function diasDoMes(uid, ym){
-  const hoje = ymdOf(new Date());
   const porDia = {};
   records.filter(r=>r.userId===uid).forEach(r=>{
     const ds = ymdOf(new Date(r.ts));
@@ -2315,12 +2314,7 @@ function diasDoMes(uid, ym){
     const recs = porDia[ds];
     const horarios = horariosDoDia(recs);
     const trab = minutosDoDia(recs);
-    if (trab === null) {
-      // Dia corrente ainda em curso (sem saída) não conta como pendência —
-      // só vira "incompleto" de verdade depois que o dia virar.
-      if (ds === hoje) return { ds, incompleto:false, emAndamento:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
-      return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
-    }
+    if (trab === null) return { ds, incompleto:true, jornada:0, banco:0, extra:0, trab:0, esperado: isDiaUtil(ds)?JORNADA_MIN:0, horarios };
     return { ds, incompleto:false, horarios, ...dividirDia(trab, ds) };
   });
   // injeta faltas aprovadas (dias sem nenhum ponto, mas com falta declarada e aprovada) —
@@ -2501,15 +2495,6 @@ function linhaDia(d, uid){
   const key = uid+'|'+d.ds;
   const aberto = diaExpandidoKey === key;
   const expandBtn = `<span style="color:var(--ink3);font-size:11px;margin-left:6px">${aberto?'▲':'▾'}</span>`;
-  if (d.emAndamento) {
-    return `<div class="dayrow${aberto?' open':''}">
-      <div class="dayrow-click" onclick="toggleDiaExpandido('${uid}','${d.ds}')">
-        <div class="dayrow-top"><div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div><div class="dayrow-total" style="color:var(--ink3)">em andamento${expandBtn}</div></div>
-        ${horariosRow(d.horarios)}
-      </div>
-      ${aberto ? renderEntradasExpandidas(uid, d.ds) : ''}
-    </div>`;
-  }
   if (d.incompleto) {
     return `<div class="dayrow incomplete${aberto?' open':''}">
       <div class="dayrow-click" onclick="toggleDiaExpandido('${uid}','${d.ds}')">
@@ -2625,25 +2610,23 @@ function abrirDetalheFuncionaria(uid){
 function fecharDetalheFuncionaria(){ dashScreenState = 'resumo'; renderDashboard(); }
 
 function renderDashboard(){
-  const all = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
-  const emps = all.filter(e=>e.ativa!==false);
-  const inativas = all.filter(e=>e.ativa===false);
+  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
   const sub = document.getElementById('dashSectionSub');
-  if (!all.length) {
+  if (!emps.length) {
     sub.textContent = 'Visão da casa';
     document.getElementById('dashBody').innerHTML = window._empCache === undefined
       ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><div class="empty-sub">Carregando...</div></div>'
       : '<div class="empty-state"><div class="empty-sub">Nenhuma funcionária cadastrada ainda.</div></div>';
     return;
   }
-  if (!dashEmpUid || !all.some(e=>e.uid===dashEmpUid)) dashEmpUid = (emps[0] || inativas[0]).uid;
+  if (!dashEmpUid || !emps.some(e=>e.uid===dashEmpUid)) dashEmpUid = emps[0].uid;
 
   if (dashScreenState === 'detalhe') {
     sub.textContent = 'Detalhe individual';
-    renderDashboardDetalhe(all);
+    renderDashboardDetalhe(emps);
   } else {
     sub.textContent = 'Visão da casa';
-    renderDashboardResumo(emps, inativas);
+    renderDashboardResumo(emps);
   }
 }
 
@@ -2665,7 +2648,7 @@ function minutosHojeDoEmp(uid){
   }
   return Math.max(0, Math.round(ms/60000));
 }
-function renderDashboardResumo(emps, inativas){
+function renderDashboardResumo(emps){
   const vigente = ymdOf(new Date()).slice(0,7);
   const du = diasUteisMes(vigente);
   let bancoTot = 0, extraTot = 0, pendTot = 0, previstoTot = 0, trabalhadoTot = 0;
@@ -2729,24 +2712,9 @@ function renderDashboardResumo(emps, inativas){
     </div>
     <div class="dash-sec-label">Funcionárias</div>
     ${cardsHtml}
-    ${(inativas && inativas.length) ? `
-    <div class="inactive-group" id="dashInactiveGroup">
-      <div class="inactive-group-header" onclick="toggleDashInactiveGroup()">
-        <span>🗄️ Funcionárias inativas (${inativas.length})</span><span class="chev">▾</span>
-      </div>
-      <div class="inactive-group-body">
-        ${inativas.map(e=>`<div class="inactive-card" style="cursor:pointer" onclick="abrirDetalheFuncionaria('${e.uid}')">
-          <div style="flex:1">
-            <div class="emp-name" style="color:var(--ink2)">${e.nome}</div>
-            <div class="emp-status">Acesso encerrado em ${e.desligamentoEm ? new Date(e.desligamentoEm).toLocaleDateString('pt-BR') : '—'}</div>
-          </div>
-        </div>`).join('')}
-      </div>
-    </div>` : ''}
     ${renderAtividadeRecenteHtml()}
   `;
 }
-function toggleDashInactiveGroup(){ const g=document.getElementById('dashInactiveGroup'); if(g) g.classList.toggle('open'); }
 
 function renderDashboardDetalhe(emps){
   const uid = dashEmpUid;
@@ -2857,7 +2825,7 @@ function renderDiasFechamento(uid, ym, ag, editable){
     return `<div style="border-top:1px solid var(--surface2);padding:10px 0">
       <div class="dayrow-top" style="margin-bottom:6px">
         <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div>
-        <div class="dayrow-total">${d.incompleto?'⚠️ incompleto':(d.emAndamento?'em andamento':fmtHM(d.trab))}</div>
+        <div class="dayrow-total">${d.incompleto?'⚠️ incompleto':fmtHM(d.trab)}</div>
       </div>
       ${ents.map(r=>{
         const hora = new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -2941,35 +2909,25 @@ function renderConteudoFechamentoFuncionaria(uid){
   return html;
 }
 function renderFechamentos(){
-  const all = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
-  const emps = all.filter(e=>e.ativa!==false);
-  const inativas = all.filter(e=>e.ativa===false);
+  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
   const box = document.getElementById('fechBody');
-  if (!all.length) {
+  if (!emps.length) {
     box.innerHTML = window._empCache === undefined
       ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><div class="empty-sub">Carregando...</div></div>'
       : '<div class="empty-state"><div class="empty-sub">Nenhuma funcionária cadastrada ainda.</div></div>';
     return;
   }
-  const grupoHtml = e => {
+  box.innerHTML = emps.map(e=>{
     const aberto = fechGrupoAberto[e.uid] !== false;
     return `<div class="fech-grupo">
       <div class="fech-grupo-head" onclick="toggleFechGrupo('${e.uid}')">
-        <span>${e.nome.split(' ')[0]}</span>
+        <span>${e.nome.split(' ')[0]}${e.ativa===false?' 🗄️':''}</span>
         <span>${aberto?'▴':'▾'}</span>
       </div>
       ${aberto ? `<div class="fech-grupo-body">${renderConteudoFechamentoFuncionaria(e.uid)}</div>` : ''}
     </div>`;
-  };
-  box.innerHTML = emps.map(grupoHtml).join('') + (inativas.length ? `
-    <div class="inactive-group" id="fechInactiveGroup">
-      <div class="inactive-group-header" onclick="toggleFechInactiveGroup()">
-        <span>🗄️ Funcionárias inativas (${inativas.length})</span><span class="chev">▾</span>
-      </div>
-      <div class="inactive-group-body">${inativas.map(grupoHtml).join('')}</div>
-    </div>` : '');
+  }).join('');
 }
-function toggleFechInactiveGroup(){ const g=document.getElementById('fechInactiveGroup'); if(g) g.classList.toggle('open'); }
 function setVtView(v){ vtView = v; renderFechamentos(); }
 // ════ VALE-TRANSPORTE: confirmação digital assinada pela funcionária ════
 let valePagamentosCache = {}; // key: uid|ym
@@ -4364,6 +4322,16 @@ async function gerarTermoAjustesPDF(uid, ym){
   if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
   const emp = (window._empCache||[]).find(e=>e.uid===uid);
   const nomeF = emp ? emp.nome : (itensCorrecao[0]?.nome || '');
+
+  // blindagem: dados antigos podem ter gravado adjustedAt como Timestamp do servidor
+  // em vez de string — new Date() direto nesse objeto dá "Invalid Date", não trata como ausente
+  function dataSegura(v){
+    if (!v) return null;
+    if (typeof v === 'object' && typeof v.toDate === 'function') return v.toDate();
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
+
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ unit:'pt', format:'a4' });
   const W = pdf.internal.pageSize.getWidth(), M = 48;
@@ -4374,47 +4342,59 @@ async function gerarTermoAjustesPDF(uid, ym){
   pdf.text('Registros manuais — solicitados pela funcionária ou ajustados pelo(a) empregador(a)', M, y); y+=26;
   pdf.setFont('helvetica','bold'); pdf.text('Funcionária:', M, y); pdf.setFont('helvetica','normal'); pdf.text(nomeF, M+80, y); y+=16;
   pdf.setFont('helvetica','bold'); pdf.text('Empregador(a):', M, y); pdf.setFont('helvetica','normal'); pdf.text(currentUser.nome||'—', M+95, y); y+=16;
-  pdf.setFont('helvetica','bold'); pdf.text('Referência:', M, y); pdf.setFont('helvetica','normal'); pdf.text(labelMes(ym), M+75, y); y+=26;
+  pdf.setFont('helvetica','bold'); pdf.text('Referência:', M, y); pdf.setFont('helvetica','normal'); pdf.text(labelMes(ym), M+75, y); y+=22;
 
-  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y+=18;
+  // termo padrão mostrado UMA VEZ (é o mesmo texto pra todo item de autocorreção — repetir por item só gasta papel)
+  const termoPadrao = itensCorrecao.find(c=>c.termoTexto)?.termoTexto;
+  if (termoPadrao) {
+    pdf.setFontSize(9); pdf.setFont('helvetica','italic'); pdf.setTextColor(110);
+    const termoLinhas = pdf.splitTextToSize(`Termo aceito digitalmente pela funcionária em cada item abaixo marcado como "autocorreção": "${termoPadrao}"`, W-2*M);
+    pdf.text(termoLinhas, M, y); y += termoLinhas.length*11 + 10;
+    pdf.setTextColor(0); pdf.setFont('helvetica','normal');
+  }
 
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y+=16;
+
+  pdf.setFontSize(9.5);
   itens.forEach((c,idx)=>{
-    if (y > 700) { pdf.addPage(); y = 60; }
+    if (y > 750) { pdf.addPage(); y = 60; }
     const dt = new Date(c.ts);
     const dtStr = dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
-    pdf.text(`${idx+1}. ${typeLabel(c.tipo)} — ${dtStr}`, M, y); y+=15;
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
 
     if (c.origem === 'correcao') {
-      const just = pdf.splitTextToSize(`Justificativa: ${c.justificativa}`, W-2*M);
-      pdf.text(just, M, y); y += just.length*13 + 3;
-      const termo = pdf.splitTextToSize(`Termo aceito: "${c.termoTexto}"`, W-2*M);
-      pdf.setTextColor(120); pdf.text(termo, M, y); pdf.setTextColor(0); y += termo.length*12 + 4;
-      const assinadoEm = c.criadoEm ? new Date(c.criadoEm).toLocaleString('pt-BR') : '—';
-      pdf.setFontSize(9.5); pdf.text(`Aceito digitalmente por: ${c.assinadoComo} — em ${assinadoEm}`, M, y);
+      const dAceite = dataSegura(c.criadoEm);
+      const aceiteStr = dAceite ? dAceite.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+      pdf.setFont('helvetica','bold');
+      const linha1 = pdf.splitTextToSize(`${idx+1}. ${typeLabel(c.tipo)} — ${dtStr} · "${c.justificativa}"`, W-2*M-80);
+      pdf.text(linha1, M, y);
+      pdf.setFont('helvetica','normal'); pdf.setTextColor(120);
+      pdf.text(`Aceito em ${aceiteStr}`, M, y + linha1.length*11 + 9);
+      pdf.setTextColor(0);
       if (c.assinaturaImg) {
-        try { pdf.addImage(c.assinaturaImg, 'PNG', W-M-70, y-14, 70, 28); } catch(e){ console.error('addImage assinatura', e); }
+        try { pdf.addImage(c.assinaturaImg, 'PNG', W-M-65, y-9, 65, 24); } catch(e){ console.error('addImage assinatura', e); }
       }
-      y += 30;
+      y += linha1.length*11 + 20;
     } else {
-      const ajustadoEm = c.adjustedAt ? new Date(c.adjustedAt).toLocaleString('pt-BR') : '—';
-      pdf.setTextColor(120);
-      pdf.text(`Ajustado manualmente por ${currentUser.nome} — em ${ajustadoEm}`, M, y);
+      const dAdj = dataSegura(c.adjustedAt);
+      const ajustadoEm = dAdj ? dAdj.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+      pdf.setFont('helvetica','bold');
+      pdf.text(`${idx+1}. ${typeLabel(c.tipo)} — ${dtStr}`, M, y);
+      pdf.setFont('helvetica','normal'); pdf.setTextColor(120);
+      pdf.text(`Ajustado manualmente por ${currentUser.nome} em ${ajustadoEm}`, M, y+11);
       pdf.setTextColor(0);
       y += 22;
     }
   });
 
-  y += 20;
-  if (y > 680) { pdf.addPage(); y = 60; }
+  y += 16;
+  if (y > 700) { pdf.addPage(); y = 60; }
   pdf.setFontSize(10); pdf.setFont('helvetica','normal');
   const declar = pdf.splitTextToSize(`Eu, ${nomeF}, declaro estar de acordo com todos os ajustes de ponto acima listados, referentes ao mês de ${labelMes(ym)}.`, W-2*M);
-  pdf.text(declar, M, y); y += declar.length*13 + 40;
+  pdf.text(declar, M, y); y += declar.length*13 + 36;
 
   pdf.line(M, y, M+200, y); pdf.text('Assinatura da funcionária', M, y+14);
   pdf.line(W-M-200, y, W-M, y); pdf.text('Assinatura do(a) empregador(a)', W-M-200, y+14);
-  y += 40;
+  y += 36;
   pdf.setFontSize(9); pdf.setTextColor(140);
   pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y);
 
