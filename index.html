@@ -2625,23 +2625,25 @@ function abrirDetalheFuncionaria(uid){
 function fecharDetalheFuncionaria(){ dashScreenState = 'resumo'; renderDashboard(); }
 
 function renderDashboard(){
-  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const all = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const emps = all.filter(e=>e.ativa!==false);
+  const inativas = all.filter(e=>e.ativa===false);
   const sub = document.getElementById('dashSectionSub');
-  if (!emps.length) {
+  if (!all.length) {
     sub.textContent = 'Visão da casa';
     document.getElementById('dashBody').innerHTML = window._empCache === undefined
       ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><div class="empty-sub">Carregando...</div></div>'
       : '<div class="empty-state"><div class="empty-sub">Nenhuma funcionária cadastrada ainda.</div></div>';
     return;
   }
-  if (!dashEmpUid || !emps.some(e=>e.uid===dashEmpUid)) dashEmpUid = emps[0].uid;
+  if (!dashEmpUid || !all.some(e=>e.uid===dashEmpUid)) dashEmpUid = (emps[0] || inativas[0]).uid;
 
   if (dashScreenState === 'detalhe') {
     sub.textContent = 'Detalhe individual';
-    renderDashboardDetalhe(emps);
+    renderDashboardDetalhe(all);
   } else {
     sub.textContent = 'Visão da casa';
-    renderDashboardResumo(emps);
+    renderDashboardResumo(emps, inativas);
   }
 }
 
@@ -2663,7 +2665,7 @@ function minutosHojeDoEmp(uid){
   }
   return Math.max(0, Math.round(ms/60000));
 }
-function renderDashboardResumo(emps){
+function renderDashboardResumo(emps, inativas){
   const vigente = ymdOf(new Date()).slice(0,7);
   const du = diasUteisMes(vigente);
   let bancoTot = 0, extraTot = 0, pendTot = 0, previstoTot = 0, trabalhadoTot = 0;
@@ -2727,9 +2729,24 @@ function renderDashboardResumo(emps){
     </div>
     <div class="dash-sec-label">Funcionárias</div>
     ${cardsHtml}
+    ${(inativas && inativas.length) ? `
+    <div class="inactive-group" id="dashInactiveGroup">
+      <div class="inactive-group-header" onclick="toggleDashInactiveGroup()">
+        <span>🗄️ Funcionárias inativas (${inativas.length})</span><span class="chev">▾</span>
+      </div>
+      <div class="inactive-group-body">
+        ${inativas.map(e=>`<div class="inactive-card" style="cursor:pointer" onclick="abrirDetalheFuncionaria('${e.uid}')">
+          <div style="flex:1">
+            <div class="emp-name" style="color:var(--ink2)">${e.nome}</div>
+            <div class="emp-status">Acesso encerrado em ${e.desligamentoEm ? new Date(e.desligamentoEm).toLocaleDateString('pt-BR') : '—'}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
     ${renderAtividadeRecenteHtml()}
   `;
 }
+function toggleDashInactiveGroup(){ const g=document.getElementById('dashInactiveGroup'); if(g) g.classList.toggle('open'); }
 
 function renderDashboardDetalhe(emps){
   const uid = dashEmpUid;
@@ -2924,25 +2941,35 @@ function renderConteudoFechamentoFuncionaria(uid){
   return html;
 }
 function renderFechamentos(){
-  const emps = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const all = (window._empCache || []).filter(e=>e.ativa!==false || records.some(r=>r.userId===e.uid));
+  const emps = all.filter(e=>e.ativa!==false);
+  const inativas = all.filter(e=>e.ativa===false);
   const box = document.getElementById('fechBody');
-  if (!emps.length) {
+  if (!all.length) {
     box.innerHTML = window._empCache === undefined
       ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><div class="empty-sub">Carregando...</div></div>'
       : '<div class="empty-state"><div class="empty-sub">Nenhuma funcionária cadastrada ainda.</div></div>';
     return;
   }
-  box.innerHTML = emps.map(e=>{
+  const grupoHtml = e => {
     const aberto = fechGrupoAberto[e.uid] !== false;
     return `<div class="fech-grupo">
       <div class="fech-grupo-head" onclick="toggleFechGrupo('${e.uid}')">
-        <span>${e.nome.split(' ')[0]}${e.ativa===false?' 🗄️':''}</span>
+        <span>${e.nome.split(' ')[0]}</span>
         <span>${aberto?'▴':'▾'}</span>
       </div>
       ${aberto ? `<div class="fech-grupo-body">${renderConteudoFechamentoFuncionaria(e.uid)}</div>` : ''}
     </div>`;
-  }).join('');
+  };
+  box.innerHTML = emps.map(grupoHtml).join('') + (inativas.length ? `
+    <div class="inactive-group" id="fechInactiveGroup">
+      <div class="inactive-group-header" onclick="toggleFechInactiveGroup()">
+        <span>🗄️ Funcionárias inativas (${inativas.length})</span><span class="chev">▾</span>
+      </div>
+      <div class="inactive-group-body">${inativas.map(grupoHtml).join('')}</div>
+    </div>` : '');
 }
+function toggleFechInactiveGroup(){ const g=document.getElementById('fechInactiveGroup'); if(g) g.classList.toggle('open'); }
 function setVtView(v){ vtView = v; renderFechamentos(); }
 // ════ VALE-TRANSPORTE: confirmação digital assinada pela funcionária ════
 let valePagamentosCache = {}; // key: uid|ym
