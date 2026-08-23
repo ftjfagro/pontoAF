@@ -487,6 +487,7 @@
 
   <div class="screen active" id="screenRegistro">
     <div id="valeConfirmaBox"></div>
+    <div id="adiantamentoConfirmaBox"></div>
     <div id="avisosBox"></div>
     <div class="greet-line">Olá, <b id="heroName">Funcionária</b></div>
     <div class="date-line" id="clockDate">carregando...</div>
@@ -603,6 +604,7 @@
       <div class="frow">
         <label>Salário mensal (R$)</label>
         <input type="number" id="fSalario" placeholder="Ex: 1518" inputmode="decimal" />
+        <div id="fSalarioHint" style="display:none;font-size:11.5px;color:var(--ink3);margin-top:4px">Reajustes agora são lançados em 💰 Salário/Adiantamento, com o mês de vigência.</div>
       </div>
       <div class="frow">
         <label>Jornada diária (horas)</label>
@@ -635,6 +637,84 @@
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeContractModal()">Cancelar</button>
         <button class="btn-form-save" onclick="saveContract()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="financeiroModal">
+    <div class="form-sheet">
+      <h3>Salário e adiantamento</h3>
+      <div class="sub" id="finNomeSub">—</div>
+      <div class="dash-toggle" style="margin:0 0 14px">
+        <button id="finBtnSalario" class="on" onclick="setFinanceiroView('salario')">Salário</button>
+        <button id="finBtnAdiantamento" onclick="setFinanceiroView('adiantamento')">Adiantamento</button>
+      </div>
+
+      <div id="finViewSalario">
+        <div class="calc-box" style="background:var(--surface2)">
+          <div style="font-size:12px;color:var(--ink3)">Salário atual</div>
+          <div style="font-size:20px;font-weight:600;margin:2px 0 10px" id="finSalarioAtual">—</div>
+          <div id="finHistoricoSalario"></div>
+        </div>
+        <div class="frow">
+          <label>Novo valor (R$)</label>
+          <input type="number" id="finNovoSalario" placeholder="Ex: 2700" inputmode="decimal" />
+        </div>
+        <div class="frow">
+          <label>A partir de qual mês</label>
+          <input type="month" id="finMesVigencia" />
+        </div>
+        <button class="btn-form-save" style="width:100%" onclick="salvarReajuste()">Registrar reajuste</button>
+      </div>
+
+      <div id="finViewAdiantamento" style="display:none">
+        <div id="finAdiantamentosAbertos"></div>
+        <div class="frow" style="margin-top:6px">
+          <label>Valor total (R$)</label>
+          <input type="number" id="adiValorTotal" placeholder="Ex: 500" inputmode="decimal" />
+        </div>
+        <div class="frow">
+          <label>Parcelas</label>
+          <select id="adiParcelas">
+            <option value="1">À vista (1x)</option>
+            <option value="2">2x</option>
+            <option value="3">3x</option>
+            <option value="4">4x</option>
+          </select>
+        </div>
+        <div class="frow">
+          <label>Primeira competência de desconto</label>
+          <input type="month" id="adiPrimeiraCompetencia" />
+        </div>
+        <button class="btn-form-save" style="width:100%" onclick="salvarAdiantamento()">Lançar e enviar pra assinatura</button>
+      </div>
+
+      <div class="form-actions" style="margin-top:14px">
+        <button class="btn-form-cancel" style="width:100%" onclick="closeFinanceiroModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="adiantamentoAssinaturaModal">
+    <div class="form-sheet">
+      <h3>Confirmar recebimento do adiantamento</h3>
+      <div class="sub" id="adiAssinaturaSub">—</div>
+      <div class="termo-box" id="adiTermoTexto"></div>
+
+      <div class="field" id="adiAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="adiAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="adiReassinar()">Assinar novamente</button>
+      </div>
+      <div class="field" id="adiAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="adiSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="adiSigStart(event)" onpointermove="adiSigMove(event)" onpointerup="adiSigEnd(event)" onpointerleave="adiSigEnd(event)" onpointercancel="adiSigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="adiLimparAssinatura()">Limpar</button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeAdiantamentoAssinaturaModal()">Cancelar</button>
+        <button class="btn-form-save" id="adiSalvarBtn" onclick="confirmarAdiantamentoAssinatura()">Confirmar recebimento</button>
       </div>
     </div>
   </div>
@@ -948,7 +1028,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  collection, query, where, orderBy, onSnapshot, serverTimestamp
+  collection, query, where, orderBy, onSnapshot, serverTimestamp, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref, uploadString, getDownloadURL
@@ -1005,7 +1085,11 @@ Object.assign(window, {
   toggleSelecaoPendente, toggleSelecionarTodas, aprovarSelecionadas,
   toggleGrupoPendente, toggleExpandirFalta, openRejeitarLoteModal,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
-  aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF
+  aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF,
+  openFinanceiroModal, closeFinanceiroModal, setFinanceiroView, salvarReajuste,
+  salvarAdiantamento, confirmarDescontoParcela, gerarTermoAdiantamentoPDF,
+  openAdiantamentoAssinaturaModal, closeAdiantamentoAssinaturaModal, adiReassinar, adiLimparAssinatura,
+  adiSigStart, adiSigMove, adiSigEnd, confirmarAdiantamentoAssinatura
 });
 
 // ════ LOGIN UI ════
@@ -1385,6 +1469,7 @@ function renderEmployeeList(ativas, inativas) {
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="emp-edit-btn" onclick="abrirAvisoModal('${emp.uid}','${emp.nome.replace(/'/g,"\\'")}')" title="Deixar um aviso">💬</button>
           <button class="emp-edit-btn" onclick="openContractModal('${emp.uid}')">⚙️ Contrato</button>
+          <button class="emp-edit-btn" onclick="openFinanceiroModal('${emp.uid}')">💰 Salário/Adiant.</button>
           <button class="emp-danger-btn" onclick="inactivateEmployee('${emp.uid}')" title="Encerrar acesso">🚫</button>
         </div>
       </div>
@@ -1469,7 +1554,7 @@ function montarPayload(competencia, empUid) {
     return {
       nome: e.nome,
       uid: e.uid,
-      salario: Number(ct.salario) || null,
+      salario: salarioVigenteNoMes(e.uid, competencia) || Number(ct.salario) || null,
       jornadaDiaria: Number(ct.jornadaDiaria) || null,
       diasTrabalho: ct.diasTrabalho || [],
       admissao: ct.admissao || null
@@ -1603,7 +1688,10 @@ function openContractModal(uid) {
   const ct = (window._contractCache||{})[uid] || {};
   document.getElementById('fNomeCompleto').value = emp.nome || '';
 
+  const temHistoricoSalarial = (ct.historicoSalarial||[]).length > 0;
   document.getElementById('fSalario').value = ct.salario || '';
+  document.getElementById('fSalario').disabled = temHistoricoSalarial;
+  document.getElementById('fSalarioHint').style.display = temHistoricoSalarial ? 'block' : 'none';
   document.getElementById('fJornada').value = ct.jornadaDiaria || '';
   document.getElementById('fAdmissao').value = ct.admissao || '';
   document.getElementById('fValeTransporte').value = ct.valeTransporteDiario != null ? ct.valeTransporteDiario : '';
@@ -1621,8 +1709,9 @@ async function saveContract() {
   const nomeCompleto = document.getElementById('fNomeCompleto').value.trim();
   if (nomeCompleto.length < 3) { showToast('Informe o nome completo'); return; }
   const dias = [...document.querySelectorAll('#fDias .day-chip.on')].map(c=>parseInt(c.dataset.d));
+  const ctAtual = (window._contractCache||{})[editingEmpUid] || {};
+  const temHistoricoSalarial = (ctAtual.historicoSalarial||[]).length > 0;
   const dados = {
-    salario: parseFloat(document.getElementById('fSalario').value) || null,
     jornadaDiaria: parseFloat(document.getElementById('fJornada').value) || null,
     diasTrabalho: dias.length ? dias : [1,2,3,4,5],
     admissao: document.getElementById('fAdmissao').value || null,
@@ -1630,15 +1719,25 @@ async function saveContract() {
     adicionalFuncaoValor: parseFloat(document.getElementById('fAdicionalFuncao').value) || null,
     houseCode: currentUser.houseCode,
   };
+  // salário: só grava aqui na 1ª vez (sem histórico ainda). Depois disso,
+  // reajustes acontecem exclusivamente em 💰 Salário/Adiantamento, com mês de vigência.
+  if (!temHistoricoSalarial) {
+    const salarioInicial = parseFloat(document.getElementById('fSalario').value) || null;
+    if (salarioInicial) {
+      dados.salario = salarioInicial;
+      const mesInicial = (document.getElementById('fAdmissao').value || ymdOf(new Date())).slice(0,7);
+      dados.historicoSalarial = [{ valor: salarioInicial, vigenciaDesde: mesInicial, criadoEm: new Date().toISOString(), criadoPor: currentUser.uid }];
+    }
+  }
   try {
     const emp = (window._empCache||[]).find(e=>e.uid===editingEmpUid);
     if (emp && nomeCompleto !== emp.nome) {
       await updateDoc(doc(db,'users',editingEmpUid), { nome: nomeCompleto });
       emp.nome = nomeCompleto;
     }
-    await setDoc(doc(db,'contratos',editingEmpUid), dados);
+    await setDoc(doc(db,'contratos',editingEmpUid), dados, { merge: true });
     window._contractCache = window._contractCache || {};
-    window._contractCache[editingEmpUid] = dados;
+    window._contractCache[editingEmpUid] = { ...ctAtual, ...dados };
     closeContractModal();
     showToast('Dados salvos ✓');
     checkAlerts();
@@ -2167,7 +2266,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
-  if(name==='Registro' && currentUser && currentUser.role!=='empregador') { checkMeuValePendente(); checkMeusAvisos(); }
+  if(name==='Registro' && currentUser && currentUser.role!=='empregador') { checkMeuValePendente(); checkMeusAvisos(); checkMeuAdiantamentoPendente(); }
   if(name==='Historico') { renderMinhasHoras(); renderMinhasCorrecoes(); }
   if(name==='Dashboard') openDashboard();
   if(name==='Fechamentos') openFechamentos();
@@ -2938,6 +3037,307 @@ async function loadValePagamentos(){
     sn.docs.forEach(d=>{ const v=d.data(); valePagamentosCache[v.uid+'|'+v.mes] = { id:d.id, ...v }; });
   } catch(e){ console.error('valePagamentos', e); valePagamentosCache = {}; }
 }
+
+// ════ SALÁRIO: HISTÓRICO COM VIGÊNCIA POR COMPETÊNCIA (mês) ════
+// contratos/{uid}.historicoSalarial = [{ valor, vigenciaDesde:"YYYY-MM", criadoEm, criadoPor }]
+// 'salario' continua sendo o cache do valor mais recente, usado como fallback.
+function salarioVigenteNoMes(uid, ym){
+  const ct = (window._contractCache||{})[uid] || {};
+  const hist = ct.historicoSalarial || [];
+  if (!hist.length) return Number(ct.salario) || null;
+  const validos = hist.filter(h => h.vigenciaDesde <= ym).sort((a,b)=> b.vigenciaDesde.localeCompare(a.vigenciaDesde));
+  if (validos.length) return Number(validos[0].valor);
+  // mês pedido é anterior ao primeiro registro do histórico: usa o mais antigo mesmo assim
+  const maisAntigo = hist.slice().sort((a,b)=> a.vigenciaDesde.localeCompare(b.vigenciaDesde))[0];
+  return Number(maisAntigo.valor);
+}
+
+let financeiroUid = null;
+let financeiroView = 'salario';
+function openFinanceiroModal(uid){
+  financeiroUid = uid;
+  financeiroView = 'salario';
+  const emp = (window._empCache||[]).find(e=>e.uid===uid);
+  document.getElementById('finNomeSub').textContent = emp ? emp.nome : '—';
+  document.getElementById('finBtnSalario').classList.add('on');
+  document.getElementById('finBtnAdiantamento').classList.remove('on');
+  document.getElementById('finViewSalario').style.display = '';
+  document.getElementById('finViewAdiantamento').style.display = 'none';
+  renderFinanceiroSalario();
+  renderFinanceiroAdiantamento();
+  document.getElementById('financeiroModal').classList.add('open');
+}
+function closeFinanceiroModal(){ document.getElementById('financeiroModal').classList.remove('open'); financeiroUid = null; }
+function setFinanceiroView(v){
+  financeiroView = v;
+  document.getElementById('finBtnSalario').classList.toggle('on', v==='salario');
+  document.getElementById('finBtnAdiantamento').classList.toggle('on', v==='adiantamento');
+  document.getElementById('finViewSalario').style.display = v==='salario' ? '' : 'none';
+  document.getElementById('finViewAdiantamento').style.display = v==='adiantamento' ? '' : 'none';
+}
+function renderFinanceiroSalario(){
+  if (!financeiroUid) return;
+  const ct = (window._contractCache||{})[financeiroUid] || {};
+  const hoje = ymdOf(new Date()).slice(0,7);
+  const atual = salarioVigenteNoMes(financeiroUid, hoje);
+  document.getElementById('finSalarioAtual').textContent = atual != null ? fmtBRL(atual) : 'Não cadastrado';
+  document.getElementById('finNovoSalario').value = '';
+  document.getElementById('finMesVigencia').value = proximoMes(hoje);
+  const hist = (ct.historicoSalarial||[]).slice().sort((a,b)=> b.vigenciaDesde.localeCompare(a.vigenciaDesde));
+  const box = document.getElementById('finHistoricoSalario');
+  if (!hist.length) { box.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Nenhum reajuste lançado ainda.</div>'; return; }
+  box.innerHTML = hist.map((h,i)=>{
+    const [y,m] = h.vigenciaDesde.split('-').map(Number);
+    const fimTxt = i===0 ? `Desde ${MESES_LONGOS[m-1].toLowerCase()}/${y}` : (()=>{
+      const prox = hist[i-1].vigenciaDesde.split('-').map(Number);
+      const fimM = prox[1]===1 ? 12 : prox[1]-1, fimY = prox[1]===1 ? prox[0]-1 : prox[0];
+      return `${MESES_LONGOS[m-1]}/${y} a ${MESES_LONGOS[fimM-1].toLowerCase()}/${fimY}`;
+    })();
+    return `<div class="calc-linha"><span>${fimTxt}</span><b>${fmtBRL(h.valor)}</b></div>`;
+  }).join('');
+}
+async function salvarReajuste(){
+  if (!financeiroUid) return;
+  const valor = parseFloat(document.getElementById('finNovoSalario').value);
+  const ym = document.getElementById('finMesVigencia').value;
+  if (!valor || valor <= 0) { showToast('Informe o novo valor'); return; }
+  if (!ym) { showToast('Escolha o mês de vigência'); return; }
+  const entrada = { valor, vigenciaDesde: ym, criadoEm: new Date().toISOString(), criadoPor: currentUser.uid };
+  try {
+    await setDoc(doc(db,'contratos',financeiroUid), {
+      historicoSalarial: arrayUnion(entrada),
+      houseCode: currentUser.houseCode
+    }, { merge: true });
+    const hoje = ymdOf(new Date()).slice(0,7);
+    if (ym <= hoje) {
+      await setDoc(doc(db,'contratos',financeiroUid), { salario: valor }, { merge: true });
+    }
+    window._contractCache = window._contractCache || {};
+    window._contractCache[financeiroUid] = window._contractCache[financeiroUid] || {};
+    const hist = window._contractCache[financeiroUid].historicoSalarial || [];
+    window._contractCache[financeiroUid].historicoSalarial = [...hist, entrada];
+    if (ym <= hoje) window._contractCache[financeiroUid].salario = valor;
+    showToast('Reajuste registrado ✓');
+    renderFinanceiroSalario();
+  } catch(e){ console.error(e); showToast('Erro ao registrar reajuste'); }
+}
+
+// ════ ADIANTAMENTO SALARIAL ════
+// adiantamentos/{id}: { uid, nome, houseCode, valorTotal, parcelas:{ "YYYY-MM":{valor,status,descontadoEm} },
+//                       status:'aguardando_assinatura'|'assinado', assinaturaImg, assinadoEm, termoTexto, criadoPor, criadoEm }
+let adiantamentosCache = [];
+async function loadAdiantamentos(){
+  try {
+    const sn = await getDocs(query(collection(db,'adiantamentos'), where('houseCode','==',currentUser.houseCode)));
+    adiantamentosCache = sn.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=> new Date(b.criadoEm)-new Date(a.criadoEm));
+  } catch(e){ console.error('loadAdiantamentos', e); adiantamentosCache = []; }
+}
+function competenciasSeguintes(ymInicial, n){
+  const out = []; let cur = ymInicial;
+  for (let i=0;i<n;i++){ out.push(cur); cur = proximoMes(cur); }
+  return out;
+}
+function renderFinanceiroAdiantamento(){
+  if (!financeiroUid) return;
+  const meus = adiantamentosCache.filter(a=>a.uid===financeiroUid);
+  const box = document.getElementById('finAdiantamentosAbertos');
+  document.getElementById('adiValorTotal').value = '';
+  document.getElementById('adiParcelas').value = '1';
+  document.getElementById('adiPrimeiraCompetencia').value = proximoMes(ymdOf(new Date()).slice(0,7));
+  if (!meus.length) { box.innerHTML = '<div class="vt-empty">Nenhum adiantamento lançado ainda.</div>'; return; }
+  box.innerHTML = meus.map(a=>{
+    const parcelasHtml = Object.keys(a.parcelas||{}).sort().map(ym=>{
+      const p = a.parcelas[ym];
+      const pendente = p.status !== 'descontado';
+      return `<div class="avulso-row">
+        <div class="avulso-data">${labelMes(ym)}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="avulso-valor">${fmtBRL(p.valor)}</span>
+          ${pendente
+            ? `<button class="cor-report-btn" style="margin-top:0;padding:5px 10px;font-size:11px" onclick="confirmarDescontoParcela('${a.id}','${ym}')">Confirmar desconto</button>`
+            : `<span class="cor-status aprovado" style="font-size:9.5px">descontado</span>`}
+        </div>
+      </div>`;
+    }).join('');
+    const statusAssinatura = a.status === 'assinado'
+      ? `<div class="vt-status-pago">✅ Assinado por ela em ${new Date(a.assinadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`
+      : `<div class="vt-status-pago">⏳ Aguardando assinatura dela</div>`;
+    return `<div class="dash-card" style="padding:12px 14px;margin:0 0 10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600">${fmtBRL(a.valorTotal)} em ${Object.keys(a.parcelas||{}).length}x</div>
+        <button class="cor-report-btn" style="margin-top:0;padding:5px 10px" onclick="gerarTermoAdiantamentoPDF('${a.id}')">🖨️ PDF</button>
+      </div>
+      ${parcelasHtml}
+      ${statusAssinatura}
+    </div>`;
+  }).join('');
+}
+async function salvarAdiantamento(){
+  if (!financeiroUid) return;
+  const valorTotal = parseFloat(document.getElementById('adiValorTotal').value);
+  const n = parseInt(document.getElementById('adiParcelas').value) || 1;
+  const ymInicial = document.getElementById('adiPrimeiraCompetencia').value;
+  if (!valorTotal || valorTotal <= 0) { showToast('Informe o valor total'); return; }
+  if (!ymInicial) { showToast('Escolha a primeira competência de desconto'); return; }
+  const competencias = competenciasSeguintes(ymInicial, n);
+  const base = Math.floor((valorTotal / n) * 100) / 100;
+  const parcelas = {};
+  competencias.forEach((ym, i) => {
+    const valor = i === n-1 ? Math.round((valorTotal - base*(n-1)) * 100) / 100 : base;
+    parcelas[ym] = { valor, status: 'pendente' };
+  });
+  const emp = (window._empCache||[]).find(e=>e.uid===financeiroUid);
+  const termoTexto = `Declaro ter recebido de ${currentUser.nome} o adiantamento salarial de ${fmtBRL(valorTotal)}, a ser descontado em ${n} parcela(s) a partir da competência de ${labelMes(ymInicial)}, conforme o art. 462 da CLT.`;
+  try {
+    await addDoc(collection(db,'adiantamentos'), {
+      uid: financeiroUid, nome: emp ? emp.nome : '', houseCode: currentUser.houseCode,
+      valorTotal, parcelas, termoTexto,
+      status: 'aguardando_assinatura', assinaturaImg: null, assinadoEm: null,
+      criadoPor: currentUser.uid, criadoEm: new Date().toISOString()
+    });
+    showToast('Adiantamento lançado — aguardando assinatura dela');
+    await loadAdiantamentos();
+    renderFinanceiroAdiantamento();
+  } catch(e){ console.error(e); showToast('Erro ao lançar adiantamento'); }
+}
+async function confirmarDescontoParcela(id, ym){
+  const a = adiantamentosCache.find(x=>x.id===id);
+  if (!a) return;
+  const p = (a.parcelas||{})[ym];
+  if (!confirm(`Confirmar o desconto de ${fmtBRL(p.valor)} referente à competência de ${labelMes(ym)}?`)) return;
+  try {
+    await updateDoc(doc(db,'adiantamentos',id), {
+      [`parcelas.${ym}.status`]: 'descontado',
+      [`parcelas.${ym}.descontadoEm`]: new Date().toISOString()
+    });
+    showToast('Desconto confirmado ✓');
+    await loadAdiantamentos();
+    renderFinanceiroAdiantamento();
+  } catch(e){ console.error(e); showToast('Erro ao confirmar desconto'); }
+}
+async function gerarTermoAdiantamentoPDF(id){
+  const a = adiantamentosCache.find(x=>x.id===id);
+  if (!a) return;
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 70;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
+  pdf.text('Termo de Adiantamento Salarial', M, y); y += 26;
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text(`Funcionária: ${a.nome}`, M, y); y += 16;
+  pdf.text(`Valor total: ${fmtBRL(a.valorTotal)}`, M, y); y += 16;
+  pdf.text(`Parcelas: ${Object.keys(a.parcelas||{}).length}x`, M, y); y += 26;
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y += 20;
+  Object.keys(a.parcelas||{}).sort().forEach(ym=>{
+    const p = a.parcelas[ym];
+    pdf.text(`${labelMes(ym)}: ${fmtBRL(p.valor)} — ${p.status==='descontado' ? 'descontado' : 'pendente'}`, M, y); y += 16;
+  });
+  y += 20;
+  const declar = pdf.splitTextToSize(a.termoTexto, W-2*M);
+  pdf.text(declar, M, y); y += declar.length*14 + 30;
+  if (a.status === 'assinado' && a.assinaturaImg) {
+    const dt = new Date(a.assinadoEm).toLocaleString('pt-BR');
+    pdf.setFontSize(10); pdf.text(`Assinado digitalmente em ${dt}.`, M, y); y += 16;
+    try { pdf.addImage(a.assinaturaImg, 'PNG', M, y, 160, 60); } catch(e){ console.error('addImage assinatura adiantamento', e); }
+    y += 75;
+  } else {
+    pdf.line(M, y, M+220, y); pdf.text('Assinatura da funcionária', M, y+14); y += 40;
+  }
+  pdf.line(W-M-220, y-40, W-M, y-40); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y-26);
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y+10);
+  pdf.save(`Termo-Adiantamento-${a.nome.split(' ')[0]}-${a.criadoEm.slice(0,10)}.pdf`);
+}
+
+// ── funcionária: confirma recebimento do adiantamento com assinatura ──
+let adiPendenteAtual = null;
+let adiSigCtx = null, adiSigDrawing = false, adiSigHasStroke = false, adiForcarNovaAssinatura = false;
+async function checkMeuAdiantamentoPendente(){
+  const box = document.getElementById('adiantamentoConfirmaBox');
+  if (!box || !currentUser || currentUser.role === 'empregador') return;
+  try {
+    const sn = await getDocs(query(collection(db,'adiantamentos'), where('uid','==',currentUser.uid)));
+    const pendentes = sn.docs.map(d=>({id:d.id, ...d.data()})).filter(a=>a.status !== 'assinado').sort((a,b)=> new Date(a.criadoEm)-new Date(b.criadoEm));
+    if (!pendentes.length) { box.innerHTML=''; adiPendenteAtual=null; return; }
+    adiPendenteAtual = pendentes[0];
+    box.innerHTML = `<div class="vt-confirma-card">
+      <div class="vt-confirma-title">Adiantamento salarial</div>
+      <div style="font-size:13px;color:var(--ink2)">Confirme o recebimento</div>
+      <div class="vt-confirma-valor">${fmtBRL(adiPendenteAtual.valorTotal)}</div>
+      <button class="dash-close-btn" onclick="openAdiantamentoAssinaturaModal()">Confirmar e assinar</button>
+    </div>`;
+  } catch(e){ console.error('checkMeuAdiantamentoPendente', e); }
+}
+function openAdiantamentoAssinaturaModal(){
+  if (!adiPendenteAtual) return;
+  document.getElementById('adiAssinaturaSub').textContent = fmtBRL(adiPendenteAtual.valorTotal);
+  document.getElementById('adiTermoTexto').textContent = adiPendenteAtual.termoTexto;
+  adiForcarNovaAssinatura = false;
+  adiRefreshAssinaturaUI();
+  document.getElementById('adiantamentoAssinaturaModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('adiAssinaturaPadBox').style.display !== 'none') adiInitSigCanvas(); });
+}
+function closeAdiantamentoAssinaturaModal(){ document.getElementById('adiantamentoAssinaturaModal').classList.remove('open'); }
+function adiRefreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !adiForcarNovaAssinatura);
+  document.getElementById('adiAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('adiAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('adiAssinaturaPreview').src = salva;
+}
+function adiReassinar(){ adiForcarNovaAssinatura = true; adiRefreshAssinaturaUI(); adiInitSigCanvas(); }
+function adiAssinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !adiForcarNovaAssinatura) return true;
+  return adiSigHasStroke;
+}
+function adiInitSigCanvas(){
+  const c = document.getElementById('adiSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  adiSigCtx = c.getContext('2d');
+  adiSigCtx.scale(dpr,dpr);
+  adiSigCtx.lineWidth = 2.3; adiSigCtx.lineCap='round'; adiSigCtx.lineJoin='round';
+  adiSigCtx.strokeStyle = '#1A1816';
+  adiSigHasStroke = false; adiSigDrawing = false;
+}
+function adiSigPos(e,c){ const rect=c.getBoundingClientRect(); return {x:e.clientX-rect.left, y:e.clientY-rect.top}; }
+function adiSigStart(e){ e.preventDefault(); adiSigDrawing=true; const p=adiSigPos(e,e.currentTarget); adiSigCtx.beginPath(); adiSigCtx.moveTo(p.x,p.y); }
+function adiSigMove(e){ if(!adiSigDrawing||!adiSigCtx) return; e.preventDefault(); const p=adiSigPos(e,e.currentTarget); adiSigCtx.lineTo(p.x,p.y); adiSigCtx.stroke(); if(!adiSigHasStroke){adiSigHasStroke=true;} }
+function adiSigEnd(){ adiSigDrawing=false; }
+function adiLimparAssinatura(){
+  const c = document.getElementById('adiSigCanvas');
+  if (!c || !adiSigCtx) return;
+  adiSigCtx.clearRect(0,0,c.width,c.height);
+  adiSigHasStroke = false;
+}
+async function confirmarAdiantamentoAssinatura(){
+  if (!adiPendenteAtual) return;
+  if (!adiAssinaturaOk()) { showToast('Assine antes de confirmar'); return; }
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !adiForcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('adiSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
+  try {
+    await updateDoc(doc(db,'adiantamentos',adiPendenteAtual.id), {
+      status: 'assinado', assinaturaImg, assinadoEm: new Date().toISOString()
+    });
+    closeAdiantamentoAssinaturaModal();
+    showToast('Recebimento confirmado ✓');
+    checkMeuAdiantamentoPendente();
+  } catch(e){ console.error(e); showToast('Erro ao confirmar'); }
+}
+
 async function marcarValePago(uid, ym, valor, diasUteis, valorDiario){
   const emp = (window._empCache||[]).find(e=>e.uid===uid);
   if (!confirm(`Marcar vale-transporte de ${labelMes(ym)} (${fmtBRL(valor)}) como pago para ${emp?emp.nome:''}?\n\nEla vai ver um card na tela inicial pra confirmar o recebimento com assinatura.`)) return;
@@ -3400,6 +3800,7 @@ async function ensureDadosGestao(){
   await loadValePagamentos();
   await loadFaltasAprovadas();
   await loadAvulsos();
+  await loadAdiantamentos();
 }
 async function openDashboard(){
   await ensureDadosGestao();
@@ -4431,6 +4832,11 @@ window.confirmRejeitar = comCarregamento(confirmRejeitar, 'Enviando...');
 window.gerarMeuRelatorioPDF = comCarregamento(gerarMeuRelatorioPDF, 'Gerando PDF...');
 window.gerarTermoAjustesPDF = comCarregamento(gerarTermoAjustesPDF, 'Gerando PDF...');
 window.gerarReciboValeTransporte = comCarregamento(gerarReciboValeTransporte, 'Gerando PDF...');
+window.salvarReajuste = comCarregamento(salvarReajuste, 'Salvando...');
+window.salvarAdiantamento = comCarregamento(salvarAdiantamento, 'Lançando adiantamento...');
+window.confirmarDescontoParcela = comCarregamento(confirmarDescontoParcela, 'Confirmando...');
+window.gerarTermoAdiantamentoPDF = comCarregamento(gerarTermoAdiantamentoPDF, 'Gerando PDF...');
+window.confirmarAdiantamentoAssinatura = comCarregamento(confirmarAdiantamentoAssinatura, 'Confirmando...');
 window.enviarParaPlanilha = comCarregamento(enviarParaPlanilha, 'Enviando para a planilha...');
 window.consolidarMes = comCarregamento(consolidarMes, 'Consolidando...');
 window.reabrirMes = comCarregamento(reabrirMes, 'Reabrindo...');
