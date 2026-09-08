@@ -189,6 +189,13 @@
     .config-banner { background: var(--warn-light); color: var(--warn); padding: 12px 16px; font-size: 13px; text-align: center; border-bottom: 1px solid #F5C49A; }
     .emp-edit-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink2); cursor: pointer; font-family: inherit; flex-shrink: 0; }
     .emp-danger-btn { background: var(--danger-light); border: 1px solid var(--danger-light); border-radius: 8px; padding: 5px 9px; font-size: 13px; cursor: pointer; font-family: inherit; flex-shrink: 0; line-height: 1; }
+    .sal-sec-label { font-size:10px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
+    .sal-linha { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px; color:var(--ink2); }
+    .sal-linha:last-child { border-bottom:none; }
+    .sal-linha b { font-family:'DM Mono',monospace; color:var(--ink); font-weight:600; }
+    .sal-linha.futuro { color:var(--folha); }
+    .sal-linha.futuro b { color:var(--folha); }
+    .sal-x { color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px; opacity:.65; flex-shrink:0; }
     .emp-menu-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 15px; line-height: 1; color: var(--ink2); cursor: pointer; font-family: inherit; flex-shrink: 0; }
     .emp-actions { display: none; border-top: 1px solid var(--border); padding: 4px 8px 8px; }
     .emp-actions.open { display: block; }
@@ -660,7 +667,8 @@
       <div id="finViewSalario">
         <div class="calc-box" style="background:var(--surface2)">
           <div style="font-size:12px;color:var(--ink3)">Salário atual</div>
-          <div style="font-size:20px;font-weight:600;margin:2px 0 10px" id="finSalarioAtual">—</div>
+          <div style="font-size:20px;font-weight:600;margin:2px 0 0" id="finSalarioAtual">—</div>
+          <div style="font-size:11px;color:var(--ink3);margin:0 0 10px" id="finSalarioAtualSub"></div>
           <div id="finHistoricoSalario"></div>
         </div>
         <div class="frow">
@@ -1093,7 +1101,7 @@ Object.assign(window, {
   toggleGrupoPendente, toggleExpandirFalta, openRejeitarLoteModal,
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF,
-  openFinanceiroModal, closeFinanceiroModal, setFinanceiroView, salvarReajuste,
+  openFinanceiroModal, closeFinanceiroModal, setFinanceiroView, salvarReajuste, removerReajuste,
   salvarAdiantamento, confirmarDescontoParcela, gerarTermoAdiantamentoPDF,
   openAdiantamentoAssinaturaModal, closeAdiantamentoAssinaturaModal, adiReassinar, adiLimparAssinatura,
   adiSigStart, adiSigMove, adiSigEnd, confirmarAdiantamentoAssinatura,
@@ -3091,9 +3099,17 @@ function salarioVigenteNoMes(uid, ym){
   if (!hist.length) return Number(ct.salario) || null;
   const validos = hist.filter(h => h.vigenciaDesde <= ym).sort((a,b)=> b.vigenciaDesde.localeCompare(a.vigenciaDesde));
   if (validos.length) return Number(validos[0].valor);
-  // mês pedido é anterior ao primeiro registro do histórico: usa o mais antigo mesmo assim
-  const maisAntigo = hist.slice().sort((a,b)=> a.vigenciaDesde.localeCompare(b.vigenciaDesde))[0];
-  return Number(maisAntigo.valor);
+  // Mês anterior a todo o histórico (contrato antigo, cadastrado antes do
+  // histórico existir). NUNCA usar o reajuste mais novo aqui — isso aplicaria
+  // salário futuro em mês passado. Usa o salário-base do contrato.
+  return Number(ct.salarioAnterior) || Number(ct.salario) || null;
+}
+/** Salário de referência do mês, com aviso quando não há registro confiável. */
+function salarioTemReferencia(uid, ym){
+  const ct = (window._contractCache||{})[uid] || {};
+  const hist = ct.historicoSalarial || [];
+  if (!hist.length) return true;
+  return hist.some(h => h.vigenciaDesde <= ym);
 }
 
 let financeiroUid = null;
@@ -3119,26 +3135,78 @@ function setFinanceiroView(v){
   document.getElementById('finViewSalario').style.display = v==='salario' ? '' : 'none';
   document.getElementById('finViewAdiantamento').style.display = v==='adiantamento' ? '' : 'none';
 }
+function labelCompetencia(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return `${MESES_LONGOS[m-1].toLowerCase()}/${y}`;
+}
 function renderFinanceiroSalario(){
   if (!financeiroUid) return;
   const ct = (window._contractCache||{})[financeiroUid] || {};
   const hoje = ymdOf(new Date()).slice(0,7);
   const atual = salarioVigenteNoMes(financeiroUid, hoje);
   document.getElementById('finSalarioAtual').textContent = atual != null ? fmtBRL(atual) : 'Não cadastrado';
+  document.getElementById('finSalarioAtualSub').textContent = `vigente em ${labelCompetencia(hoje)}`;
   document.getElementById('finNovoSalario').value = '';
   document.getElementById('finMesVigencia').value = proximoMes(hoje);
+
   const hist = (ct.historicoSalarial||[]).slice().sort((a,b)=> b.vigenciaDesde.localeCompare(a.vigenciaDesde));
   const box = document.getElementById('finHistoricoSalario');
   if (!hist.length) { box.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Nenhum reajuste lançado ainda.</div>'; return; }
-  box.innerHTML = hist.map((h,i)=>{
-    const [y,m] = h.vigenciaDesde.split('-').map(Number);
-    const fimTxt = i===0 ? `Desde ${MESES_LONGOS[m-1].toLowerCase()}/${y}` : (()=>{
-      const prox = hist[i-1].vigenciaDesde.split('-').map(Number);
-      const fimM = prox[1]===1 ? 12 : prox[1]-1, fimY = prox[1]===1 ? prox[0]-1 : prox[0];
-      return `${MESES_LONGOS[m-1]}/${y} a ${MESES_LONGOS[fimM-1].toLowerCase()}/${fimY}`;
-    })();
-    return `<div class="calc-linha"><span>${fimTxt}</span><b>${fmtBRL(h.valor)}</b></div>`;
-  }).join('');
+
+  const futuros = hist.filter(h => h.vigenciaDesde > hoje);
+  const passados = hist.filter(h => h.vigenciaDesde <= hoje);
+
+  let html = '';
+  if (futuros.length) {
+    html += '<div class="sal-sec-label">Agendado</div>';
+    html += futuros.map(h=>`<div class="sal-linha futuro">
+      <span><b>${fmtBRL(h.valor)}</b> a partir de ${labelCompetencia(h.vigenciaDesde)}</span>
+      <span class="sal-x" title="Remover lançamento" onclick="removerReajuste('${h.vigenciaDesde}')">✕</span>
+    </div>`).join('');
+  }
+  html += '<div class="sal-sec-label">Histórico</div>';
+  if (!passados.length) {
+    html += '<div style="font-size:12px;color:var(--ink3);padding:4px 0">Sem registro anterior. O mês passado usa o salário do contrato.</div>';
+  } else {
+    html += passados.map((h,i)=>{
+      const proxima = i===0 ? (futuros.length ? futuros[futuros.length-1].vigenciaDesde : null) : passados[i-1].vigenciaDesde;
+      let periodo;
+      if (!proxima) periodo = `desde ${labelCompetencia(h.vigenciaDesde)}`;
+      else {
+        const [py,pm] = proxima.split('-').map(Number);
+        const fimM = pm===1 ? 12 : pm-1, fimY = pm===1 ? py-1 : py;
+        periodo = `${labelCompetencia(h.vigenciaDesde)} a ${MESES_LONGOS[fimM-1].toLowerCase()}/${fimY}`;
+      }
+      const podeRemover = i===0 && !futuros.length && passados.length>1;
+      return `<div class="sal-linha">
+        <span><b>${fmtBRL(h.valor)}</b> ${periodo}</span>
+        ${podeRemover ? `<span class="sal-x" title="Remover lançamento" onclick="removerReajuste('${h.vigenciaDesde}')">✕</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+/** Remove um lançamento de reajuste (erro de digitação, duplicado). */
+async function removerReajuste(vigenciaDesde){
+  if (!financeiroUid) return;
+  const ct = (window._contractCache||{})[financeiroUid] || {};
+  const hist = ct.historicoSalarial || [];
+  const alvo = hist.find(h => h.vigenciaDesde === vigenciaDesde);
+  if (!alvo) return;
+  if (!confirm(`Remover o lançamento de ${fmtBRL(alvo.valor)} a partir de ${labelCompetencia(vigenciaDesde)}?`)) return;
+  const novoHist = hist.filter(h => h.vigenciaDesde !== vigenciaDesde);
+  try {
+    await setDoc(doc(db,'contratos',financeiroUid), { historicoSalarial: novoHist }, { merge: true });
+    window._contractCache[financeiroUid].historicoSalarial = novoHist;
+    const hoje = ymdOf(new Date()).slice(0,7);
+    const vigenteAgora = salarioVigenteNoMes(financeiroUid, hoje);
+    if (vigenteAgora) {
+      await setDoc(doc(db,'contratos',financeiroUid), { salario: vigenteAgora }, { merge: true });
+      window._contractCache[financeiroUid].salario = vigenteAgora;
+    }
+    showToast('Lançamento removido');
+    renderFinanceiroSalario();
+  } catch(e){ console.error(e); showToast('Erro ao remover'); }
 }
 async function salvarReajuste(){
   if (!financeiroUid) return;
@@ -3146,12 +3214,20 @@ async function salvarReajuste(){
   const ym = document.getElementById('finMesVigencia').value;
   if (!valor || valor <= 0) { showToast('Informe o novo valor'); return; }
   if (!ym) { showToast('Escolha o mês de vigência'); return; }
+  const ctAtual = (window._contractCache||{})[financeiroUid] || {};
+  const histAtual = ctAtual.historicoSalarial || [];
+  if (histAtual.some(h => h.vigenciaDesde === ym)) {
+    showToast('Já existe um lançamento para ' + labelCompetencia(ym) + ' — remova antes de lançar outro');
+    return;
+  }
   const entrada = { valor, vigenciaDesde: ym, criadoEm: new Date().toISOString(), criadoPor: currentUser.uid };
   try {
-    await setDoc(doc(db,'contratos',financeiroUid), {
-      historicoSalarial: arrayUnion(entrada),
-      houseCode: currentUser.houseCode
-    }, { merge: true });
+    const extras = { historicoSalarial: arrayUnion(entrada), houseCode: currentUser.houseCode };
+    // Contrato antigo (sem histórico): guarda o salário atual como referência
+    // dos meses anteriores, senão o mês passado herdaria o reajuste novo.
+    if (!histAtual.length && ctAtual.salario) extras.salarioAnterior = Number(ctAtual.salario);
+    await setDoc(doc(db,'contratos',financeiroUid), extras, { merge: true });
+    if (!histAtual.length && ctAtual.salario) window._contractCache[financeiroUid].salarioAnterior = Number(ctAtual.salario);
     const hoje = ymdOf(new Date()).slice(0,7);
     if (ym <= hoje) {
       await setDoc(doc(db,'contratos',financeiroUid), { salario: valor }, { merge: true });
