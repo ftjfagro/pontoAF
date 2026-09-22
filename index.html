@@ -1106,7 +1106,7 @@ Object.assign(window, {
   sigStart, sigMove, sigEnd, limparAssinatura, reassinarCorrecao,
   aprovarCorrecao, openRejeitarModal, closeRejeitarModal, confirmRejeitar, gerarTermoAjustesPDF,
   openFinanceiroModal, closeFinanceiroModal, setFinanceiroView, salvarReajuste, removerReajuste,
-  salvarAdiantamento, confirmarDescontoParcela, gerarTermoAdiantamentoPDF,
+  salvarAdiantamento, confirmarDescontoParcela, gerarTermoAdiantamentoPDF, excluirAdiantamento,
   openAdiantamentoAssinaturaModal, closeAdiantamentoAssinaturaModal, adiReassinar, adiLimparAssinatura,
   adiSigStart, adiSigMove, adiSigEnd, confirmarAdiantamentoAssinatura,
   toggleDashInactiveGroup, toggleFechInactiveGroup
@@ -3306,11 +3306,16 @@ function renderFinanceiroAdiantamento(){
     const statusAssinatura = a.status === 'assinado'
       ? `<div class="vt-status-pago">✅ Assinado por ela em ${new Date(a.assinadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>`
       : `<div class="vt-status-pago">⏳ Aguardando assinatura dela</div>`;
+    const nenhumaDescontada = Object.values(a.parcelas||{}).every(p => p.status !== 'descontado');
     return `<div class="dash-card" style="padding:12px 14px;margin:0 0 10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div><div style="font-size:13px;font-weight:600">${fmtBRL(a.valorTotal)} em ${Object.keys(a.parcelas||{}).length}x</div>${a.dataPagamento ? `<div style="font-size:11px;color:var(--ink3)">pago em ${a.dataPagamento.split('-').reverse().join('/')}</div>` : ''}</div>
-        <button class="cor-report-btn" style="margin-top:0;padding:5px 10px" onclick="gerarTermoAdiantamentoPDF('${a.id}')">🖨️ PDF</button>
+        <div style="display:flex;gap:6px">
+          <button class="cor-report-btn" style="margin-top:0;padding:5px 10px" onclick="gerarTermoAdiantamentoPDF('${a.id}')">🖨️ PDF</button>
+          ${nenhumaDescontada ? `<button class="cor-report-btn" style="margin-top:0;padding:5px 10px;border-color:var(--danger);color:var(--danger)" onclick="excluirAdiantamento('${a.id}')">🗑️ Excluir</button>` : ''}
+        </div>
       </div>
+      ${!nenhumaDescontada ? '<div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Já tem parcela descontada — não pode excluir; me avise se precisar corrigir.</div>' : ''}
       ${parcelasHtml}
       ${statusAssinatura}
     </div>`;
@@ -3361,6 +3366,19 @@ async function confirmarDescontoParcela(id, ym){
     await loadAdiantamentos();
     renderFinanceiroAdiantamento();
   } catch(e){ console.error(e); showToast('Erro ao confirmar desconto'); }
+}
+async function excluirAdiantamento(id){
+  const a = adiantamentosCache.find(x=>x.id===id);
+  if (!a) return;
+  const algumaDescontada = Object.values(a.parcelas||{}).some(p => p.status === 'descontado');
+  if (algumaDescontada) { showToast('Já tem parcela descontada — não pode excluir'); return; }
+  if (!confirm(`Excluir este lançamento de ${fmtBRL(a.valorTotal)}? Essa ação não pode ser desfeita.`)) return;
+  try {
+    await deleteDoc(doc(db,'adiantamentos', id));
+    showToast('Adiantamento excluído');
+    await loadAdiantamentos();
+    renderFinanceiroAdiantamento();
+  } catch(e){ console.error(e); alert('Erro ao excluir adiantamento:\n\n' + (e.code || e.message || e)); }
 }
 async function gerarTermoAdiantamentoPDF(id){
   const a = adiantamentosCache.find(x=>x.id===id);
