@@ -2064,9 +2064,11 @@ async function saveRecord() {
   try {
     const ts=new Date().toISOString();
     // 1. upload da foto
+    var etapa = 'envio da foto';
     const photoRef=ref(storage,`pontos/${currentUser.uid}/${Date.now()}.jpg`);
     await uploadString(photoRef, capturedDataUrl, 'data_url');
     const photoUrl=await getDownloadURL(photoRef);
+    etapa = 'gravação do registro';
     // 2. grava o registro
     await addDoc(collection(db,'records'), {
       type: currentType, ts,
@@ -2078,7 +2080,7 @@ async function saveRecord() {
     closeCamera();
     const labels={entrada:'Entrada registrada ✓',saida:'Saída registrada ✓','almoco-saida':'Saída p/ almoço ✓','almoco-volta':'Volta do almoço ✓'};
     showToast(labels[currentType]);
-  } catch(e) { console.error(e); showToast('Erro ao salvar registro'); }
+  } catch(e) { console.error(e); alert('Não foi possível salvar o ponto.\n\nEtapa: ' + (typeof etapa !== 'undefined' ? etapa : 'início') + '\nErro: ' + (e.code || e.message || e) + '\n\nTire um print desta tela e envie ao empregador.'); }
   btn.disabled=false;
 }
 
