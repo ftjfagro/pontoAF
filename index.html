@@ -21,7 +21,7 @@
       --accent: #2D6A4F; --accent-light: #D8EDDF;
       --warn: #E07A2F; --warn-light: #FEF0E4;
       --danger: #C0392B; --danger-light: #FDECEA;
-      --folha: #2E75B6; --folha-light: #E5F1FB;
+      --folha: #2E75B6; --folha-light: #E5F1FB; --feriado: #8A5A2B; --feriado-bg: #F3E8D6;
       --border: #E8E3DD; --radius: 14px;
       --shadow: 0 2px 12px rgba(0,0,0,0.07);
     }
@@ -359,6 +359,20 @@
     .cor-status.pendente { background:var(--warn-light); color:var(--warn); }
     .cor-status.aprovado { background:var(--accent-light); color:var(--accent); }
     .cor-status.rejeitado { background:var(--danger-light); color:var(--danger); }
+    .cor-status.cancelado { background:var(--surface2); color:var(--ink3); }
+    .chip-dia { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; margin-left:6px; vertical-align:middle; letter-spacing:.2px; font-family:'DM Sans',sans-serif; }
+    .chip-dia.feriado { background:var(--feriado-bg); color:var(--feriado); }
+    .chip-dia.fds { background:var(--surface2); color:var(--ink2); }
+    .dia-hint { font-size:12px; margin-top:5px; color:var(--ink3); }
+    .dia-hint.feriado { color:var(--feriado); font-weight:600; }
+    .dia-hint.fds { color:var(--ink2); font-weight:600; }
+    .dayrow.is-feriado { border-left:3px solid var(--feriado); }
+    .dayrow.is-fds { border-left:3px solid var(--ink3); }
+    .dayrow.is-troca { border-left:3px solid var(--folha); }
+    .chip-dia.troca { background:var(--folha-light); color:var(--folha); }
+    .dia-hint.troca { color:var(--folha); font-weight:600; }
+    .frow select { width:100%; padding:11px 13px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface2); color:var(--ink); outline:none; }
+    .falta-x { background:none; border:1px solid var(--danger); color:var(--danger); border-radius:6px; font-size:10.5px; font-weight:600; padding:3px 8px; cursor:pointer; font-family:inherit; flex-shrink:0; }
     .my-correction-just { font-size:12.5px; color:var(--ink2); margin-top:8px; line-height:1.4; }
     .my-correction-motivo { font-size:12px; color:var(--danger); margin-top:6px; font-style:italic; }
     .termo-box { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 13px; font-size:12.5px; color:var(--ink2); line-height:1.5; margin:12px 0; }
@@ -502,6 +516,7 @@
   <div class="screen active" id="screenRegistro">
     <div id="valeConfirmaBox"></div>
     <div id="adiantamentoConfirmaBox"></div>
+    <div id="trocaConfirmaBox"></div>
     <div id="avisosBox"></div>
     <div class="greet-line">Olá, <b id="heroName">Funcionária</b></div>
     <div class="date-line" id="clockDate">carregando...</div>
@@ -569,7 +584,7 @@
 
       <div class="section-header">
         <div><div class="section-title" style="font-size:15px">Feriados</div><div class="section-sub">Base para dias úteis e vale-transporte</div></div>
-        <button class="emp-edit-btn" onclick="openFeriadosModal()">📅 Editar</button>
+        <div style="display:flex;gap:6px"><button class="emp-edit-btn" onclick="openTrocaFeriadoModal()">🔄 Compensar</button><button class="emp-edit-btn" onclick="openFeriadosModal()">📅 Editar</button></div>
       </div>
     </div>
 
@@ -738,6 +753,52 @@
     </div>
   </div>
 
+  <div class="form-modal" id="trocaFeriadoModal">
+    <div class="form-sheet">
+      <h3>Compensar feriado</h3>
+      <div class="sub">O feriado vira dia normal de trabalho e a folga cai na data escolhida. Cada funcionária ativa recebe um termo para assinar.</div>
+      <div class="frow">
+        <label>Feriado a compensar</label>
+        <select id="tfFeriadoSel" onchange="atualizarTrocaPreview()"></select>
+      </div>
+      <div class="frow">
+        <label>Data da folga compensatória</label>
+        <input type="date" data-dia="1" id="tfNovaData" onchange="atualizarTrocaPreview()" />
+      </div>
+      <div class="termo-box" id="tfPreview" style="display:none"></div>
+      <button class="btn-form-save" style="width:100%" onclick="lancarTrocaFeriado()">Lançar e enviar termo</button>
+      <div class="sal-sec-label" style="margin-top:16px">Compensações lançadas</div>
+      <div id="tfLista"></div>
+      <div class="form-actions" style="margin-top:12px">
+        <button class="btn-form-cancel" style="width:100%" onclick="closeTrocaFeriadoModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-modal" id="trocaAssinaturaModal">
+    <div class="form-sheet">
+      <h3>Compensação de feriado</h3>
+      <div class="sub" id="tfAssinaturaSub">—</div>
+      <div class="termo-box" id="tfTermoTexto"></div>
+
+      <div class="field" id="tfAssinaturaSalvaBox" style="display:none">
+        <label>Sua assinatura</label>
+        <img id="tfAssinaturaPreview" style="display:block;max-height:74px;border:1.5px solid var(--border);border-radius:10px;background:#fff;padding:4px" />
+        <button type="button" class="dash-reopen" onclick="tfReassinar()">Assinar novamente</button>
+      </div>
+      <div class="field" id="tfAssinaturaPadBox">
+        <label>Assine com o dedo</label>
+        <canvas id="tfSigCanvas" style="width:100%;height:120px;display:block;border:1.5px dashed var(--border);border-radius:10px;background:#fff;touch-action:none" onpointerdown="tfSigStart(event)" onpointermove="tfSigMove(event)" onpointerup="tfSigEnd(event)" onpointerleave="tfSigEnd(event)" onpointercancel="tfSigEnd(event)"></canvas>
+        <button type="button" class="dash-reopen" onclick="tfLimparAssinatura()">Limpar</button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-form-cancel" onclick="closeTrocaAssinaturaModal()">Cancelar</button>
+        <button class="btn-form-save" onclick="confirmarTrocaAssinatura()">Confirmar e assinar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="form-modal" id="inviteModal">
     <div class="form-sheet">
       <h3>Nova funcionária</h3>
@@ -772,7 +833,7 @@
       </div>
       <div class="frow">
         <label>Data</label>
-        <input type="date" id="pData" />
+        <input type="date" data-dia="1" id="pData" />
       </div>
       <div class="frow">
         <label>Horário</label>
@@ -817,7 +878,7 @@
           <div class="type-opt" data-v="saida" onclick="setCorTipo('saida')">Saída</div>
         </div>
       </div>
-      <div class="field"><label>Data</label><input type="date" id="corData" onchange="atualizarCorContexto()" /></div>
+      <div class="field"><label>Data</label><input type="date" data-dia="1" id="corData" onchange="atualizarCorContexto()" /></div>
       <div id="corContexto"></div>
       <div class="field"><label>Horário</label><input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="corHora" oninput="maskHora(this)" onblur="validaHora(this)" /></div>
       <div class="field"><label>O que aconteceu?</label><textarea id="corJustificativa" placeholder="Ex: esqueci"></textarea></div>
@@ -900,7 +961,7 @@
   <div class="form-modal" id="faltaModal">
     <div class="form-sheet">
       <h3 id="faltaModalTitulo">Falta justificada</h3>
-      <div class="field"><label>Data da falta</label><input type="date" id="faltaData" /></div>
+      <div class="field"><label>Data da falta</label><input type="date" data-dia="1" id="faltaData" /></div>
 
       <div id="faltaJustificadaBox">
         <div class="field">
@@ -952,7 +1013,7 @@
     <div class="form-sheet">
       <h3>Registrar folga</h3>
       <div class="sub">O empregador liberou este dia — vai ser abatido do seu banco de horas</div>
-      <div class="field"><label>Data da folga</label><input type="date" id="folgaData" /></div>
+      <div class="field"><label>Data da folga</label><input type="date" data-dia="1" id="folgaData" /></div>
       <div class="field"><label>Detalhes <span style="font-weight:400;color:var(--ink3);font-size:11px">(opcional)</span></label><textarea id="folgaDetalhes" placeholder="Ex: combinado na sexta-feira"></textarea></div>
       <div class="termo-box" id="folgaTermoTexto">Declaro que o empregador me liberou neste dia, a ser abatido do meu banco de horas, e solicito o registro desta folga.</div>
       <label class="termo-check"><input type="checkbox" id="folgaAceite" /><span>Estou de acordo com o termo acima.</span></label>
@@ -979,7 +1040,7 @@
     <div class="form-sheet">
       <h3>Marcar dia como folga</h3>
       <div class="sub" id="folgaEmpNomeSub">—</div>
-      <div class="field"><label>Data</label><input type="date" id="folgaEmpData" /></div>
+      <div class="field"><label>Data</label><input type="date" data-dia="1" id="folgaEmpData" /></div>
       <div class="field"><label>Observação <span style="font-weight:400;color:var(--ink3);font-size:11px">(opcional)</span></label><textarea id="folgaEmpObs" placeholder="Ex: combinado na sexta-feira"></textarea></div>
       <div class="form-actions">
         <button class="btn-form-cancel" onclick="closeFolgaEmpregadorModal()">Cancelar</button>
@@ -992,7 +1053,7 @@
     <div class="form-sheet">
       <h3>Lançar trabalho avulso</h3>
       <div class="sub" id="avulsoNomeSub">—</div>
-      <div class="field"><label>Data</label><input type="date" id="avulsoData" onchange="recalcularAvulso()" /></div>
+      <div class="field"><label>Data</label><input type="date" data-dia="1" id="avulsoData" onchange="recalcularAvulso()" /></div>
       <div class="field" style="display:flex;gap:8px">
         <div style="flex:1"><label>Início</label><input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="avulsoInicio" oninput="maskHora(this); recalcularAvulso();" onblur="validaHora(this); recalcularAvulso();" /></div>
         <div style="flex:1"><label>Término</label><input type="text" inputmode="numeric" maxlength="5" placeholder="00:00" class="hora-input" id="avulsoTermino" oninput="maskHora(this); recalcularAvulso();" onblur="validaHora(this); recalcularAvulso();" /></div>
@@ -1109,7 +1170,9 @@ Object.assign(window, {
   salvarAdiantamento, confirmarDescontoParcela, gerarTermoAdiantamentoPDF, excluirAdiantamento,
   openAdiantamentoAssinaturaModal, closeAdiantamentoAssinaturaModal, adiReassinar, adiLimparAssinatura,
   adiSigStart, adiSigMove, adiSigEnd, confirmarAdiantamentoAssinatura,
-  toggleDashInactiveGroup, toggleFechInactiveGroup
+  toggleDashInactiveGroup, toggleFechInactiveGroup, removerFaltaFolga,
+  openTrocaFeriadoModal, closeTrocaFeriadoModal, atualizarTrocaPreview, lancarTrocaFeriado, removerTrocaFeriado, gerarTermoTrocaPDF,
+  openTrocaAssinaturaModal, closeTrocaAssinaturaModal, tfReassinar, tfLimparAssinatura, tfSigStart, tfSigMove, tfSigEnd, confirmarTrocaAssinatura
 });
 
 // ════ LOGIN UI ════
@@ -1302,6 +1365,9 @@ async function initApp() {
     document.getElementById('invitesList').innerHTML = '';
     document.getElementById('employeeList').innerHTML = '';
     document.getElementById('correcoesPendentesBox').innerHTML = '';
+    const anoHoje = new Date().getFullYear();
+    await ensureFeriados([anoHoje, anoHoje-1]);
+    await ensureTrocas();
     showScreen('Registro');
   }
 
@@ -1405,7 +1471,11 @@ function updateClock() {
   const days=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const dt=document.getElementById('clockDate');
-  if(dt) dt.textContent = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}`;
+  if(dt){
+    const hojeDs = ymdOf(now);
+    dt.innerHTML = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}${chipDia(hojeDs)}`
+      + (!isDiaUtil(hojeDs) ? '<div style="margin-top:3px">Dia sem jornada prevista</div>' : '');
+  }
   renderRegistroHoje();
 }
 
@@ -1421,7 +1491,7 @@ function todayRecordsFor(uid) {
 function buildAlerts(today, cfg) {
   const alerts=[]; const now=nowMinutes(); const tol=cfg.tolerancia||15;
   const has=t=>today.some(r=>r.type===t);
-  if (![1,2,3,4,5].includes(new Date().getDay())) return alerts;
+  if (!isDiaUtil(ymdOf(new Date()))) return alerts;   // fim de semana ou feriado: não cobra ponto
   const eM=toMinutes(cfg.entrada), aM=toMinutes(cfg.almoco), vM=toMinutes(cfg.voltaAlmoco), sM=toMinutes(cfg.saida);
   if (!has('entrada') && now > eM+tol) alerts.push({type:'danger',msg:`Entrada não registrada — prevista às ${cfg.entrada}`});
   if (has('entrada') && !has('almoco-saida') && now > aM+tol && now < sM) alerts.push({type:'warn',msg:`Saída de almoço não registrada — prevista às ${cfg.almoco}`});
@@ -1653,7 +1723,17 @@ function montarPayload(competencia, empUid) {
     };
   });
 
-  return { token: SHEETS_TOKEN, competencia, funcionarias, dias: Object.values(bucket) };
+  // Compensação de feriado: o dia da folga vai explícito como FERIADO (sem jornada) e as datas trocadas seguem num campo à parte
+  trocasCal.filter(t => t.para.slice(0,7) === competencia).forEach(t => {
+    emps.forEach(emp => {
+      const k = emp.nome + '|' + t.para;
+      if (bucket[k]) return;
+      bucket[k] = { nome: emp.nome, data: t.para, tipoDia: 'FERIADO', entrada: null, almocoSaida: null, almocoVolta: null, saida: null,
+        manual: false, foraCerca: 0, obs: 'Folga de compensação do feriado de ' + t.nome + ' (' + dmBR(t.de) + ')' };
+    });
+  });
+  const trocasDaCompetencia = trocasCal.filter(t => t.de.slice(0,7) === competencia || t.para.slice(0,7) === competencia).map(t => ({ de: t.de, para: t.para, nome: t.nome }));
+  return { token: SHEETS_TOKEN, competencia, funcionarias, dias: Object.values(bucket), trocasFeriado: trocasDaCompetencia };
 }
 
 /** Valida antes de enviar. Retorna array de problemas. */
@@ -2291,7 +2371,7 @@ function scheduleReminders() {
   fixos.forEach(({t,tipo,m})=>{
     const [h,mi]=t.split(':').map(Number); const tgt=new Date(); tgt.setHours(h,mi,0,0);
     if(tgt<=new Date())tgt.setDate(tgt.getDate()+1);
-    notifTimers.push(setTimeout(()=>{ if (!jaTemHoje(tipo)) dispararLembrete(m); }, tgt-new Date()));
+    notifTimers.push(setTimeout(()=>{ if (isDiaUtil(ymdOf(new Date())) && !jaTemHoje(tipo)) dispararLembrete(m); }, tgt-new Date()));
   });
 
   // volta do almoço — relativo ao horário real que ela bateu a saída, não um horário fixo
@@ -2315,7 +2395,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen'+name).classList.add('active');
   const nb=document.getElementById('nav'+name); if(nb)nb.classList.add('active');
-  if(name==='Registro' && currentUser && currentUser.role!=='empregador') { checkMeuValePendente(); checkMeusAvisos(); checkMeuAdiantamentoPendente(); }
+  if(name==='Registro' && currentUser && currentUser.role!=='empregador') { checkMeuValePendente(); checkMeusAvisos(); checkMeuAdiantamentoPendente(); checkMeuTrocaPendente(); }
   if(name==='Historico') { renderMinhasHoras(); renderMinhasCorrecoes(); }
   if(name==='Dashboard') openDashboard();
   if(name==='Fechamentos') openFechamentos();
@@ -2403,12 +2483,96 @@ async function ensureFeriados(anos){
     } catch(e) { console.error('feriados', e); ferByAno[k] = feriadosPadrao(Number(a)); }
   }
 }
-function isFeriado(ds){ return (ferByAno[ds.slice(0,4)]||[]).some(f=>f.d===ds); }
+function isFeriado(ds){
+  if (trocasCal.some(t=>t.para===ds)) return true;    // dia da folga compensatória
+  if (trocasCal.some(t=>t.de===ds)) return false;     // feriado trabalhado (compensado em outra data)
+  return (ferByAno[ds.slice(0,4)]||[]).some(f=>f.d===ds);
+}
 function isDiaUtil(ds){
   const [Y,M,D] = ds.split('-').map(Number);
   const dow = new Date(Y,M-1,D).getDay();
   return dow>=1 && dow<=5 && !isFeriado(ds);
 }
+// ═ DIA ESPECIAL (início) ═
+const DOW_LONGOS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+let trocasCal = [];   // compensações de feriado em vigor: [{id, de, para, nome}]
+function dmBR(ds){ const [y,m,d] = ds.split('-'); return d + '/' + m; }
+function dmyBR(ds){ const [y,m,d] = ds.split('-'); return d + '/' + m + '/' + y; }
+function dowLongo(ds){ const [Y,M,D] = ds.split('-').map(Number); return DOW_LONGOS[new Date(Y,M-1,D).getDay()].toLowerCase(); }
+function nomeFeriado(ds){
+  const f = (ferByAno[ds.slice(0,4)]||[]).find(x=>x.d===ds);
+  return f ? f.nome : null;
+}
+/** Classifica a data: folga de compensação, feriado trabalhado, feriado, sábado, domingo ou dia útil. */
+function tipoDia(ds){
+  const [Y,M,D] = ds.split('-').map(Number);
+  const dow = new Date(Y,M-1,D).getDay();
+  const tPara = trocasCal.find(t=>t.para===ds);
+  if (tPara) return { tipo:'feriado', troca:true, nome:'Compensação do feriado de ' + dmBR(tPara.de), dow };
+  const tDe = trocasCal.find(t=>t.de===ds);
+  if (tDe && dow >= 1 && dow <= 5) return { tipo:'trabalhado', nome:tDe.nome, para:tDe.para, dow };
+  if (!tDe) {
+    const fer = nomeFeriado(ds);
+    if (fer) return { tipo:'feriado', nome:fer, dow };
+  }
+  if (dow === 0) return { tipo:'domingo', dow };
+  if (dow === 6) return { tipo:'sabado', dow };
+  return { tipo:'util', dow };
+}
+/** Etiqueta visual ao lado da data. Dia útil normal não ganha nada (evita poluir). */
+function chipDia(ds, curto){
+  const t = tipoDia(ds);
+  if (t.tipo === 'feriado' && t.troca) return `<span class="chip-dia troca">🔄 ${curto ? 'Compensação' : t.nome}</span>`;
+  if (t.tipo === 'trabalhado') return `<span class="chip-dia troca">🔄 ${curto ? 'Compensado' : 'Dia normal · feriado compensado em ' + dmBR(t.para)}</span>`;
+  if (t.tipo === 'feriado') return `<span class="chip-dia feriado">🎉 ${curto ? 'Feriado' : 'Feriado · ' + t.nome}</span>`;
+  if (t.tipo === 'domingo') return `<span class="chip-dia fds">Domingo</span>`;
+  if (t.tipo === 'sabado')  return `<span class="chip-dia fds">Sábado</span>`;
+  return '';
+}
+function classeDia(ds){
+  const t = tipoDia(ds);
+  if (t.tipo === 'trabalhado' || (t.tipo === 'feriado' && t.troca)) return ' is-troca';
+  if (t.tipo === 'feriado') return ' is-feriado';
+  return (t.tipo === 'sabado' || t.tipo === 'domingo') ? ' is-fds' : '';
+}
+function descDia(ds){
+  const t = tipoDia(ds);
+  const [Y,M,D] = ds.split('-').map(Number);
+  const dd = `${DOW_LONGOS[t.dow]}, ${pad2(D)}/${pad2(M)}`;
+  if (t.tipo === 'feriado' && t.troca) return { cls:'troca', html:`🔄 ${dd} · ${t.nome} — folga compensatória, sem jornada prevista` };
+  if (t.tipo === 'trabalhado') return { cls:'troca', html:`🔄 ${dd} · dia normal: o feriado ${t.nome} foi compensado em ${dmBR(t.para)}` };
+  if (t.tipo === 'feriado') return { cls:'feriado', html:`🎉 ${dd} · Feriado: ${t.nome} — sem jornada prevista` };
+  if (t.tipo === 'sabado' || t.tipo === 'domingo') return { cls:'fds', html:`${dd} · fim de semana — sem jornada prevista` };
+  return { cls:'', html:dd };
+}
+/** Aviso logo abaixo de um campo de data (cria o elemento sozinho, na primeira vez). */
+function mostrarDiaHint(inputId){
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  let h = document.getElementById(inputId + 'Hint');
+  if (!h) {
+    h = document.createElement('div');
+    h.id = inputId + 'Hint';
+    el.insertAdjacentElement('afterend', h);
+  }
+  if (!el.value) { h.className = 'dia-hint'; h.innerHTML = ''; return; }
+  const d = descDia(el.value);
+  h.className = 'dia-hint ' + d.cls;
+  h.innerHTML = d.html;
+}
+// atualiza o aviso quando a pessoa escolhe a data…
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t && t.matches && t.matches('input[data-dia]')) mostrarDiaHint(t.id);
+});
+// …e quando qualquer janela é aberta com a data já preenchida pelo app
+const diaObserver = new MutationObserver(ms => ms.forEach(m => {
+  const t = m.target;
+  if (t.classList && t.classList.contains('open')) t.querySelectorAll('input[data-dia]').forEach(i => mostrarDiaHint(i.id));
+}));
+document.querySelectorAll('.form-modal').forEach(mo => diaObserver.observe(mo, { attributes:true, attributeFilter:['class'] }));
+// ═ DIA ESPECIAL (fim) ═
+
 function diasUteisMes(ym){
   const [Y,M] = ym.split('-').map(Number);
   const ultimo = new Date(Y,M,0).getDate();
@@ -2473,7 +2637,7 @@ function diasDoMes(uid, ym){
   fonteFaltas
     .filter(f => (ehEuMesma || f.uid === uid) && f.status === 'aprovado' && f.ds.slice(0,7) === ym && !dsComRegistro.has(f.ds))
     .forEach(f => {
-      dias.push({ ds:f.ds, incompleto:false, falta:true, tipo: f.tipo || 'falta', justificada:f.justificada, motivoLabel:f.motivoLabel, anexoUrl:f.anexoUrl, jornada:0, banco:0, extra:0, trab:0, esperado:0, horarios:null });
+      dias.push({ ds:f.ds, faltaId:f.id, incompleto:false, falta:true, tipo: f.tipo || 'falta', justificada:f.justificada, motivoLabel:f.motivoLabel, anexoUrl:f.anexoUrl, jornada:0, banco:0, extra:0, trab:0, esperado:0, horarios:null });
     });
   dias.sort((a,b)=>a.ds.localeCompare(b.ds));
   return dias;
@@ -2553,6 +2717,11 @@ function mensagemProblemasCoerencia(lista){
   return lista.map(p => `${p.ds.split('-').reverse().join('/')}: ${p.problemas.join('; ')}`).join('\n');
 }
 
+function avisoTrocaSemAssinatura(uid, ym){
+  const pend = trocasDocsCache.filter(t => t.uid === uid && t.status !== 'assinado' && (t.dataOriginal.slice(0,7) === ym || t.dataNova.slice(0,7) === ym));
+  if (!pend.length) return '';
+  return '\n\n⚠️ Termo de compensação de feriado ainda SEM assinatura: ' + pend.map(t => t.nomeFeriado + ' (' + dmBR(t.dataOriginal) + ')').join(', ') + '.\nVocê pode consolidar mesmo assim.';
+}
 async function consolidarMes(uid, ym){
   const problemasCoerencia = diasComProblemasCoerencia(uid, ym);
   if (problemasCoerencia.length) {
@@ -2560,7 +2729,7 @@ async function consolidarMes(uid, ym){
     return;
   }
   const ag = agregarMes(uid, ym);
-  if (!confirm(`Consolidar ${labelMes(ym)}?\n\nPote do mês: ${fmtHM(ag.pote)}\nHoras extras: ${fmtHM(ag.extra)}\nA pagar: ${fmtHM(ag.pagar)}\n\nO mês fica fechado e travado para ajustes. Você pode reabrir depois.`)) return;
+  if (!confirm(`Consolidar ${labelMes(ym)}?\n\nPote do mês: ${fmtHM(ag.pote)}\nHoras extras: ${fmtHM(ag.extra)}\nA pagar: ${fmtHM(ag.pagar)}\n\nO mês fica fechado e travado para ajustes. Você pode reabrir depois.${avisoTrocaSemAssinatura(uid, ym)}`)) return;
   try {
     await setDoc(doc(db,'fechamentos', uid+'_'+ym), {
       uid, mes: ym, houseCode: currentUser.houseCode, status:'fechado',
@@ -2623,40 +2792,66 @@ function renderEntradasExpandidas(uid, ds){
         <div><div class="entry-type">${typeLabel(r.type)}${r.adjusted?' <span style="color:var(--ink3);font-weight:400">· ajustado</span>':''}</div><div class="entry-meta">${hora}${loc?(' · '+loc):''}</div></div></div>`;
     }).join('') + `</div>`;
 }
+function btnRemoverFalta(d){
+  if (!currentUser || currentUser.role !== 'empregador' || !d.faltaId) return '';
+  return `<button class="falta-x" onclick="removerFaltaFolga('${d.faltaId}')" title="Remover lançamento">✕ Remover</button>`;
+}
+/** Empregador remove falta/folga lançada por engano. Não apaga: marca como 'cancelado'
+    (fica no histórico, mas sai dos cálculos e do envio pra planilha). */
+async function removerFaltaFolga(id){
+  const f = faltasAprovadasPorCasa.find(x=>x.id===id);
+  if (!f) { showToast('Lançamento não encontrado'); return; }
+  if (await mesEstaFechado(f.uid, f.ds.slice(0,7))) {
+    alert('Este mês já está consolidado.\n\nReabra o mês em Fechamentos antes de remover este lançamento.');
+    return;
+  }
+  const [Y,M,D] = f.ds.split('-').map(Number);
+  const rotulo = f.tipo === 'folga_banco' ? 'a folga' : 'a falta';
+  if (!confirm(`Remover ${rotulo} do dia ${pad2(D)}/${pad2(M)}?\n\nO lançamento deixa de contar nos cálculos e no envio para a planilha. O histórico fica guardado.`)) return;
+  try {
+    await updateDoc(doc(db,'faltas',id), { status:'cancelado', canceladoPor: currentUser.uid, canceladoEm: new Date().toISOString() });
+    showToast('Lançamento removido ✓');
+    await loadFaltasAprovadas();
+    if (document.getElementById('screenDashboard').classList.contains('active')) renderDashboard();
+    else renderFechamentos();
+  } catch(e){ console.error(e); alert('Erro ao remover:\n\n' + (e.code || e.message || e)); }
+}
 function linhaDia(d, uid){
   const [Y,M,D] = d.ds.split('-').map(Number);
   const dow = DOW_CURTOS[new Date(Y,M-1,D).getDay()];
   if (d.falta && d.tipo === 'folga_banco') {
     return `<div class="falta-mini folga">
       <span class="ic">🏖️</span>
-      <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — Folga (banco de horas)</span>
+      <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b>${chipDia(d.ds,true)} — Folga (banco de horas)</span>
+      ${btnRemoverFalta(d)}
     </div>`;
   }
   if (d.falta) {
     const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
     return `<div class="falta-mini">
       <span class="ic">📋</span>
-      <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — ${rotulo}</span>
+      <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b>${chipDia(d.ds,true)} — ${rotulo}</span>
       ${d.anexoUrl ? `<a href="${d.anexoUrl}" target="_blank" class="anexo-link">Ver anexo</a>` : ''}
+      ${btnRemoverFalta(d)}
     </div>`;
   }
   const key = uid+'|'+d.ds;
   const aberto = diaExpandidoKey === key;
   const expandBtn = `<span style="color:var(--ink3);font-size:11px;margin-left:6px">${aberto?'▲':'▾'}</span>`;
   if (d.incompleto) {
-    return `<div class="dayrow incomplete${aberto?' open':''}">
+    return `<div class="dayrow incomplete${aberto?' open':''}${classeDia(d.ds)}">
       <div class="dayrow-click" onclick="toggleDiaExpandido('${uid}','${d.ds}')">
-        <div class="dayrow-top"><div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div><div class="dayrow-total" style="color:var(--warn)">⚠️ dia incompleto${expandBtn}</div></div>
+        <div class="dayrow-top"><div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span>${chipDia(d.ds)}</div><div class="dayrow-total" style="color:var(--warn)">⚠️ dia incompleto${expandBtn}</div></div>
         ${horariosRow(d.horarios)}
       </div>
       ${aberto ? renderEntradasExpandidas(uid, d.ds) : ''}
     </div>`;
   }
   const orc = Math.max(d.esperado || JORNADA_MIN, d.trab);
-  return `<div class="dayrow${aberto?' open':''}">
+  return `<div class="dayrow${aberto?' open':''}${classeDia(d.ds)}">
     <div class="dayrow-click" onclick="toggleDiaExpandido('${uid}','${d.ds}')">
       <div class="dayrow-top">
-        <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}${d.esperado===0?' · exceção':''}</span></div>
+        <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span>${chipDia(d.ds)}</div>
         <div class="dayrow-total">${fmtHM(d.trab)}${expandBtn}</div>
       </div>
       ${horariosRow(d.horarios)}
@@ -2976,21 +3171,23 @@ function renderDiasFechamento(uid, ym, ag, editable){
     if (d.falta && d.tipo === 'folga_banco') {
       return `<div class="falta-mini folga">
         <span class="ic">🏖️</span>
-        <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — Folga (banco de horas)</span>
+        <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b>${chipDia(d.ds,true)} — Folga (banco de horas)</span>
+        ${editable ? btnRemoverFalta(d) : ''}
       </div>`;
     }
     if (d.falta) {
       const rotulo = d.justificada ? `Falta justificada${d.motivoLabel?' · '+d.motivoLabel:''}` : 'Falta não justificada';
       return `<div class="falta-mini">
         <span class="ic">📋</span>
-        <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b> — ${rotulo}</span>
+        <span class="txt"><b>${D} ${MESES_CURTOS[M-1]} ${dow}</b>${chipDia(d.ds,true)} — ${rotulo}</span>
         ${d.anexoUrl ? `<a href="${d.anexoUrl}" target="_blank" class="anexo-link">Ver anexo</a>` : ''}
+        ${editable ? btnRemoverFalta(d) : ''}
       </div>`;
     }
     const ents = entriesDoDia(uid, d.ds);
     return `<div style="border-top:1px solid var(--surface2);padding:10px 0">
       <div class="dayrow-top" style="margin-bottom:6px">
-        <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span></div>
+        <div class="dayrow-date">${D} ${MESES_CURTOS[M-1]}<span class="dow">${dow}</span>${chipDia(d.ds)}</div>
         <div class="dayrow-total">${d.incompleto?'⚠️ incompleto':fmtHM(d.trab)}</div>
       </div>
       ${ents.map(r=>{
@@ -3506,6 +3703,249 @@ async function confirmarAdiantamentoAssinatura(){
   } catch(e){ console.error(e); showToast('Erro ao confirmar'); }
 }
 
+// ════ COMPENSAÇÃO DE FERIADO (feriado trabalhado + folga em outra data) ════
+// feriados/trocas = { itens:[{id, de, para, nome, criadoEm, criadoPor}] }  -> calendário efetivo (vale p/ toda a casa)
+// trocasFeriado/{id}_{uid} = termo individual a assinar { trocaId, uid, nome, houseCode, dataOriginal, dataNova, nomeFeriado, termoTexto, status, assinaturaImg, assinadoEm }
+let trocasDocsCache = [];
+async function ensureTrocas(){
+  try {
+    const sn = await getDoc(doc(db,'feriados','trocas'));
+    trocasCal = sn.exists() ? (sn.data().itens || []) : [];
+  } catch(e){ console.error('ensureTrocas', e); }
+}
+async function loadTrocasDocs(){
+  try {
+    const sn = await getDocs(query(collection(db,'trocasFeriado'), where('houseCode','==',currentUser.houseCode)));
+    trocasDocsCache = sn.docs.map(d=>({id:d.id, ...d.data()}));
+  } catch(e){ console.error('loadTrocasDocs', e); trocasDocsCache = []; }
+}
+function termoTrocaTexto(t){
+  return `Declaro estar ciente e de acordo que o feriado de ${t.nome} (${dmyBR(t.de)}, ${dowLongo(t.de)}) será trabalhado normalmente, sendo compensado com folga no dia ${dmyBR(t.para)} (${dowLongo(t.para)}), sem prejuízo da minha remuneração, nos termos da Lei Complementar nº 150/2015.`;
+}
+async function openTrocaFeriadoModal(){
+  const ano = new Date().getFullYear();
+  await ensureFeriados([ano, ano+1]);
+  await ensureTrocas();
+  await loadTrocasDocs();
+  const primeiroDoMes = ymdOf(new Date()).slice(0,7) + '-01';
+  const opcoes = [];
+  [ano, ano+1].forEach(a => (ferByAno[String(a)] || []).forEach(f => {
+    if (f.d < primeiroDoMes) return;
+    if (trocasCal.some(t => t.de === f.d)) return;
+    const [Y,M,D] = f.d.split('-').map(Number);
+    const dow = new Date(Y,M-1,D).getDay();
+    if (dow === 0 || dow === 6) return;               // feriado em fim de semana não tem o que compensar
+    opcoes.push(`<option value="${f.d}">${pad2(D)}/${pad2(M)} — ${f.nome} (${DOW_LONGOS[dow].toLowerCase()})</option>`);
+  }));
+  document.getElementById('tfFeriadoSel').innerHTML = opcoes.length ? opcoes.join('') : '<option value="">Nenhum feriado disponível</option>';
+  document.getElementById('tfNovaData').value = '';
+  atualizarTrocaPreview();
+  renderTrocaLista();
+  document.getElementById('trocaFeriadoModal').classList.add('open');
+}
+function closeTrocaFeriadoModal(){ document.getElementById('trocaFeriadoModal').classList.remove('open'); }
+function atualizarTrocaPreview(){
+  const box = document.getElementById('tfPreview');
+  const de = document.getElementById('tfFeriadoSel').value;
+  const para = document.getElementById('tfNovaData').value;
+  if (!de || !para) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.textContent = termoTrocaTexto({ nome: nomeFeriado(de) || 'feriado', de, para });
+}
+function renderTrocaLista(){
+  const box = document.getElementById('tfLista');
+  if (!trocasCal.length) { box.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Nenhuma compensação lançada.</div>'; return; }
+  box.innerHTML = trocasCal.slice().sort((a,b)=> b.de.localeCompare(a.de)).map(t=>{
+    const docs = trocasDocsCache.filter(d => d.trocaId === t.id);
+    const linhas = docs.map(d => `<div class="sal-linha"><span>${d.nome.split(' ')[0]} — ${d.status === 'assinado' ? '✅ assinado' : '⏳ aguardando assinatura'}</span>
+      <button class="cor-report-btn" style="margin-top:0;padding:4px 9px;font-size:11px" onclick="gerarTermoTrocaPDF('${d.id}')">🖨️ PDF</button></div>`).join('');
+    return `<div class="dash-card" style="padding:12px 14px;margin:0 0 10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div><div style="font-size:13px;font-weight:600">${t.nome}</div>
+          <div style="font-size:11.5px;color:var(--ink3)">trabalha ${dmBR(t.de)} · folga ${dmBR(t.para)}</div></div>
+        <span class="sal-x" title="Remover compensação" onclick="removerTrocaFeriado('${t.id}')">✕</span>
+      </div>${linhas}
+    </div>`;
+  }).join('');
+}
+async function mesesFechadosParaTroca(uids, meses){
+  for (const uid of uids) for (const ym of meses) if (await mesEstaFechado(uid, ym)) return { uid, ym };
+  return null;
+}
+function atualizarTelasAposTroca(){
+  if (document.getElementById('screenDashboard').classList.contains('active')) renderDashboard();
+  else if (document.getElementById('screenFechamentos').classList.contains('active')) renderFechamentos();
+}
+async function lancarTrocaFeriado(){
+  const de = document.getElementById('tfFeriadoSel').value;
+  const para = document.getElementById('tfNovaData').value;
+  if (!de) { showToast('Escolha o feriado'); return; }
+  if (!para) { showToast('Escolha a data da folga'); return; }
+  if (para === de) { showToast('A folga precisa ser em outro dia'); return; }
+  if (!isDiaUtil(para)) { alert('A folga precisa cair num dia útil normal — esse dia é fim de semana, feriado ou já é uma folga de compensação.'); return; }
+  if (trocasCal.some(t => t.de === de)) { showToast('Esse feriado já foi compensado'); return; }
+  const ativas = (window._empCache || []).filter(e => e.ativa !== false);
+  if (!ativas.length) { showToast('Nenhuma funcionária ativa'); return; }
+  const fechado = await mesesFechadosParaTroca(ativas.map(e=>e.uid), [...new Set([de.slice(0,7), para.slice(0,7)])]);
+  if (fechado) {
+    const quem = (ativas.find(e=>e.uid===fechado.uid)||{}).nome || 'uma funcionária';
+    alert(`${labelMes(fechado.ym)} já está consolidado para ${quem}.\n\nReabra o mês em Fechamentos antes de lançar essa compensação.`);
+    return;
+  }
+  const nome = nomeFeriado(de) || 'feriado';
+  const id = 'tf' + Date.now();
+  const item = { id, de, para, nome, criadoEm: new Date().toISOString(), criadoPor: currentUser.uid };
+  const termoTexto = termoTrocaTexto({ nome, de, para });
+  try {
+    for (const e of ativas) {
+      await setDoc(doc(db,'trocasFeriado', id + '_' + e.uid), {
+        trocaId: id, uid: e.uid, nome: e.nome, houseCode: currentUser.houseCode,
+        dataOriginal: de, dataNova: para, nomeFeriado: nome, termoTexto,
+        status: 'aguardando_assinatura', assinaturaImg: null, assinadoEm: null,
+        criadoPor: currentUser.uid, criadoEm: item.criadoEm
+      });
+    }
+    await setDoc(doc(db,'feriados','trocas'), { itens: arrayUnion(item) }, { merge: true });
+    trocasCal.push(item);
+    await loadTrocasDocs();
+    showToast('Compensação lançada ✓ Termos enviados');
+    openTrocaFeriadoModal();
+    atualizarTelasAposTroca();
+  } catch(e){ console.error(e); alert('Erro ao lançar a compensação:\n\n' + (e.code || e.message || e)); }
+}
+async function removerTrocaFeriado(id){
+  const t = trocasCal.find(x => x.id === id);
+  if (!t) return;
+  const docs = trocasDocsCache.filter(d => d.trocaId === id);
+  const uids = [...new Set(docs.map(d => d.uid))];
+  const fechado = await mesesFechadosParaTroca(uids, [...new Set([t.de.slice(0,7), t.para.slice(0,7)])]);
+  if (fechado) { alert(`${labelMes(fechado.ym)} já está consolidado.\n\nReabra o mês em Fechamentos antes de remover essa compensação.`); return; }
+  if (!confirm(`Remover a compensação do feriado de ${t.nome}?\n\n${dmBR(t.de)} volta a ser feriado e ${dmBR(t.para)} volta a ser dia normal. Os termos enviados são apagados.`)) return;
+  try {
+    await setDoc(doc(db,'feriados','trocas'), { itens: trocasCal.filter(x => x.id !== id) }, { merge: true });
+    for (const d of docs) await deleteDoc(doc(db,'trocasFeriado', d.id));
+    trocasCal = trocasCal.filter(x => x.id !== id);
+    await loadTrocasDocs();
+    showToast('Compensação removida');
+    openTrocaFeriadoModal();
+    atualizarTelasAposTroca();
+  } catch(e){ console.error(e); alert('Erro ao remover:\n\n' + (e.code || e.message || e)); }
+}
+async function gerarTermoTrocaPDF(docId){
+  const d = trocasDocsCache.find(x => x.id === docId);
+  if (!d) return;
+  if (!window.jspdf) { showToast('Biblioteca de PDF ainda carregando, tente de novo em instantes'); return; }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:'pt', format:'a4' });
+  const W = pdf.internal.pageSize.getWidth(), M = 48;
+  let y = 70;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
+  pdf.text('Termo de Compensação de Feriado', M, y); y += 26;
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+  pdf.text(`Funcionária: ${d.nome}`, M, y); y += 16;
+  pdf.text(`Feriado: ${d.nomeFeriado} — ${dmyBR(d.dataOriginal)} (${dowLongo(d.dataOriginal)})`, M, y); y += 16;
+  pdf.text(`Folga compensatória: ${dmyBR(d.dataNova)} (${dowLongo(d.dataNova)})`, M, y); y += 26;
+  pdf.setDrawColor(220); pdf.line(M, y, W-M, y); y += 22;
+  const declar = pdf.splitTextToSize(d.termoTexto, W-2*M);
+  pdf.text(declar, M, y); y += declar.length*14 + 30;
+  if (d.status === 'assinado' && d.assinaturaImg) {
+    pdf.setFontSize(10); pdf.text(`Assinado digitalmente em ${new Date(d.assinadoEm).toLocaleString('pt-BR')}.`, M, y); y += 16;
+    try { pdf.addImage(d.assinaturaImg, 'PNG', M, y, 160, 60); } catch(e){ console.error('addImage assinatura troca', e); }
+    y += 75;
+  } else {
+    pdf.line(M, y, M+220, y); pdf.text('Assinatura da funcionária', M, y+14); y += 40;
+  }
+  pdf.line(W-M-220, y-40, W-M, y-40); pdf.text('Assinatura do(a) empregador(a)', W-M-220, y-26);
+  pdf.setFontSize(9); pdf.setTextColor(140);
+  pdf.text('Documento gerado pelo PontoCasa em ' + new Date().toLocaleString('pt-BR') + '.', M, y+10);
+  pdf.save(`Termo-Compensacao-Feriado-${d.nome.split(' ')[0]}-${d.dataOriginal}.pdf`);
+}
+
+// ── funcionária: confirma o termo com assinatura ──
+let tfPendenteAtual = null;
+let tfSigCtx = null, tfSigDrawing = false, tfSigHasStroke = false, tfForcarNovaAssinatura = false;
+async function checkMeuTrocaPendente(){
+  const box = document.getElementById('trocaConfirmaBox');
+  if (!box || !currentUser || currentUser.role === 'empregador') return;
+  try {
+    const sn = await getDocs(query(collection(db,'trocasFeriado'), where('uid','==',currentUser.uid)));
+    const pend = sn.docs.map(d=>({id:d.id, ...d.data()})).filter(t=>t.status !== 'assinado').sort((a,b)=> a.dataOriginal.localeCompare(b.dataOriginal));
+    if (!pend.length) { box.innerHTML = ''; tfPendenteAtual = null; return; }
+    tfPendenteAtual = pend[0];
+    box.innerHTML = `<div class="vt-confirma-card">
+      <div class="vt-confirma-title">Compensação de feriado</div>
+      <div style="font-size:13px;color:var(--ink2)">${tfPendenteAtual.nomeFeriado}</div>
+      <div style="font-size:13px;color:var(--ink);margin:4px 0 10px">Trabalha em <b>${dmBR(tfPendenteAtual.dataOriginal)}</b> e folga em <b>${dmBR(tfPendenteAtual.dataNova)}</b></div>
+      <button class="dash-close-btn" onclick="openTrocaAssinaturaModal()">Ler e assinar</button>
+    </div>`;
+  } catch(e){ console.error('checkMeuTrocaPendente', e); }
+}
+function openTrocaAssinaturaModal(){
+  if (!tfPendenteAtual) return;
+  document.getElementById('tfAssinaturaSub').textContent = `${tfPendenteAtual.nomeFeriado} — ${dmyBR(tfPendenteAtual.dataOriginal)}`;
+  document.getElementById('tfTermoTexto').textContent = tfPendenteAtual.termoTexto;
+  tfForcarNovaAssinatura = false;
+  tfRefreshAssinaturaUI();
+  document.getElementById('trocaAssinaturaModal').classList.add('open');
+  requestAnimationFrame(()=>{ if (document.getElementById('tfAssinaturaPadBox').style.display !== 'none') tfInitSigCanvas(); });
+}
+function closeTrocaAssinaturaModal(){ document.getElementById('trocaAssinaturaModal').classList.remove('open'); }
+function tfRefreshAssinaturaUI(){
+  const salva = currentUser && currentUser.assinaturaImg;
+  const mostraSalva = !!(salva && !tfForcarNovaAssinatura);
+  document.getElementById('tfAssinaturaSalvaBox').style.display = mostraSalva ? 'block' : 'none';
+  document.getElementById('tfAssinaturaPadBox').style.display = mostraSalva ? 'none' : 'block';
+  if (mostraSalva) document.getElementById('tfAssinaturaPreview').src = salva;
+}
+function tfReassinar(){ tfForcarNovaAssinatura = true; tfRefreshAssinaturaUI(); tfInitSigCanvas(); }
+function tfAssinaturaOk(){
+  if (currentUser && currentUser.assinaturaImg && !tfForcarNovaAssinatura) return true;
+  return tfSigHasStroke;
+}
+function tfInitSigCanvas(){
+  const c = document.getElementById('tfSigCanvas');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round((rect.width||300)*dpr));
+  c.height = Math.max(1, Math.round((rect.height||120)*dpr));
+  tfSigCtx = c.getContext('2d');
+  tfSigCtx.scale(dpr,dpr);
+  tfSigCtx.lineWidth = 2.3; tfSigCtx.lineCap='round'; tfSigCtx.lineJoin='round';
+  tfSigCtx.strokeStyle = '#1A1816';
+  tfSigHasStroke = false; tfSigDrawing = false;
+}
+function tfSigPos(e,c){ const rect=c.getBoundingClientRect(); return {x:e.clientX-rect.left, y:e.clientY-rect.top}; }
+function tfSigStart(e){ e.preventDefault(); tfSigDrawing=true; const p=tfSigPos(e,e.currentTarget); tfSigCtx.beginPath(); tfSigCtx.moveTo(p.x,p.y); }
+function tfSigMove(e){ if(!tfSigDrawing||!tfSigCtx) return; e.preventDefault(); const p=tfSigPos(e,e.currentTarget); tfSigCtx.lineTo(p.x,p.y); tfSigCtx.stroke(); if(!tfSigHasStroke){tfSigHasStroke=true;} }
+function tfSigEnd(){ tfSigDrawing=false; }
+function tfLimparAssinatura(){
+  const c = document.getElementById('tfSigCanvas');
+  if (!c || !tfSigCtx) return;
+  tfSigCtx.clearRect(0,0,c.width,c.height);
+  tfSigHasStroke = false;
+}
+async function confirmarTrocaAssinatura(){
+  if (!tfPendenteAtual) return;
+  if (!tfAssinaturaOk()) { showToast('Assine antes de confirmar'); return; }
+  let assinaturaImg;
+  if (currentUser.assinaturaImg && !tfForcarNovaAssinatura) {
+    assinaturaImg = currentUser.assinaturaImg;
+  } else {
+    assinaturaImg = document.getElementById('tfSigCanvas').toDataURL('image/png');
+    try {
+      await updateDoc(doc(db,'users',currentUser.uid), { assinaturaImg, assinaturaSalvaEm: new Date().toISOString() });
+      currentUser.assinaturaImg = assinaturaImg;
+    } catch(e){ console.error('salvar assinatura', e); }
+  }
+  try {
+    await updateDoc(doc(db,'trocasFeriado', tfPendenteAtual.id), { status:'assinado', assinaturaImg, assinadoEm: new Date().toISOString() });
+    closeTrocaAssinaturaModal();
+    showToast('Termo assinado ✓');
+    checkMeuTrocaPendente();
+  } catch(e){ console.error(e); alert('Erro ao assinar o termo:\n\n' + (e.code || e.message || e)); }
+}
+
 async function marcarValePago(uid, ym, valor, diasUteis, valorDiario){
   const emp = (window._empCache||[]).find(e=>e.uid===uid);
   if (!confirm(`Marcar vale-transporte de ${labelMes(ym)} (${fmtBRL(valor)}) como pago para ${emp?emp.nome:''}?\n\nEla vai ver um card na tela inicial pra confirmar o recebimento com assinatura.`)) return;
@@ -3968,6 +4408,8 @@ async function ensureDadosGestao(){
   await loadFaltasAprovadas();
   await loadAvulsos();
   await loadAdiantamentos();
+  await ensureTrocas();
+  await loadTrocasDocs();
 }
 async function openDashboard(){
   await ensureDadosGestao();
@@ -4235,7 +4677,7 @@ function computeDiasParaRevisar(){
     minhasCorrecoesRaw.filter(c=>c.status!=='rejeitado').map(c=> ymdOf(new Date(c.ts))+'|'+c.tipo)
   );
   const faltasDatas = new Set(
-    minhasFaltasRaw.filter(f=>f.status!=='rejeitado').map(f=>f.ds)
+    minhasFaltasRaw.filter(f=>f.status!=='rejeitado' && f.status!=='cancelado').map(f=>f.ds)
   );
   const out = [];
   Object.keys(porDia).sort().forEach(ds=>{
@@ -4274,7 +4716,7 @@ function renderDiasParaRevisar(){
       if (d.vazio) {
         return `<div class="revisar-item">
           <div class="revisar-item-linha">
-            <span class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></span>
+            <span class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span>${chipDia(d.ds,true)}</span>
             <span class="revisar-falta">nenhum ponto batido</span>
           </div>
           <div class="revisar-vazio-choice">
@@ -4287,7 +4729,7 @@ function renderDiasParaRevisar(){
       const faltStr = d.faltando.map(t=>typeLabel(t)).join(', ');
       return `<div class="revisar-item">
         <div class="revisar-item-linha">
-          <span class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span></span>
+          <span class="revisar-date">${D} ${MESES_CURTOS[M-1]} <span class="dow">${dow}</span>${chipDia(d.ds,true)}</span>
           <span class="revisar-falta">faltou ${faltStr}</span>
           <button class="revisar-btn" onclick='openCorrecaoModal(${JSON.stringify(d.ds)}, ${JSON.stringify(d.faltando)})'>Ajustar</button>
         </div>
@@ -4394,6 +4836,7 @@ function faltaLimparAssinatura(){
 async function saveFalta(){
   const ds = document.getElementById('faltaData').value;
   if (!ds) { showToast('Escolha a data'); return; }
+  if (!isDiaUtil(ds) && !confirm('Esse dia é fim de semana ou feriado — normalmente não há jornada prevista. Registrar a falta mesmo assim?')) return;
   const ym = ds.slice(0,7);
   if (await mesEstaFechado(currentUser.uid, ym)) {
     showToast('Este mês já foi fechado — peça ao empregador para reabrir antes');
@@ -4491,6 +4934,7 @@ function folgaLimparAssinatura(){
 async function saveFolga(){
   const ds = document.getElementById('folgaData').value;
   if (!ds) { showToast('Escolha a data'); return; }
+  if (!isDiaUtil(ds)) { alert('Esse dia é fim de semana ou feriado — não há jornada prevista, então não é preciso registrar folga.'); return; }
   const ym = ds.slice(0,7);
   if (await mesEstaFechado(currentUser.uid, ym)) {
     showToast('Este mês já foi fechado — peça ao empregador para reabrir antes');
@@ -4544,6 +4988,7 @@ async function confirmarFolgaEmpregador(){
   if (!folgaEmpregadorUid) return;
   const ds = document.getElementById('folgaEmpData').value;
   if (!ds) { showToast('Escolha a data'); return; }
+  if (!isDiaUtil(ds)) { alert('Esse dia é fim de semana ou feriado — não há jornada prevista, então não é preciso marcar folga.'); return; }
   const emp = (window._empCache||[]).find(e=>e.uid===folgaEmpregadorUid);
   const obs = document.getElementById('folgaEmpObs').value.trim();
   try {
@@ -5000,6 +5445,9 @@ window.gerarMeuRelatorioPDF = comCarregamento(gerarMeuRelatorioPDF, 'Gerando PDF
 window.gerarTermoAjustesPDF = comCarregamento(gerarTermoAjustesPDF, 'Gerando PDF...');
 window.gerarReciboValeTransporte = comCarregamento(gerarReciboValeTransporte, 'Gerando PDF...');
 window.salvarReajuste = comCarregamento(salvarReajuste, 'Salvando...');
+window.lancarTrocaFeriado = comCarregamento(lancarTrocaFeriado, 'Lançando compensação...');
+window.confirmarTrocaAssinatura = comCarregamento(confirmarTrocaAssinatura, 'Confirmando...');
+window.gerarTermoTrocaPDF = comCarregamento(gerarTermoTrocaPDF, 'Gerando PDF...');
 window.salvarAdiantamento = comCarregamento(salvarAdiantamento, 'Lançando adiantamento...');
 window.confirmarDescontoParcela = comCarregamento(confirmarDescontoParcela, 'Confirmando...');
 window.gerarTermoAdiantamentoPDF = comCarregamento(gerarTermoAdiantamentoPDF, 'Gerando PDF...');
